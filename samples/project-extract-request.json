@@ -1,0 +1,25 @@
+{
+  "schema_version": "rafid-project-data-v1",
+  "metadata": {
+    "title": "نظام ري ذكي تجريبي",
+    "type": "ابتكار جامعي",
+    "university": "جامعة افتراضية",
+    "owner": null
+  },
+  "files": [
+    {
+      "name": "project-summary.txt",
+      "type": "text/plain",
+      "size": 2048
+    }
+  ],
+  "raw_text": "يعالج المشروع هدر مياه الري باستخدام حساسات تربة ونموذج تنبؤ. يوجد نموذج أولي بمستوى TRL 5 واختبار مخبري أولي. يحتاج المشروع إلى تجربة ميدانية وميزانية تفصيلية وخطاب شريك تطبيق.",
+  "privacy": {
+    "classification": "internal",
+    "remote_processing_confirmed": true,
+    "redaction_preview_confirmed": true,
+    "redactions_applied": [
+      "identity:1"
+    ]
+  }
+}

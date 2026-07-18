@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0b2430" />
+    <meta
+      name="description"
+      content="رافد — حسم أهلية المشاريع لفرصة تمويل محددة وإغلاق فجوات التقديم قبل الموعد."
+    />
+    <title>رافد | جاهزية الفرصة التمويلية</title>
+    <link rel="stylesheet" href="rafid-v4.css" />
+    <script defer src="vendor/mammoth.browser.min.js"></script>
+    <script defer src="vendor/supabase.min.js"></script>
+    <script defer src="rafid-v4.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#mainContent">انتقل إلى المحتوى</a>
+
+    <section id="authGate" class="auth-gate" aria-labelledby="authTitle" hidden>
+      <div class="auth-card">
+        <div class="auth-brand"><span class="brand-mark" aria-hidden="true">ر</span><div><b>رافد</b><small>حساب واحد يحفظ عملك ويعيدك إليه</small></div></div>
+        <span class="eyebrow">دخول آمن وسلس</span>
+        <h1 id="authTitle">ابدأ من حيث توقفت</h1>
+        <p>سجّل مرة واحدة؛ تبقى الجلسة متجددة على هذا الجهاز حتى تسجل الخروج، وتحفظ مساحة عملك في حسابك.</p>
+        <div id="socialAuthButtons" class="social-auth-buttons">
+          <button class="social-auth google" type="button" data-auth-provider="google"><span>G</span> المتابعة عبر Google</button>
+          <button class="social-auth microsoft" type="button" data-auth-provider="azure"><span>M</span> المتابعة عبر Microsoft</button>
+          <button class="social-auth github" type="button" data-auth-provider="github"><span>GH</span> المتابعة عبر GitHub</button>
+        </div>
+        <div class="auth-divider"><span>أو</span></div>
+        <form id="emailAuthForm" class="email-auth-form">
+          <label for="authEmailInput">الدخول بالبريد دون كلمة مرور</label>
+          <div><input id="authEmailInput" type="email" autocomplete="email" inputmode="email" dir="ltr" placeholder="name@example.com" required /><button class="button primary" type="submit">أرسل رابط الدخول</button></div>
+        </form>
+        <p id="authMessage" class="auth-message" role="status">لن نطلب منك كلمة مرور جديدة.</p>
+        <p class="auth-privacy">مفتاح Groq لا يصل إلى حسابك أو متصفحك؛ يحتفظ به خادم رافد فقط.</p>
+      </div>
+    </section>
+
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="رافد — الصفحة الرئيسية" data-view-link="opportunity">
+        <span class="brand-mark" aria-hidden="true">ر</span>
+        <span>
+          <strong>رافد</strong>
+          <small>جاهزية الفرصة التمويلية</small>
+        </span>
+      </a>
+      <div class="top-actions">
+        <span class="pilot-badge"><i></i> تحليل تلقائي مع مراجعة بشرية</span>
+        <button class="button ghost compact" id="loadDemoBtn" type="button">تشغيل تجربة جاهزة</button>
+        <button class="button ghost compact" id="importWorkspaceBtn" type="button">استيراد مساحة</button>
+        <button class="button secondary compact" id="exportWorkspaceBtn" type="button">تصدير مساحة العمل</button>
+        <div id="accountWrap" class="account-wrap" hidden>
+          <button id="accountButton" class="account-button" type="button" aria-expanded="false"><span id="accountInitial">ح</span><b id="accountName">حسابي</b></button>
+          <div id="accountMenu" class="account-menu" hidden>
+            <b id="accountEmail">—</b>
+            <span id="cloudSyncStatus">جارٍ التحقق من الحفظ…</span>
+            <button id="signOutBtn" type="button">تسجيل الخروج</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="مراحل رافد">
+        <div class="focus-card">
+          <span class="eyebrow">قرار البداية</span>
+          <p>فرصة حيّة واحدة، حتى 10 مشاريع حقيقية، وقرار قابل للتدقيق قبل الموعد.</p>
+        </div>
+
+        <nav class="side-nav">
+          <button class="nav-item active" data-view-link="opportunity" type="button">
+            <span class="nav-number">1</span>
+            <span><b>الفرصة الحيّة</b><small>استخرج الشروط الرسمية</small></span>
+            <i class="nav-state" id="navOpportunityState"></i>
+          </button>
+          <button class="nav-item" data-view-link="projects" type="button">
+            <span class="nav-number">2</span>
+            <span><b>المشاريع</b><small>أضف المشاريع الفعلية</small></span>
+            <i class="nav-state" id="navProjectsState"></i>
+          </button>
+          <button class="nav-item" data-view-link="portfolio" type="button">
+            <span class="nav-number">3</span>
+            <span><b>الحسم</b><small>الأهلية والفجوات</small></span>
+            <i class="nav-state" id="navPortfolioState"></i>
+          </button>
+          <button class="nav-item" data-view-link="review" type="button">
+            <span class="nav-number">4</span>
+            <span><b>المراجعة</b><small>قرار المكتب البحثي</small></span>
+            <i class="nav-state" id="navReviewState"></i>
+          </button>
+        </nav>
+
+        <div class="decision-chain" aria-label="منطق رافد">
+          <span>فرصة</span><i>←</i><span>شرط</span><i>←</i><span>دليل</span><i>←</i><span>إجراء</span><i>←</i><span>قرار</span>
+        </div>
+
+        <button class="settings-link" data-view-link="settings" type="button">
+          <span aria-hidden="true">⚙</span> الاتصال والخصوصية
+        </button>
+      </aside>
+
+      <main id="mainContent" tabindex="-1">
+        <section class="view active" data-view="opportunity" aria-labelledby="opportunityTitle">
+          <div class="page-heading">
+            <div>
+              <span class="kicker">1 — ثبّت مرجع القرار</span>
+              <h1 id="opportunityTitle">أي فرصة نمول لها الآن؟</h1>
+              <p>ألصق الرابط الرسمي فقط، أو ارفع الدليل. يقرأ رافد المصدر ويستخرج كل بوابة أهلية مع اقتباسها.</p>
+            </div>
+            <div class="heading-rule"><b>واحدة فقط</b><span>حتى لا يتحول القرار إلى توصيات عامة</span></div>
+          </div>
+
+          <div class="grid two-one">
+            <article class="panel">
+              <div class="panel-head">
+                <div><span class="eyebrow">مصدر رسمي</span><h2>بيانات الفرصة</h2></div>
+                <span class="trust-chip">لا نخمن شرطًا مفقودًا</span>
+              </div>
+              <div class="form-grid two">
+                <label>اسم الفرصة
+                  <input id="oppTitleInput" autocomplete="off" placeholder="مثال: منحة حلول الاستدامة 2026" />
+                </label>
+                <label>الجهة الممولة
+                  <input id="oppFunderInput" autocomplete="off" placeholder="اسم الجهة كما ورد" />
+                </label>
+                <label>الرابط الرسمي
+                  <input id="oppUrlInput" type="url" inputmode="url" placeholder="https://..." dir="ltr" />
+                </label>
+                <label>موعد الإغلاق
+                  <input id="oppDeadlineInput" type="date" />
+                </label>
+              </div>
+              <label class="textarea-label">نص الإعلان أو دليل التقديم
+                <textarea id="oppSourceInput" rows="13" placeholder="الصق النص الرسمي كاملًا، أو ارفع PDF / DOCX / TXT أدناه..."></textarea>
+              </label>
+              <div class="file-row">
+                <label class="file-button">
+                  <input id="oppFileInput" type="file" accept=".pdf,.docx,.txt,.md,.html,.htm,.json,.csv" />
+                  <span aria-hidden="true">＋</span> قراءة ملف محليًا
+                </label>
+                <span id="oppFileStatus" class="file-status">لم يُختر ملف</span>
+              </div>
+              <div class="source-warning">
+                <span aria-hidden="true">!</span>
+                <p><b>ما الذي يُرسل؟</b> لن يغادر شيء المتصفح قبل عرض نسخة منقحة عليك والحصول على تأكيد صريح.</p>
+              </div>
+              <div class="action-row">
+                <button class="button primary" id="extractOpportunityBtn" type="button">قراءة الفرصة واستخراجها تلقائيًا</button>
+                <label class="button ghost file-inline">
+                  استيراد فرصة JSON
+                  <input id="oppJsonInput" type="file" accept=".json,application/json" />
+                </label>
+              </div>
+            </article>
+
+            <aside class="panel soft" aria-live="polite">
+              <div id="oppEmptyState" class="empty-state compact-empty">
+                <div class="empty-icon">01</div>
+                <h3>ابدأ بالفرصة لا بالمشروع</h3>
+                <p>السؤال الصحيح ليس «هل المشروع جيد؟» بل «هل يستوفي شرط هذه الفرصة، وبأي دليل؟»</p>
+              </div>
+              <div id="oppResult" class="hidden"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-view="projects" aria-labelledby="projectsTitle">
+          <div class="page-heading">
+            <div>
+              <span class="kicker">2 — أدخل الواقع كما هو</span>
+              <h1 id="projectsTitle">المشاريع المرشحة</h1>
+              <p>حد التجربة عشرة مشاريع. لا نحتاج مكتبة ضخمة؛ نحتاج حالات حقيقية تكشف إن كان رافد يوفر قرارًا أفضل وأسرع.</p>
+            </div>
+            <div class="capacity"><b id="projectCount">0</b><span>/ 10 مشاريع</span><i><em id="projectCapacityBar"></em></i></div>
+          </div>
+
+          <div class="grid two-one">
+            <article class="panel">
+              <div class="panel-head">
+                <div><span class="eyebrow">مشروع حقيقي</span><h2>إضافة مشروع</h2></div>
+                <span class="trust-chip">لا تقييم قبل الفرصة</span>
+              </div>
+              <div class="form-grid three">
+                <label>اسم المشروع
+                  <input id="projectTitleInput" autocomplete="off" placeholder="الاسم الرسمي أو المؤقت" />
+                </label>
+                <label>الجامعة / الجهة
+                  <input id="projectOrgInput" autocomplete="organization" placeholder="الجهة المالكة" />
+                </label>
+                <label>الباحث المسؤول
+                  <input id="projectOwnerInput" autocomplete="off" placeholder="سيُنقح عند الحساسية العالية" />
+                </label>
+              </div>
+              <label class="textarea-label">محتوى المشروع
+                <textarea id="projectSourceInput" rows="12" placeholder="الصق المقترح أو الملخص أو ارفع ملف المشروع..."></textarea>
+              </label>
+              <div class="file-row">
+                <label class="file-button">
+                  <input id="projectFileInput" type="file" multiple accept=".pdf,.docx,.txt,.md,.html,.htm,.json,.csv" />
+                  <span aria-hidden="true">＋</span> قراءة ملفات محليًا
+                </label>
+                <span id="projectFileStatus" class="file-status">يمكن دمج عدة مرفقات</span>
+              </div>
+              <div class="action-row">
+                <button class="button primary" id="extractProjectBtn" type="button">تحليل المشروع كاملًا وإظهار القرار</button>
+                <label class="button ghost file-inline">
+                  استيراد Project JSON
+                  <input id="projectJsonInput" type="file" accept=".json,application/json" />
+                </label>
+                <button class="button text-button" id="clearProjectFormBtn" type="button">مسح الحقول</button>
+              </div>
+            </article>
+
+            <aside class="panel soft">
+              <span class="eyebrow">قيد التجربة</span>
+              <h2>ما الذي نقيسه؟</h2>
+              <ul class="measure-list">
+                <li><b>زمن المراجعة</b><span>من استلام الملف إلى قرار أولي</span></li>
+                <li><b>اتفاق المراجعين</b><span>هل يرون البوابات نفسها؟</span></li>
+                <li><b>إغلاق الفجوات</b><span>كم نقصًا أُغلق قبل الموعد؟</span></li>
+                <li><b>التقديم في الوقت</b><span>هل تحولت المراجعة إلى ملف مُرسل؟</span></li>
+              </ul>
+              <p class="microcopy">لا نستخدم «عدد التطابقات» كمقياس نجاح؛ التطابق الذي لا يقود إلى قرار ليس قيمة.</p>
+            </aside>
+          </div>
+
+          <div class="section-head"><div><span class="eyebrow">دفعة التجربة</span><h2>المشاريع المضافة</h2></div></div>
+          <div id="projectCards" class="project-grid"></div>
+          <div id="projectsEmptyState" class="empty-state">
+            <div class="empty-icon">＋</div><h3>لا توجد مشاريع بعد</h3><p>أضف أول مشروع أو شغّل التجربة الجاهزة لرؤية المسار كاملًا.</p>
+          </div>
+        </section>
+
+        <section class="view" data-view="portfolio" aria-labelledby="portfolioTitle">
+          <div class="page-heading">
+            <div>
+              <span class="kicker">3 — الأهلية قبل الدرجة</span>
+              <h1 id="portfolioTitle">لوحة الحسم</h1>
+              <p>المشاريع غير المؤهلة لا تتصدر القائمة مهما ارتفعت جودتها العامة. الدرجة تشرح الجاهزية بعد اجتياز البوابات، ولا تستبدلها.</p>
+            </div>
+            <button class="button primary" id="assessAllBtn" type="button">مطابقة المشاريع غير المحسومة</button>
+          </div>
+
+          <div id="portfolioEmptyState" class="empty-state">
+            <div class="empty-icon">↯</div><h3>نحتاج فرصة ومشروعًا واحدًا على الأقل</h3><p>ثبّت الفرصة، أضف المشاريع، ثم شغّل المطابقة.</p>
+          </div>
+          <div id="portfolioContent" class="hidden">
+            <div id="portfolioKpis" class="kpi-grid"></div>
+            <article class="panel table-panel">
+              <div class="panel-head">
+                <div><span class="eyebrow">القرار التشغيلي</span><h2>الدفعة حسب قابلية التقديم</h2></div>
+                <span class="legend"><i class="green"></i> مؤهل <i class="amber"></i> مشروط/غير محسوم <i class="red"></i> غير مؤهل</span>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead><tr><th>المشروع</th><th>الأهلية</th><th>جاهزية الفرصة</th><th>البوابات المفتوحة</th><th>قوة الدليل</th><th>الإجراء التالي</th><th>المراجعة</th></tr></thead>
+                  <tbody id="portfolioRows"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-view="review" aria-labelledby="reviewTitle">
+          <div class="page-heading review-heading">
+            <div>
+              <span class="kicker">4 — الإنسان يملك القرار</span>
+              <h1 id="reviewTitle">ملف المراجعة المؤسسية</h1>
+              <p>يعرض رافد الحكم وأساسه، ثم يطلب من مكتب البحث اعتماد القرار أو إرجاعه؛ لا توجد موافقة آلية صامتة.</p>
+            </div>
+            <label class="project-picker">المشروع
+              <select id="reviewProjectSelect"><option value="">اختر مشروعًا محسمًا</option></select>
+            </label>
+          </div>
+          <div id="reviewEmptyState" class="empty-state">
+            <div class="empty-icon">✓</div><h3>لم يُحدد ملف للمراجعة</h3><p>اختر مشروعًا أُجريت له المطابقة من القائمة أعلاه أو من لوحة الحسم.</p>
+          </div>
+          <div id="reviewContent" class="hidden"></div>
+        </section>
+
+        <section class="view" data-view="settings" aria-labelledby="settingsTitle">
+          <div class="page-heading">
+            <div>
+              <span class="kicker">ضبط مسؤول</span>
+              <h1 id="settingsTitle">الاتصال والخصوصية</h1>
+              <p id="settingsIntro">مفتاح النموذج يبقى في الخادم ولا يظهر للمستخدم أو المتصفح.</p>
+            </div>
+          </div>
+          <div class="grid two-one">
+            <article id="serverProviderPanel" class="panel hidden">
+              <div class="panel-head"><div><span class="eyebrow">إدارة مركزية</span><h2>الذكاء الاصطناعي جاهز للجميع</h2></div><span id="serverProviderBadge" class="status neutral">جارٍ التحقق</span></div>
+              <div class="managed-provider">
+                <div><b id="managedProviderName">Groq + GPT‑OSS 120B</b><span>المفتاح سر خادمي؛ لا يُرسل إلى أي مستخدم ولا يمكن تغييره من الواجهة.</span></div>
+                <div><b>دخول موثّق</b><span>كل طلب AI مرتبط بحساب المستخدم وتطبق عليه حدود مستقلة.</span></div>
+                <div><b>حفظ تلقائي</b><span>الفرصة والمشاريع والقرارات المنظمة تعود بعد إغلاق المتصفح.</span></div>
+              </div>
+              <div id="managedPolicyNote" class="policy-note">سياسة ZDR وحالة المزود تأتيان من إعداد الخادم.</div>
+              <div class="action-row"><button class="button ghost" id="testManagedConnectionBtn" type="button">اختبار الخدمة</button></div>
+            </article>
+            <article id="localProviderPanel" class="panel">
+              <div class="panel-head"><div><span class="eyebrow">إعداد سريع محلي</span><h2>تفعيل الذكاء الاصطناعي</h2></div><span id="providerBadge" class="status neutral">غير مفعّل</span></div>
+              <div class="form-grid two">
+                <label>طريقة المعالجة
+                  <select id="providerSelect">
+                    <option value="groq" selected>Groq + GPT‑OSS 120B — مجاني مع ZDR</option>
+                    <option value="openai">OpenAI GPT‑5.6 — أعلى جودة سحابية</option>
+                    <option value="ollama">Ollama + gpt‑oss — محلي لا يغادر الجهاز</option>
+                  </select>
+                </label>
+                <label id="cloudKeyWrap"><span id="cloudKeyLabel">مفتاح Groq API</span>
+                  <input id="providerApiKeyInput" type="password" dir="ltr" autocomplete="off" placeholder="gsk_… ألصقه هنا محليًا فقط" />
+                </label>
+                <label>النموذج
+                  <input id="providerModelInput" dir="ltr" autocomplete="off" value="openai/gpt-oss-120b" />
+                </label>
+                <label id="cloudPolicyWrap">سياسة الاحتفاظ
+                  <select id="providerDataPolicy">
+                    <option value="strict_zdr" selected>صارم — Zero Data Retention فقط</option>
+                    <option value="standard">قياسي — store:false مع سجلات مراقبة محتملة</option>
+                  </select>
+                </label>
+                <label id="zdrConfirmedWrap" class="confirm-box compact-confirm">
+                  <input id="zdrConfirmedInput" type="checkbox" />
+                  <span><b>حساب API معتمد فعليًا لـ ZDR</b><small>ليس مجرد تفعيل store:false.</small></span>
+                </label>
+              </div>
+              <div id="groqSetupNote" class="policy-note setup-note">
+                <b>قبل التفعيل مرة واحدة:</b>
+                <span>أنشئ المفتاح من <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer noopener">Groq API Keys</a>، ثم افتح <a href="https://console.groq.com/settings/data-controls" target="_blank" rel="noreferrer noopener">Data Controls</a> وفعّل Zero Data Retention، وبعدها ضع علامة التأكيد أعلاه.</span>
+              </div>
+              <div class="action-row">
+                <button class="button primary" id="configureProviderBtn" type="button">تفعيل لهذه الجلسة</button>
+                <button class="button ghost" id="testConnectionBtn" type="button">اختبار خادم رافد</button>
+              </div>
+              <div id="providerPolicyNote" class="policy-note">Groq المجاني لا يحتفظ بطلبات الاستدلال افتراضيًا، والوضع الصارم يتطلب تفعيل Zero Data Retention من لوحة Groq.</div>
+              <p class="microcopy">المفتاح ينتقل عبر اتصال localhost فقط إلى عملية Node الجارية، ثم يُمسح الحقل فورًا. عند إغلاق الخادم يختفي المفتاح من الذاكرة.</p>
+            </article>
+            <aside class="panel soft">
+              <span class="eyebrow">سياسة هذه النسخة</span>
+              <h2>أربع درجات للحساسية</h2>
+              <div class="privacy-levels">
+                <div><b>عام</b><span>مسموح بعد المعاينة</span></div>
+                <div><b>داخلي</b><span>تنقيح تلقائي + حد أدنى من البيانات</span></div>
+                <div><b>سري</b><span>يتطلب ZDR مؤكدًا أو معالجة داخلية</span></div>
+                <div class="blocked"><b>مقيّد</b><span>محظور عن أي API خارجي</span></div>
+              </div>
+              <label class="workspace-classification">تصنيف مساحة الحفظ
+                <select id="workspaceClassificationInput">
+                  <option value="public">عام — يسمح بالحفظ السحابي</option>
+                  <option value="internal" selected>داخلي — يسمح بالحفظ السحابي</option>
+                  <option value="confidential">سري — يوقف الحفظ السحابي افتراضيًا</option>
+                  <option value="restricted">مقيّد — يوقف الحفظ والاتصال الخارجي</option>
+                </select>
+                <small>لا يتضمن الحفظ النص الخام، لكن السجلات المنظمة قد تبقى حساسة.</small>
+              </label>
+            </aside>
+          </div>
+          <article id="advancedConnectionPanel" class="panel">
+            <div class="panel-head"><div><span class="eyebrow">إعداد متقدم</span><h2>عنوان خادم رافد</h2></div><span id="connectionBadge" class="status neutral">غير مختبر</span></div>
+            <div class="form-grid two">
+              <label>عنوان قاعدة API
+                <input id="endpointInput" dir="ltr" inputmode="url" placeholder="http://127.0.0.1:8080/api/rafid" />
+              </label>
+              <label>رمز وصول رافد — عند النشر فقط
+                <input id="accessTokenInput" type="password" dir="ltr" autocomplete="off" placeholder="اختياري في جهازك المحلي" />
+              </label>
+            </div>
+            <div class="action-row"><button class="button ghost" id="clearSessionTokenBtn" type="button">نسيان رمز الجلسة</button></div>
+          </article>
+          <article class="panel architecture-panel">
+            <div><span class="architecture-step">المتصفح</span><small>قراءة الملفات والتنقيح محليًا</small></div><i>←</i><div><span class="architecture-step">خادم رافد</span><small>المفتاح في الذاكرة وسجلات بلا محتوى</small></div><i>←</i><div><span class="architecture-step">النموذج</span><small>ZDR للمسار السحابي الصارم، أو معالجة محلية</small></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <div id="privacyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <div><span class="eyebrow">بوابة الخصوصية</span><h2 id="privacyModalTitle">راجع ما سيغادر جهازك</h2></div>
+          <button class="icon-button" id="closePrivacyModalBtn" type="button" aria-label="إغلاق">×</button>
+        </div>
+        <div class="privacy-grid">
+          <label>تصنيف المحتوى
+            <select id="privacyClassification">
+              <option value="internal" selected>داخلي — موصى به للتجربة</option>
+              <option value="public">عام</option>
+              <option value="confidential">سري</option>
+              <option value="restricted">مقيّد — يمنع الإرسال</option>
+            </select>
+          </label>
+          <label>مصطلحات إضافية للتنقيح
+            <input id="customRedactionTerms" placeholder="اسم الباحث، اسم الاختراع... افصل بفاصلة" />
+          </label>
+        </div>
+        <div id="privacyPolicyNote" class="policy-note"></div>
+        <div id="redactionCounts" class="redaction-counts"></div>
+        <label class="preview-label">النسخة المنقحة التي ستُرسل
+          <textarea id="redactedPreview" rows="13" readonly dir="auto"></textarea>
+        </label>
+        <label class="confirm-box">
+          <input id="privacyConfirm" type="checkbox" />
+          <span><b>راجعت النسخة أعلاه وأوافق على معالجتها عن بُعد لهذا الطلب فقط.</b><small>لا يعني ذلك أن رافد يحفظ المصدر في مساحة العمل أو السجلات.</small></span>
+        </label>
+        <div class="modal-actions">
+          <button class="button ghost" id="cancelPrivacyBtn" type="button">إلغاء</button>
+          <button class="button primary" id="confirmPrivacyBtn" type="button" disabled>تأكيد ومتابعة</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="busyOverlay" class="busy-overlay" hidden aria-live="assertive" aria-busy="true">
+      <div class="busy-card"><div class="spinner"></div><h2 id="busyTitle">يعمل رافد...</h2><p id="busyMessage">يربط الشروط بالأدلة دون افتراضات.</p><div class="busy-track"><i id="busyBar"></i></div></div>
+    </div>
+
+    <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <input id="workspaceImportInput" type="file" accept=".json,application/json" hidden />
+  </body>
+</html>

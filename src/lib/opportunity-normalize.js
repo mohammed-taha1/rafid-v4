@@ -1,0 +1,107 @@
+"use strict";
+
+const crypto = require("node:crypto");
+
+function arr(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function clamp(value, min = 0, max = 100) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
+function stableId(prefix, ...parts) {
+  const source = parts.map((part) => String(part || "").trim()).join("|");
+  return `${prefix}-${crypto.createHash("sha256").update(source || crypto.randomUUID()).digest("hex").slice(0, 12)}`;
+}
+
+function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
+  const item = structuredClone(opportunity || {});
+  item.identity ||= {};
+  item.identity.title = metadata.title || item.identity.title || "فرصة غير مسماة";
+  item.identity.funder = metadata.funder || item.identity.funder || null;
+  item.identity.official_source_url =
+    metadata.official_source_url || item.identity.official_source_url || null;
+  item.identity.deadline = metadata.deadline || item.identity.deadline || null;
+  item.identity.opportunity_id =
+    item.identity.opportunity_id ||
+    stableId(
+      "opp",
+      item.identity.title,
+      item.identity.funder,
+      item.identity.deadline,
+      item.identity.official_source_url,
+    );
+
+  const seenIds = new Set();
+  item.requirements = arr(item.requirements).map((requirement, index) => {
+    const normalized = { ...requirement };
+    let id = String(normalized.requirement_id || "").trim();
+    if (!id || seenIds.has(id)) {
+      id = stableId(
+        "req",
+        item.identity.opportunity_id,
+        normalized.title,
+        normalized.source_quote,
+        index,
+      );
+    }
+    seenIds.add(id);
+    normalized.requirement_id = id;
+    normalized.evidence_required = arr(normalized.evidence_required);
+    return normalized;
+  });
+
+  const seenDocs = new Set();
+  item.submission_documents = arr(item.submission_documents).map((document, index) => {
+    const normalized = { ...document };
+    let id = String(normalized.document_id || "").trim();
+    if (!id || seenDocs.has(id)) {
+      id = stableId("doc", item.identity.opportunity_id, normalized.name, index);
+    }
+    seenDocs.add(id);
+    normalized.document_id = id;
+    return normalized;
+  });
+
+  item.evaluation_criteria = arr(item.evaluation_criteria);
+  item.contradictions = arr(item.contradictions);
+  item.missing_information = arr(item.missing_information);
+  item.source_summary ||= {};
+  item.source_summary.source_name =
+    metadata.source_name || item.source_summary.source_name || "نص الفرصة المرفق";
+  item.source_summary.sections_reviewed = arr(item.source_summary.sections_reviewed);
+  item.source_summary.extraction_confidence = clamp(
+    item.source_summary.extraction_confidence,
+  );
+
+  return item;
+}
+
+function validateOpportunityData(opportunity) {
+  const errors = [];
+  const warnings = [];
+  if (!opportunity?.identity?.title) errors.push("اسم الفرصة غير موجود.");
+  if (!arr(opportunity?.requirements).length)
+    errors.push("لم يتم استخراج أي شرط من مصدر الفرصة.");
+  if (!arr(opportunity?.requirements).some((item) => item.gate_type === "بوابة صارمة"))
+    warnings.push("لم يتم تمييز أي بوابة أهلية صارمة؛ راجع المصدر يدويًا.");
+  if (!opportunity?.identity?.deadline)
+    warnings.push("موعد الإغلاق غير معروف.");
+  if (!opportunity?.identity?.official_source_url)
+    warnings.push("الرابط الرسمي غير مثبت.");
+  if (arr(opportunity?.contradictions).length)
+    warnings.push("يتضمن المصدر تعارضات تحتاج حسمًا من الجهة الممولة.");
+
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+module.exports = {
+  arr,
+  clamp,
+  stableId,
+  normalizeOpportunityData,
+  validateOpportunityData,
+};

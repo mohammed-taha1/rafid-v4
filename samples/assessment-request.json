@@ -1,0 +1,69 @@
+{
+  "opportunity": {
+    "identity": {
+      "opportunity_id": "opp-demo-001",
+      "title": "منحة المياه والطاقة التجريبية",
+      "funder": "جهة تمويل افتراضية",
+      "official_source_url": "https://example.org/call",
+      "deadline": "2026-09-15"
+    },
+    "requirements": [
+      {
+        "requirement_id": "req-university",
+        "category": "أهلية مقدم الطلب",
+        "title": "مقدم الطلب جامعة سعودية",
+        "description": "يقتصر التقديم على الجامعات السعودية.",
+        "requirement_type": "إلزامي",
+        "gate_type": "بوابة صارمة",
+        "evidence_required": [
+          "خطاب اعتماد الجامعة"
+        ],
+        "source_quote": "يقتصر مقدم الطلب الرئيس على جامعة سعودية",
+        "source_reference": "قسم الأهلية"
+      }
+    ],
+    "submission_documents": [],
+    "evaluation_criteria": [],
+    "contradictions": [],
+    "missing_information": [],
+    "source_summary": {
+      "source_name": "دليل افتراضي",
+      "sections_reviewed": [
+        "الأهلية"
+      ],
+      "information_completeness": "متوسطة",
+      "extraction_confidence": 90,
+      "notes": "للاختبار فقط"
+    }
+  },
+  "project_data": {
+    "project_identity": {
+      "project_title": "نظام ري ذكي تجريبي",
+      "university": "جامعة افتراضية",
+      "project_owner": {
+        "name": null,
+        "email": null,
+        "phone": null
+      }
+    },
+    "project_stage": {
+      "current_stage": "نموذج أولي"
+    },
+    "problem": {
+      "problem_statement": "هدر مياه الري في المزارع الصغيرة."
+    },
+    "solution": {
+      "solution_summary": "حساسات ونموذج تنبؤ يضبطان كميات الري."
+    }
+  },
+  "context": {
+    "assessment_date": "2026-07-15",
+    "reviewer_role": "مكتب البحث والابتكار"
+  },
+  "privacy": {
+    "classification": "internal",
+    "remote_processing_confirmed": true,
+    "redaction_preview_confirmed": true,
+    "redactions_applied": []
+  }
+}

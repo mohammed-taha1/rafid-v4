@@ -1,0 +1,52 @@
+{
+  "name": "Rafid V3 secure extraction endpoint",
+  "method": "POST",
+  "content_type": "application/json",
+  "request_example": {
+    "schema_version": "rafid-project-data-v1",
+    "metadata": {
+      "title": "اختياري",
+      "type": "ابتكار",
+      "university": "اختياري",
+      "owner": "اختياري"
+    },
+    "files": [
+      {
+        "name": "project.pdf",
+        "type": "application/pdf",
+        "size": 123456
+      }
+    ],
+    "raw_text": "النص المستخرج من الملفات"
+  },
+  "response_requirement": {
+    "description": "أعد كائن مشروع رافد مباشرة أو داخل project_data.",
+    "accepted_shapes": [
+      {
+        "project_data": {
+          "project_identity": {
+            "project_title": "..."
+          }
+        }
+      },
+      {
+        "project_identity": {
+          "project_title": "..."
+        }
+      }
+    ],
+    "required_fields": [
+      "project_identity.project_title",
+      "problem.problem_statement",
+      "solution.solution_summary",
+      "missing_information",
+      "source_summary"
+    ]
+  },
+  "security_notes": [
+    "لا تضع مفتاح مزود الذكاء الاصطناعي داخل ملف HTML أو المتصفح.",
+    "احفظ المفتاح في متغيرات بيئة الخادم.",
+    "طبّق حدًا لحجم النص والملفات، والتحقق من الأنواع، وسجل أخطاء لا يحتوي بيانات حساسة.",
+    "أعد JSON فقط وتحقق من مطابقته للمخطط قبل إرساله إلى الواجهة."
+  ]
+}

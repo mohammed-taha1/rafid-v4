@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "title": "منحة تجريبية",
+    "funder": "جهة تمويل افتراضية",
+    "official_source_url": "https://example.org/call",
+    "deadline": "2026-09-15",
+    "source_name": "official-call.txt"
+  },
+  "source_text": "هذه فرصة افتراضية للاختبار فقط. يقتصر مقدم الطلب الرئيس على جامعة سعودية. يجب أن يقع المشروع في مجال المياه أو الطاقة، وأن يرفق خطاب شريك تطبيق موقعًا، وميزانية تفصيلية. آخر موعد للتقديم 15 سبتمبر 2026. لا يجوز استخدام هذا النص كفرصة حقيقية.",
+  "privacy": {
+    "classification": "public",
+    "remote_processing_confirmed": true,
+    "redaction_preview_confirmed": true,
+    "redactions_applied": []
+  }
+}

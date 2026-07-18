@@ -1,0 +1,2 @@
+project_id,project_title,received_at,review_started_at,first_decision_at,eligibility_status,blocking_gates,critical_gaps_initial,critical_gaps_closed,second_reviewer_agreement,institutional_decision,submitted_at,official_deadline,submitted_on_time,notes
+P-001,اسم المشروع,2026-07-15T08:00:00Z,2026-07-15T09:00:00Z,2026-07-15T09:45:00Z,غير محسوم,1,2,0,لم يفحص,إعادة استكمال,,2026-09-15,false,صف تجريبي يحذف قبل الاستخدام
