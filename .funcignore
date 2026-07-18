@@ -1,0 +1,13 @@
+.git*
+.vscode
+local.settings.json
+.env
+README.md
+scripts
+frontend
+docs
+samples
+tests.js
+sample-request.json
+*.zip
+node_modules/.cache
