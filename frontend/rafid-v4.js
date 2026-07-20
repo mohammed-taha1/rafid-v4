@@ -133,40 +133,39 @@ function connectionConfig() {
   return { endpoint, token };
 }
 
-async function apiRequest(path, body = null) {
-  const { endpoint, token } = connectionConfig();
-  const headers = { Accept: "application/json" };
-  if (token) headers["x-rafid-access-token"] = token;
-  if (runtimeConfig.auth?.required) {
-    if (!supabaseClient) throw new Error("خدمة تسجيل الدخول غير جاهزة.");
-    const { data } = await supabaseClient.auth.getSession();
-    authSession = data?.session || null;
-    if (!authSession?.access_token) {
-      showAuthGate("انتهت الجلسة. سجّل الدخول للمتابعة.", true);
-      throw new Error("سجّل الدخول للمتابعة.");
-    }
-    headers.Authorization = `Bearer ${authSession.access_token}`;
+async function init() {
+  $("#endpointInput").value = state.endpoint;
+  $("#accessTokenInput").value = state.accessToken;
+  $("#workspaceClassificationInput").value =
+    state.workspaceClassification;
+
+  bindEvents();
+  renderProviderPolicyChoice();
+  renderAll();
+
+  // يجب تهيئة Supabase أولًا حتى يقرأ جلسة OAuth من الرابط
+  // قبل أن يغيّر رافد location.hash.
+  await loadRuntimeConfig();
+  await initializeAuthentication();
+
+  const requestedView = location.hash.slice(1);
+  const validViews = [
+    "opportunity",
+    "projects",
+    "portfolio",
+    "review",
+    "settings",
+  ];
+
+  showView(
+    validViews.includes(requestedView)
+      ? requestedView
+      : "opportunity",
+  );
+
+  if (!runtimeConfig.auth?.required && !authSession) {
+    await testConnection(true);
   }
-  if (body) headers["Content-Type"] = "application/json";
-  let response;
-  try {
-    response = await fetch(`${endpoint}/${path}`, {
-      method: body ? "POST" : "GET",
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    throw new Error("تعذر الوصول إلى خادم رافد. تحقق من العنوان وCORS والاتصال بالإنترنت.");
-  }
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || payload.ok === false) {
-    const error = new Error(payload.error || `فشل الطلب برمز ${response.status}.`);
-    error.code = payload.code;
-    error.status = response.status;
-    error.requestId = payload.request_id;
-    throw error;
-  }
-  return payload;
 }
 
 function workspaceSnapshot() {
