@@ -133,39 +133,40 @@ function connectionConfig() {
   return { endpoint, token };
 }
 
-async function init() {
-  $("#endpointInput").value = state.endpoint;
-  $("#accessTokenInput").value = state.accessToken;
-  $("#workspaceClassificationInput").value =
-    state.workspaceClassification;
-
-  bindEvents();
-  renderProviderPolicyChoice();
-  renderAll();
-
-  // يجب تهيئة Supabase أولًا حتى يقرأ جلسة OAuth من الرابط
-  // قبل أن يغيّر رافد location.hash.
-  await loadRuntimeConfig();
-  await initializeAuthentication();
-
-  const requestedView = location.hash.slice(1);
-  const validViews = [
-    "opportunity",
-    "projects",
-    "portfolio",
-    "review",
-    "settings",
-  ];
-
-  showView(
-    validViews.includes(requestedView)
-      ? requestedView
-      : "opportunity",
-  );
-
-  if (!runtimeConfig.auth?.required && !authSession) {
-    await testConnection(true);
+async function apiRequest(path, body = null) {
+  const { endpoint, token } = connectionConfig();
+  const headers = { Accept: "application/json" };
+  if (token) headers["x-rafid-access-token"] = token;
+  if (runtimeConfig.auth?.required) {
+    if (!supabaseClient) throw new Error("خدمة تسجيل الدخول غير جاهزة.");
+    const { data } = await supabaseClient.auth.getSession();
+    authSession = data?.session || null;
+    if (!authSession?.access_token) {
+      showAuthGate("انتهت الجلسة. سجّل الدخول للمتابعة.", true);
+      throw new Error("سجّل الدخول للمتابعة.");
+    }
+    headers.Authorization = `Bearer ${authSession.access_token}`;
   }
+  if (body) headers["Content-Type"] = "application/json";
+  let response;
+  try {
+    response = await fetch(`${endpoint}/${path}`, {
+      method: body ? "POST" : "GET",
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new Error("تعذر الوصول إلى خادم رافد. تحقق من العنوان وCORS والاتصال بالإنترنت.");
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok === false) {
+    const error = new Error(payload.error || `فشل الطلب برمز ${response.status}.`);
+    error.code = payload.code;
+    error.status = response.status;
+    error.requestId = payload.request_id;
+    throw error;
+  }
+  return payload;
 }
 
 function workspaceSnapshot() {
@@ -434,6 +435,29 @@ async function loadRuntimeConfig() {
   applyRuntimeUi();
 }
 
+function readAuthCallback() {
+  const search = new URLSearchParams(location.search);
+  const hash = new URLSearchParams(location.hash.startsWith("#") ? location.hash.slice(1) : location.hash);
+  return {
+    code: search.get("code") || "",
+    accessToken: hash.get("access_token") || "",
+    refreshToken: hash.get("refresh_token") || "",
+    error:
+      search.get("error_description") ||
+      hash.get("error_description") ||
+      search.get("error") ||
+      hash.get("error") ||
+      "",
+  };
+}
+
+function clearAuthCallbackFromUrl() {
+  const url = new URL(location.href);
+  ["code", "error", "error_code", "error_description"].forEach((key) => url.searchParams.delete(key));
+  url.hash = "";
+  history.replaceState(null, "", `${url.pathname}${url.search}`);
+}
+
 async function initializeAuthentication() {
   if (!runtimeConfig.auth?.enabled) {
     if (runtimeConfig.auth?.required) {
@@ -447,6 +471,9 @@ async function initializeAuthentication() {
     showAuthGate("تعذر تحميل مكوّن تسجيل الدخول المحلي.", true);
     return;
   }
+
+  // نستخدم PKCE للعمليات الجديدة، ونعالج أيضًا روابط implicit القديمة يدويًا.
+  // detectSessionInUrl معطّل هنا حتى لا نعتمد على توقيت التهيئة التلقائية قبل تغيير hash.
   supabaseClient = globalThis.rafidSupabase.createClient(
     runtimeConfig.auth.supabase_url,
     runtimeConfig.auth.publishable_key,
@@ -454,27 +481,66 @@ async function initializeAuthentication() {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: "implicit",
+        detectSessionInUrl: false,
+        flowType: "pkce",
       },
     },
   );
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
-    window.setTimeout(() => handleAuthSession(session), 0);
-  });
-  const { data, error } = await supabaseClient.auth.getSession();
-  if (error) {
+
+  const callback = readAuthCallback();
+  if (callback.error) {
+    clearAuthCallbackFromUrl();
+    showAuthGate(`رفض مزود الدخول العملية: ${callback.error}`, true);
+    return;
+  }
+
+  let callbackSession = null;
+  if (callback.code) {
+    const { data, error } = await supabaseClient.auth.exchangeCodeForSession(callback.code);
+    if (error) {
+      clearAuthCallbackFromUrl();
+      showAuthGate(error.message || "تعذر تحويل رمز الدخول إلى جلسة.", true);
+      return;
+    }
+    callbackSession = data?.session || null;
+  } else if (callback.accessToken && callback.refreshToken) {
+    const { data, error } = await supabaseClient.auth.setSession({
+      access_token: callback.accessToken,
+      refresh_token: callback.refreshToken,
+    });
+    if (error) {
+      clearAuthCallbackFromUrl();
+      showAuthGate(error.message || "تعذر حفظ جلسة الدخول في المتصفح.", true);
+      return;
+    }
+    callbackSession = data?.session || null;
+  }
+
+  const sessionResult = callbackSession
+    ? { data: { session: callbackSession }, error: null }
+    : await supabaseClient.auth.getSession();
+
+  if (sessionResult.error) {
     showAuthGate("تعذر استعادة جلسة الدخول. حاول تسجيل الدخول من جديد.", true);
     return;
   }
-  await handleAuthSession(data?.session || null);
+
+  if (callback.code || callback.accessToken) clearAuthCallbackFromUrl();
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    window.setTimeout(() => handleAuthSession(session), 0);
+  });
+  await handleAuthSession(sessionResult.data?.session || null);
 }
 
 async function signInWithProvider(provider) {
   if (!supabaseClient) return showAuthGate("خدمة تسجيل الدخول غير جاهزة.", true);
   $("#authMessage").textContent = "ينقلك رافد إلى مزود الهوية…";
   $("#authMessage").classList.remove("error");
-  const options = { redirectTo: `${location.origin}${location.pathname}` };
+  const redirectUrl = new URL(location.pathname || "/", location.origin);
+  redirectUrl.search = "";
+  redirectUrl.hash = "";
+  const options = { redirectTo: redirectUrl.href };
   if (provider === "azure") options.scopes = "email";
   const { error } = await supabaseClient.auth.signInWithOAuth({ provider, options });
   if (error) showAuthGate(error.message || "تعذر بدء تسجيل الدخول.", true);
@@ -1737,10 +1803,17 @@ async function init() {
   bindEvents();
   renderProviderPolicyChoice();
   renderAll();
-  const requestedView = location.hash.slice(1);
-  showView(["opportunity", "projects", "portfolio", "review", "settings"].includes(requestedView) ? requestedView : "opportunity");
+
+  const hashValue = location.hash.slice(1);
+  const requestedView = ["opportunity", "projects", "portfolio", "review", "settings"].includes(hashValue)
+    ? hashValue
+    : "opportunity";
+
+  // لا تغيّر query/hash قبل أن ينتهي Supabase من معالجة رجوع OAuth.
   await loadRuntimeConfig();
   await initializeAuthentication();
+  showView(requestedView);
+
   if (!runtimeConfig.auth?.required && !authSession) await testConnection(true);
 }
 
