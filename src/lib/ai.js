@@ -233,6 +233,35 @@ function getClient() {
   return { client: cachedClient, config };
 }
 
+function structuredOutputErrorText(error) {
+  const parts = [
+    error?.message,
+    error?.code,
+    error?.type,
+    error?.error ? JSON.stringify(error.error) : "",
+    error?.response?.data ? JSON.stringify(error.response.data) : "",
+  ];
+  return parts.filter(Boolean).join(" ");
+}
+
+function isStructuredOutputSchemaError(error) {
+  const status = Number(error?.status || error?.statusCode || 0);
+  if (status !== 400) return false;
+  return /failed_generation|does not match the expected schema|does not validate|json.?schema|response_format|schema validation/i.test(
+    structuredOutputErrorText(error),
+  );
+}
+
+function friendlyStructuredOutputError(error) {
+  const wrapped = new Error(
+    "تعذر تنظيم نتيجة الذكاء الاصطناعي وفق بنية رافد بعد محاولتين. أعد المحاولة مرة أخرى، وإن تكرر الخطأ استخدم مصدرًا أقصر أو استورد JSON منظمًا.",
+  );
+  wrapped.statusCode = 422;
+  wrapped.code = "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED";
+  wrapped.cause = error;
+  return wrapped;
+}
+
 function smartTruncate(text, maxChars) {
   const value = String(text || "").trim();
   if (value.length <= maxChars) return { text: value, truncated: false };
@@ -388,7 +417,8 @@ async function runStructured({
     reasoning_effort: ["none", "low", "medium", "high"].includes(effectiveReasoning)
       ? effectiveReasoning
       : "high",
-    temperature: config.provider === "groq" ? 0.2 : 0,
+    // درجة حرارة صفر تقلل اختلاف أسماء enum وتزيد ثبات JSON المنظم.
+    temperature: 0,
   };
   if (config.provider === "groq") {
     chatRequest.reasoning_format = "hidden";
@@ -396,20 +426,49 @@ async function runStructured({
   } else {
     chatRequest.max_tokens = effectiveMaxOutputTokens;
   }
-  const response =
-    config.apiMode === "chat_completions"
-      ? await client.chat.completions.create(chatRequest)
-      : await client.responses.create({
-          model: config.model,
-          store: dataPolicy.store,
-          input: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          text: { format: schema },
-          reasoning: { effort: effectiveReasoning },
-          max_output_tokens: effectiveMaxOutputTokens,
-        });
+  let response;
+  if (config.apiMode === "chat_completions") {
+    try {
+      response = await client.chat.completions.create(chatRequest);
+    } catch (error) {
+      if (config.provider !== "groq" || !isStructuredOutputSchemaError(error)) throw error;
+
+      // Groq قد يعيد 400 إذا أنشأ النموذج قيمة لا تطابق enum حرفيًا.
+      // نعيد المحاولة مرة واحدة بتعليمات تصحيح صريحة بدل إظهار الخطأ للمستخدم مباشرة.
+      const retryRequest = {
+        ...chatRequest,
+        messages: [
+          ...chatRequest.messages,
+          {
+            role: "user",
+            content:
+              "هذه إعادة محاولة بعد فشل التحقق من JSON Schema. راجع كل حقل enum واستخدم فقط القيم الحرفية الموجودة في المخطط. لا تنشئ تسميات بديلة، ولا تضف أي نص خارج JSON.",
+          },
+        ],
+        temperature: 0,
+      };
+      try {
+        response = await client.chat.completions.create(retryRequest);
+      } catch (retryError) {
+        if (isStructuredOutputSchemaError(retryError)) {
+          throw friendlyStructuredOutputError(retryError);
+        }
+        throw retryError;
+      }
+    }
+  } else {
+    response = await client.responses.create({
+      model: config.model,
+      store: dataPolicy.store,
+      input: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      text: { format: schema },
+      reasoning: { effort: effectiveReasoning },
+      max_output_tokens: effectiveMaxOutputTokens,
+    });
+  }
 
   const outputText =
     config.apiMode === "chat_completions"
@@ -485,5 +544,6 @@ module.exports = {
   smartTruncate,
   dataPolicyFor,
   assertDataPolicy,
+  isStructuredOutputSchemaError,
   resetAIClient,
 };
