@@ -752,50 +752,13 @@ function confirmPrivacyGate() {
   });
 }
 
-async function readPdf(file, progress) {
-  try {
-    window.pdfjsLib ||= await import("./vendor/pdf.min.mjs");
-  } catch {
-    throw new Error("قارئ PDF المحلي لم يُحمّل. شغّل رافد عبر npm.cmd run rafid أو استخدم TXT.");
-  }
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("vendor/pdf.worker.min.mjs", location.href).href;
-  const pdf = await window.pdfjsLib.getDocument({
-    data: await file.arrayBuffer(),
-    isEvalSupported: false,
-  }).promise;
-  const pages = [];
-  for (let index = 1; index <= pdf.numPages; index += 1) {
-    const page = await pdf.getPage(index);
-    const content = await page.getTextContent();
-    pages.push(content.items.map((item) => item.str).join(" "));
-    progress?.(`قراءة ${file.name}: صفحة ${index} من ${pdf.numPages}`);
-  }
-  return pages.join("\n\n");
-}
-
-async function readDocx(file) {
-  if (!window.mammoth) throw new Error("قارئ Word المحلي لم يُحمّل. استخدم TXT أو الصق النص.");
-  const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-  return result.value || "";
-}
-
-function htmlToText(value) {
-  const documentValue = new DOMParser().parseFromString(value, "text/html");
-  documentValue.querySelectorAll("script,style,noscript").forEach((item) => item.remove());
-  return documentValue.body?.innerText || "";
-}
-
 async function readOneFile(file, progress) {
-  const configuredLimit = Number(runtimeConfig.limits?.max_file_size_mb || 20);
-  const maxFileSizeMb = Number.isFinite(configuredLimit) ? configuredLimit : 20;
-  if (file.size > maxFileSizeMb * 1024 * 1024) {
-    throw new Error(`الملف ${file.name} أكبر من ${maxFileSizeMb} ميغابايت.`);
-  }
-  const extension = (file.name.split(".").pop() || "").toLowerCase();
-  if (extension === "pdf") return readPdf(file, progress);
-  if (extension === "docx") return readDocx(file);
-  const text = await file.text();
-  return ["html", "htm"].includes(extension) ? htmlToText(text) : text;
+  if (!window.RafidIngest?.read) throw new Error("طبقة إدخال الملفات غير جاهزة.");
+  const document = await window.RafidIngest.read(file, {
+    maxFileSizeMb: runtimeConfig.limits?.max_file_size_mb || 20,
+    progress,
+  });
+  return document.fullText;
 }
 
 async function readFiles(files, progress) {

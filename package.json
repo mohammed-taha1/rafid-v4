@@ -15,7 +15,7 @@
     "check": "node scripts/check-js.js",
     "lint": "eslint frontend/*.js src scripts tests.js",
     "typecheck": "tsc --project jsconfig.json",
-    "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/env-test.js && node scripts/auth-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/server-smoke-test.js"
+    "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/env-test.js && node scripts/auth-test.js && node scripts/ingest-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/server-smoke-test.js"
   },
   "engines": {
     "node": ">=20.19 <23"
@@ -31,6 +31,7 @@
     "esbuild": "^0.28.1",
     "eslint": "10.8.0",
     "globals": "16.5.0",
+    "jszip": "^3.10.1",
     "mammoth": "1.12.0",
     "pdfjs-dist": "5.4.624",
     "typescript": "5.9.3"

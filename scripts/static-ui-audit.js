@@ -9,6 +9,7 @@ const frontend = path.join(root, "frontend");
 const html = fs.readFileSync(path.join(frontend, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(frontend, "rafid-v4.js"), "utf8");
 const config = fs.readFileSync(path.join(frontend, "rafid-config.js"), "utf8");
+const ingest = fs.readFileSync(path.join(frontend, "rafid-ingest.js"), "utf8");
 const legacy = fs.readFileSync(path.join(frontend, "rafid_v3_1_ai_connected.html"), "utf8");
 const httpHelpers = fs.readFileSync(path.join(root, "src", "lib", "http.js"), "utf8");
 
@@ -34,7 +35,7 @@ for (const match of html.matchAll(/<(?:script|link)[^>]+(?:src|href)="([^"]+)"/g
 }
 for (const reference of ["vendor/pdf.min.mjs", "vendor/pdf.worker.min.mjs"]) {
   assert.ok(fs.existsSync(path.join(frontend, reference)), `Missing local PDF asset: ${reference}`);
-  assert.match(app, new RegExp(reference.replaceAll(".", "\\.")), `PDF asset is not referenced: ${reference}`);
+  assert.match(ingest, new RegExp(reference.replaceAll(".", "\\.")), `PDF asset is not referenced by secure ingestion: ${reference}`);
 }
 
 assert.doesNotMatch(html + app, /sk-[A-Za-z0-9_-]{20,}/, "Potential API secret embedded in frontend.");
@@ -51,6 +52,8 @@ assert.match(config, /productName:\s*"رافد"/, "Product name must be centrali
 assert.match(config, /mvpMode:\s*true/, "The focused MVP mode must be enabled.");
 assert.doesNotMatch(html, /id="projectOwnerInput"/, "Personal researcher input must not be present in the MVP flow.");
 assert.match(html, /id="oppFileInput"[^>]+accept="\.pdf,\.docx,\.txt"/, "MVP intake must only advertise supported document formats.");
+assert.match(html, /rafid-ingest\.js/, "Secure ingestion module must load before the application.");
+assert.match(ingest, /INGEST_PDF_NO_TEXT/, "The UI must clearly reject image-only PDFs without claiming OCR.");
 assert.match(html, /data-view="settings"[^>]*hidden/, "Technical settings must be hidden from the MVP flow.");
 assert.match(app, /persistSession:\s*true/, "Authentication sessions must persist.");
 assert.match(app, /autoRefreshToken:\s*true/, "Authentication sessions must refresh automatically.");
