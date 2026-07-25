@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "include": [
+    "frontend/rafid-v4.js",
+    "scripts/**/*.js",
+    "src/**/*.js",
+    "tests.js"
+  ],
+  "exclude": [
+    "frontend/vendor/**",
+    "frontend/rafid_v3_1_ai_connected.html",
+    "node_modules/**"
+  ]
+}

@@ -487,7 +487,9 @@ async function runStructured({
   try {
     parsed = JSON.parse(outputText);
   } catch (error) {
-    throw new Error(`أعاد النموذج مخرجات غير صالحة كـ JSON: ${error.message}`);
+    throw new Error(`أعاد النموذج مخرجات غير صالحة كـ JSON: ${error.message}`, {
+      cause: error,
+    });
   }
 
   return {

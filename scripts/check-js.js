@@ -2,7 +2,7 @@
 
 const { execFileSync } = require("node:child_process");
 const { readdirSync, statSync } = require("node:fs");
-const { join, relative } = require("node:path");
+const { join } = require("node:path");
 
 const root = join(__dirname, "..");
 const targets = [

@@ -25,7 +25,7 @@ function supabaseConfig() {
   const publishableKey = String(
     process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "",
   ).trim();
-  let validUrl = false;
+  let validUrl;
   try {
     const parsed = new URL(url);
     validUrl = parsed.protocol === "https:";
