@@ -69,10 +69,10 @@ function publicRuntimeConfig() {
       persist_session: supabase.configured,
     },
     workspace_sync: {
-      enabled: supabase.configured,
-      table: supabase.configured ? "rafid_workspaces" : null,
+      enabled: false,
+      table: null,
       raw_content_persisted: false,
-      allow_confidential: envFlag("RAFID_ALLOW_CONFIDENTIAL_CLOUD_PERSISTENCE", false),
+      allow_confidential: false,
     },
   };
 }

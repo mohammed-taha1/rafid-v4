@@ -41,7 +41,7 @@ async function main() {
     const index = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(index.status, 200);
     assert.match(index.headers.get("content-type") || "", /text\/html/);
-    assert.match(await index.text(), /جاهزية الفرصة التمويلية/);
+    assert.match(await index.text(), /تحليل الجاهزية/);
     assert.match(index.headers.get("content-security-policy") || "", /default-src 'self'/);
 
     const publicConfig = await fetch(`http://127.0.0.1:${port}/api/rafid/public/config`);

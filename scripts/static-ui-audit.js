@@ -8,6 +8,7 @@ const root = path.join(__dirname, "..");
 const frontend = path.join(root, "frontend");
 const html = fs.readFileSync(path.join(frontend, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(frontend, "rafid-v4.js"), "utf8");
+const config = fs.readFileSync(path.join(frontend, "rafid-config.js"), "utf8");
 const legacy = fs.readFileSync(path.join(frontend, "rafid_v3_1_ai_connected.html"), "utf8");
 const httpHelpers = fs.readFileSync(path.join(root, "src", "lib", "http.js"), "utf8");
 
@@ -45,12 +46,15 @@ assert.match(html, /data-auth-provider="google"/, "Google sign-in is required.")
 assert.match(html, /data-auth-provider="azure"/, "Microsoft sign-in is required.");
 assert.match(html, /id="emailAuthForm"/, "Passwordless email sign-in is required.");
 assert.match(html, /vendor\/supabase\.min\.js/, "Local Supabase client bundle is required.");
-assert.match(html, /id="serverProviderPanel"/, "Server-managed provider status is required.");
-assert.match(html, /value="groq" selected/, "Groq free ZDR path should be the default quick setup.");
-assert.match(app, /openai\/gpt-oss-120b/, "Groq GPT-OSS 120B default model is required.");
+assert.match(html, /rafid-config\.js/, "Central product configuration must load before the application.");
+assert.match(config, /productName:\s*"رافد"/, "Product name must be centralized.");
+assert.match(config, /mvpMode:\s*true/, "The focused MVP mode must be enabled.");
+assert.doesNotMatch(html, /id="projectOwnerInput"/, "Personal researcher input must not be present in the MVP flow.");
+assert.match(html, /id="oppFileInput"[^>]+accept="\.pdf,\.docx,\.txt"/, "MVP intake must only advertise supported document formats.");
+assert.match(html, /data-view="settings"[^>]*hidden/, "Technical settings must be hidden from the MVP flow.");
 assert.match(app, /persistSession:\s*true/, "Authentication sessions must persist.");
 assert.match(app, /autoRefreshToken:\s*true/, "Authentication sessions must refresh automatically.");
-assert.match(app, /rafid_workspaces/, "Per-user workspace sync is required.");
+assert.match(app, /workspace_sync/, "Workspace state remains isolated behind the database integration boundary.");
 assert.match(
   httpHelpers,
   /Access-Control-Allow-Headers[^\n]+Authorization/,

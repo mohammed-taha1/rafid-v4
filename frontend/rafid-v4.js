@@ -2,6 +2,7 @@
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const productConfig = globalThis.RafidConfig || { productName: "رافد", mvpMode: true, copy: {} };
 
 const sameOriginEndpoint =
   typeof location !== "undefined" && /^https?:\/\//i.test(String(location.origin || ""))
@@ -92,7 +93,7 @@ function toast(message, type = "info") {
   window.setTimeout(() => item.remove(), 4500);
 }
 
-function setBusy(active, title = "يعمل رافد...", message = "يربط الشروط بالأدلة دون افتراضات.", percent = 12) {
+function setBusy(active, title = productConfig.copy.busyTitle || "يحلل رافد المحتوى...", message = productConfig.copy.busyMessage || "يرتب الأدلة والتوصيات دون افتراضات.", percent = 12) {
   const overlay = $("#busyOverlay");
   overlay.hidden = !active;
   if (active) {
@@ -400,6 +401,13 @@ async function handleAuthSession(session) {
 }
 
 function applyRuntimeUi() {
+  if (productConfig.mvpMode) {
+    ["#localProviderPanel", "#serverProviderPanel", "#advancedConnectionPanel"].forEach((selector) => {
+      const panel = $(selector);
+      if (panel) panel.hidden = true;
+    });
+    return;
+  }
   const serverManaged = runtimeConfig.provider_configuration_mode === "server";
   $("#serverProviderPanel").classList.toggle("hidden", !serverManaged);
   $("#localProviderPanel").classList.toggle("hidden", serverManaged);
@@ -679,7 +687,7 @@ function renderPrivacyPreview() {
   pendingPrivacyRequest.preview = result;
   $("#privacyPolicyNote").textContent = privacyDescriptions[classification];
   $("#privacyPolicyNote").classList.toggle("blocked", classification === "restricted");
-  $("#redactedPreview").value = JSON.stringify(result.payload, null, 2);
+  $("#redactedPreview").value = privacyPreviewText(result.payload);
   const countEntries = Object.entries(result.counts);
   $("#redactionCounts").innerHTML = countEntries.length
     ? countEntries.map(([key, count]) => `<span>${esc(redactionLabels[key] || key)}: ${count}</span>`).join("")
@@ -687,6 +695,19 @@ function renderPrivacyPreview() {
   $("#privacyConfirm").checked = false;
   $("#confirmPrivacyBtn").disabled = true;
   $("#confirmPrivacyBtn").textContent = classification === "restricted" ? "الإرسال محظور" : "تأكيد ومتابعة";
+}
+
+function privacyPreviewText(value, depth = 0) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map((item) => privacyPreviewText(item, depth + 1)).filter(Boolean).join("\n");
+  if (typeof value === "object") {
+    return Object.entries(value)
+      .map(([key, item]) => `${"  ".repeat(depth)}${key}: ${privacyPreviewText(item, depth + 1)}`)
+      .filter((line) => line.trim().length > 1)
+      .join("\n");
+  }
+  return "";
 }
 
 function openPrivacyGate(payload, label = "هذه العملية") {
@@ -918,7 +939,7 @@ async function extractProject() {
       metadata: {
         title: $("#projectTitleInput").value.trim() || null,
         university: $("#projectOrgInput").value.trim() || null,
-        owner: $("#projectOwnerInput").value.trim() || null,
+        owner: null,
         type: "مشروع بحثي أو ابتكاري",
       },
       files,
@@ -962,7 +983,6 @@ async function extractProject() {
 function clearProjectForm() {
   $("#projectTitleInput").value = "";
   $("#projectOrgInput").value = "";
-  $("#projectOwnerInput").value = "";
   $("#projectSourceInput").value = "";
   $("#projectFileInput").value = "";
   $("#projectFileStatus").textContent = "يمكن دمج عدة مرفقات";
@@ -1344,6 +1364,10 @@ function renderAll() {
 }
 
 function showView(name) {
+  if (productConfig.mvpMode && name !== "opportunity") {
+    toast(productConfig.copy.unsupportedLegacyView || "هذه الشاشة خارج نطاق النسخة الأولية الحالية.", "info");
+    name = "opportunity";
+  }
   $$(".view").forEach((view) => view.classList.toggle("active", view.dataset.view === name));
   $$(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.viewLink === name));
   history.replaceState(null, "", `#${name}`);
@@ -1811,7 +1835,7 @@ async function init() {
   renderAll();
 
   const hashValue = location.hash.slice(1);
-  const requestedView = ["opportunity", "projects", "portfolio", "review", "settings"].includes(hashValue)
+  const requestedView = !productConfig.mvpMode && ["opportunity", "projects", "portfolio", "review", "settings"].includes(hashValue)
     ? hashValue
     : "opportunity";
 

@@ -19,7 +19,7 @@ module.exports = [
     },
   },
   {
-    files: ["frontend/rafid-v4.js"],
+    files: ["frontend/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",

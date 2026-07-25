@@ -13,7 +13,7 @@
     "build": "npm run build:vendor",
     "build:vendor": "esbuild node_modules/@supabase/supabase-js/dist/index.mjs --bundle --format=iife --global-name=rafidSupabase --minify --target=es2022 --outfile=frontend/vendor/supabase.min.js",
     "check": "node scripts/check-js.js",
-    "lint": "eslint frontend/rafid-v4.js src scripts tests.js",
+    "lint": "eslint frontend/*.js src scripts tests.js",
     "typecheck": "tsc --project jsconfig.json",
     "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/env-test.js && node scripts/auth-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/server-smoke-test.js"
   },

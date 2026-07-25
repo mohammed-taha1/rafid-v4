@@ -58,7 +58,8 @@ async function main() {
     assert.equal(config.auth.required, true);
     assert.equal(config.auth.persist_session, true);
     assert.deepEqual(config.auth.sign_in_providers, ["google", "azure", "github", "email"]);
-    assert.equal(config.workspace_sync.enabled, true);
+    assert.equal(config.workspace_sync.enabled, false);
+    assert.equal(config.workspace_sync.raw_content_persisted, false);
     assert.equal(config.provider_configuration_mode, "server");
     assert.equal(Object.prototype.hasOwnProperty.call(config, "GROQ_API_KEY"), false);
     assert.equal(JSON.stringify(config).includes(process.env.SUPABASE_SERVICE_ROLE_KEY), false);
@@ -71,7 +72,7 @@ async function main() {
     assert.equal(limited.ok, false);
     assert.equal(limited.scope, "user");
 
-    console.log("Rafid Supabase auth, persistent-session config, and per-user limits passed.");
+    console.log("Rafid Supabase auth, non-persistent MVP workspace config, and per-user limits passed.");
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
