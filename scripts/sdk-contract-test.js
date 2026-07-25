@@ -54,7 +54,7 @@ async function testResponsesContract() {
     }));
   }, async (baseURL) => {
     process.env.AI_PROVIDER = "openai";
-    process.env.OPENAI_API_KEY = "sk-contract-test-not-real";
+    process.env.OPENAI_API_KEY = "test-openai-key-not-real";
     process.env.OPENAI_BASE_URL = baseURL;
     process.env.OPENAI_MODEL = "gpt-5.6";
     process.env.RAFID_DATA_POLICY = "standard";
@@ -128,7 +128,7 @@ async function testGroqContract() {
     }));
   }, async (baseURL) => {
     process.env.AI_PROVIDER = "groq";
-    process.env.GROQ_API_KEY = "gsk_contract_test_not_real";
+    process.env.GROQ_API_KEY = "test-groq-key-not-real";
     process.env.GROQ_BASE_URL = baseURL;
     process.env.GROQ_MODEL = "openai/gpt-oss-120b";
     process.env.GROQ_ZERO_DATA_RETENTION_CONFIRMED = "true";
@@ -149,7 +149,7 @@ async function testGroqContract() {
     assert.equal(result.dataPolicy.usage_metadata_retained, true);
   });
   assert.equal(captured.url, "/v1/chat/completions");
-  assert.equal(captured.authorization, "Bearer gsk_contract_test_not_real");
+  assert.equal(captured.authorization, "Bearer test-groq-key-not-real");
   assert.equal(captured.body.reasoning_effort, "low");
   assert.equal(captured.body.reasoning_format, "hidden");
   assert.equal(captured.body.max_completion_tokens, 1600);

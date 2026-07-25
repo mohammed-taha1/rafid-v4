@@ -26,8 +26,9 @@ async function main() {
   process.env.RAFID_DEPLOYMENT_MODE = "shared";
   process.env.RAFID_AUTH_PROVIDERS = "google,azure,github,email,unknown";
   process.env.SUPABASE_URL = `http://127.0.0.1:${address.port}`;
-  process.env.SUPABASE_PUBLISHABLE_KEY = "sb_publishable_test_key_not_secret_123456";
-  process.env.RAFID_RATE_LIMIT_REQUESTS = "2";
+  process.env.SUPABASE_ANON_KEY = "test-supabase-anon-key-not-secret-123456";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key-never-public";
+  process.env.RATE_LIMIT_REQUESTS = "2";
   process.env.RAFID_GLOBAL_DAILY_AI_LIMIT = "3";
 
   const {
@@ -60,6 +61,8 @@ async function main() {
     assert.equal(config.workspace_sync.enabled, true);
     assert.equal(config.provider_configuration_mode, "server");
     assert.equal(Object.prototype.hasOwnProperty.call(config, "GROQ_API_KEY"), false);
+    assert.equal(JSON.stringify(config).includes(process.env.SUPABASE_SERVICE_ROLE_KEY), false);
+    assert.equal(JSON.stringify(config).includes("SUPABASE_SERVICE_ROLE_KEY"), false);
 
     const request = { headers: { "x-forwarded-for": "203.0.113.7" } };
     assert.equal(checkRateLimit(request, valid).ok, true);

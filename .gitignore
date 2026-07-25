@@ -6,6 +6,8 @@ node_modules/
 .env.*
 !.env.example
 local.settings.json
+local.settings.*.json
+!local.settings.example.json
 secrets/
 *.secret
 *.secrets
@@ -13,6 +15,10 @@ secrets/
 *.key
 *.p12
 *.pfx
+*.jks
+*.keystore
+.npmrc
+.pypirc
 
 # Build, coverage, and cache output
 dist/

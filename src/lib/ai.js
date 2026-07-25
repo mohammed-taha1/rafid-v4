@@ -12,16 +12,11 @@ const {
   ASSESSMENT_SYSTEM_PROMPT,
   buildAssessmentPrompt,
 } = require("./assessment-prompt");
+const { analysisTimeoutMs, envFlag } = require("./env");
 
 let cachedClient = null;
 let cachedConfigKey = null;
 let OpenAIClient = null;
-
-function envFlag(name, fallback = false) {
-  const value = process.env[name];
-  if (value === undefined || value === null || value === "") return fallback;
-  return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
-}
 
 function dataPolicyFor(config) {
   if (config.provider === "ollama") {
@@ -224,10 +219,11 @@ function compactEvidencePayload(value) {
 
 function getClient() {
   const config = providerConfig();
-  const key = `${config.provider}|${config.baseURL}|${config.model}|${config.apiKey.slice(-6)}`;
+  const timeout = analysisTimeoutMs();
+  const key = `${config.provider}|${config.baseURL}|${config.model}|${config.apiKey.slice(-6)}|${timeout}`;
   if (!cachedClient || cachedConfigKey !== key) {
     OpenAIClient ||= require("openai");
-    cachedClient = new OpenAIClient({ apiKey: config.apiKey, baseURL: config.baseURL });
+    cachedClient = new OpenAIClient({ apiKey: config.apiKey, baseURL: config.baseURL, timeout });
     cachedConfigKey = key;
   }
   return { client: cachedClient, config };

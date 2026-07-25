@@ -11,6 +11,7 @@ const targets = [
   join(root, "scripts", "run-rafid.js"),
   join(root, "scripts", "sdk-contract-test.js"),
   join(root, "scripts", "auth-test.js"),
+  join(root, "scripts", "env-test.js"),
   join(root, "scripts", "check-js.js"),
   join(root, "tests.js"),
 ];

@@ -1,15 +1,14 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const {
+  envFlag,
+  publicEnvironment,
+  supabaseEnvironment,
+} = require("./env");
 
 const verifiedSessions = new Map();
 const allowedProviders = new Set(["google", "azure", "github", "email"]);
-
-function envFlag(name, fallback = false) {
-  const value = process.env[name];
-  if (value === undefined || value === null || value === "") return fallback;
-  return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
-}
 
 function getHeader(headers, name) {
   if (!headers) return "";
@@ -21,28 +20,11 @@ function getHeader(headers, name) {
 }
 
 function supabaseConfig() {
-  const url = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
-  const publishableKey = String(
-    process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "",
-  ).trim();
-  let validUrl;
-  try {
-    const parsed = new URL(url);
-    validUrl = parsed.protocol === "https:";
-    if (
-      envFlag("RAFID_TEST_MODE") &&
-      parsed.protocol === "http:" &&
-      ["127.0.0.1", "localhost", "::1"].includes(parsed.hostname.toLowerCase())
-    ) {
-      validUrl = true;
-    }
-  } catch {
-    validUrl = false;
-  }
+  const environment = supabaseEnvironment();
   return {
-    url,
-    publishableKey,
-    configured: Boolean(validUrl && publishableKey.length >= 20),
+    url: environment.url,
+    publishableKey: environment.anonKey,
+    configured: environment.configured,
   };
 }
 
@@ -70,6 +52,7 @@ function publicRuntimeConfig() {
   const required = authRequired();
   return {
     version: "4.3.0",
+    ...publicEnvironment(),
     deployment_mode:
       String(process.env.RAFID_DEPLOYMENT_MODE || "local").toLowerCase() === "shared"
         ? "shared"

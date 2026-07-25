@@ -27,6 +27,7 @@ let pendingPrivacyRequest = null;
 let runtimeConfig = {
   deployment_mode: "local",
   provider_configuration_mode: "local_session",
+  limits: { max_file_size_mb: 20 },
   auth: { enabled: false, required: false, sign_in_providers: [] },
   workspace_sync: { enabled: false },
 };
@@ -428,6 +429,7 @@ async function loadRuntimeConfig() {
     runtimeConfig = {
       deployment_mode: "local",
       provider_configuration_mode: "local_session",
+      limits: { max_file_size_mb: 20 },
       auth: { enabled: false, required: false, sign_in_providers: [] },
       workspace_sync: { enabled: false },
     };
@@ -763,7 +765,11 @@ function htmlToText(value) {
 }
 
 async function readOneFile(file, progress) {
-  if (file.size > 20 * 1024 * 1024) throw new Error(`الملف ${file.name} أكبر من 20 ميغابايت.`);
+  const configuredLimit = Number(runtimeConfig.limits?.max_file_size_mb || 20);
+  const maxFileSizeMb = Number.isFinite(configuredLimit) ? configuredLimit : 20;
+  if (file.size > maxFileSizeMb * 1024 * 1024) {
+    throw new Error(`الملف ${file.name} أكبر من ${maxFileSizeMb} ميغابايت.`);
+  }
   const extension = (file.name.split(".").pop() || "").toLowerCase();
   if (extension === "pdf") return readPdf(file, progress);
   if (extension === "docx") return readDocx(file);

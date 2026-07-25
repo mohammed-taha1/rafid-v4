@@ -30,6 +30,9 @@ function loadEnvironmentFile(file) {
 
 loadEnvironmentFile(path.join(root, ".env"));
 
+const { inspectEnvironment, logEnvironmentIssues } = require("../src/lib/env");
+const environmentReport = logEnvironmentIssues(inspectEnvironment());
+
 const {
   extractWithAI,
   extractOpportunityWithAI,
@@ -747,6 +750,9 @@ server.listen(port, host, () => {
     providerConfigurationMode() === "server"
       ? "The AI key is server-managed and is never sent to users or the frontend."
       : "The API key is read from memory/.env only and is never sent to the frontend.",
+  );
+  console.log(
+    `Environment readiness: public_pages=${environmentReport.publicPagesReady}, auth=${environmentReport.authReady}, analysis=${environmentReport.analysisReady}`,
   );
 });
 

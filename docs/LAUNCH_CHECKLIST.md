@@ -28,7 +28,11 @@
 ## أسرار وإعدادات الإنتاج
 
 - [ ] إلغاء وتدوير أي رمز وصول سبق كشفه خارج Git.
-- [ ] توسيع `.dockerignore` و`.funcignore` لتغطية `.env.*` ومجلدات الأسرار وملفات المفاتيح.
+- [x] فحص النسخة الحالية وتاريخ Git دون عرض القيم؛ لم يظهر سر حي عالي الثقة.
+- [x] توسيع `.dockerignore` و`.funcignore` لتغطية `.env.*` ومجلدات الأسرار وملفات المفاتيح.
+- [x] فصل قائمة الإعداد العام عن أسرار الخادم ومنع إرسال `SUPABASE_SERVICE_ROLE_KEY`.
+- [x] إضافة تحقق مبكر آمن من البيئة مع استمرار فتح الصفحات العامة عند تعطل Supabase.
+- [x] توثيق خطوات التدوير في `docs/SECRET_ROTATION.md` دون قيم حقيقية.
 - [ ] حفظ مفاتيح Groq وSupabase في مدير أسرار الاستضافة فقط.
 - [ ] ضبط `RAFID_DEPLOYMENT_MODE=shared` و`RAFID_PROVIDER_CONFIGURATION_MODE=server`.
 - [ ] تفعيل `RAFID_AUTH_REQUIRED=true`.
