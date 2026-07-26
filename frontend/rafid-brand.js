@@ -1,2 +1,3 @@
 "use strict";
-(() => { const apply = () => document.body?.innerHTML && [...document.body.querySelectorAll("*")].forEach((node) => { if (node.children.length === 0 && node.textContent?.includes("جسور")) node.textContent = node.textContent.replaceAll("جسور", "رافد"); }); window.addEventListener("DOMContentLoaded", apply); new MutationObserver(apply).observe(document.documentElement, { childList: true, subtree: true }); })();
+
+document.documentElement.dataset.product = "rafid";
