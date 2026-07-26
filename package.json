@@ -11,7 +11,7 @@
     "azure": "func start",
     "frontend": "node scripts/serve-frontend.js",
     "build": "npm run build:vendor",
-    "build:vendor": "esbuild node_modules/@supabase/supabase-js/dist/index.mjs --bundle --format=iife --global-name=rafidSupabase --minify --target=es2022 --outfile=frontend/vendor/supabase.min.js",
+    "build:vendor": "node scripts/build-vendor.js",
     "check": "node scripts/check-js.js",
     "lint": "eslint frontend/*.js src scripts tests.js",
     "typecheck": "tsc --project jsconfig.json",
