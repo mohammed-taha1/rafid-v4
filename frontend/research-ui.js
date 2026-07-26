@@ -119,6 +119,7 @@
   function results(result, meta = {}) {
     const dimensions = (result.technicalReadiness?.dimensions || []).map((dimension) => `<li><b>${esc(dimension.id)}</b><span>${esc(dimension.explanation)}</span></li>`).join("");
     const truncationNotice = meta.truncated ? `<p class="rafid-notice" role="status">تم تحليل الجزء المقبول من المستند الطويل فقط؛ أعد التحليل على ملخص مركز أو الأقسام المتبقية للحصول على تغطية أوسع.</p>` : "";
+    const suggestion = `<section class="rafid-suggestion" aria-labelledby="suggestionTitle"><h2 id="suggestionTitle">لديك اقتراح لتحسين رافد؟</h2><p>اختياري ولا يتطلب تسجيل دخول. لا تكتب معلومات حساسة أو نص البحث.</p><label for="suggestion">اقتراحك <textarea id="suggestion" maxlength="500" rows="3" placeholder="مثال: أود رؤية قسم يوضح…"></textarea></label><button id="saveSuggestion" class="rafid-secondary" type="button">حفظ الاقتراح</button><p id="suggestionStatus" role="status"></p></section>`;
     root().innerHTML = `
       <header class="rafid-header"><a class="rafid-logo" href="#"><span>ر</span><b>رافد</b></a><button id="new" class="rafid-text-button" type="button">تحليل جديد</button></header>
       <section class="rafid-report"><span class="rafid-kicker">نتيجة التحليل</span><h1>جاهزية البحث</h1><p class="report-summary">${esc(result.researchSummary || "غير موضح")}</p>${truncationNotice}
@@ -128,11 +129,19 @@
         <details><summary>النواقص والتحسينات</summary><ul>${list(result.criticalGaps)}</ul></details>
         <details><summary>خطة العمل</summary><ul>${list(result.actionPlan)}</ul></details>
         <p class="rafid-notice">${esc(result.fundingDisclaimer || "هذا التحليل إرشادي ولا يضمن قبول البحث أو الحصول على تمويل.")}</p>
-        <div class="form-actions"><button id="copy" class="rafid-secondary" type="button">نسخ الملخص</button><button id="print" class="rafid-primary" type="button">طباعة التقرير</button></div>
+        ${suggestion}<div class="form-actions"><button id="copy" class="rafid-secondary" type="button">نسخ الملخص</button><button id="print" class="rafid-primary" type="button">طباعة التقرير</button></div>
       </section>`;
     root().querySelector("#new").addEventListener("click", submitView);
     root().querySelector("#copy").addEventListener("click", () => navigator.clipboard?.writeText(result.researchSummary || ""));
     root().querySelector("#print").addEventListener("click", () => window.print());
+    root().querySelector("#saveSuggestion").addEventListener("click", () => {
+      const input = root().querySelector("#suggestion");
+      const status = root().querySelector("#suggestionStatus");
+      const value = input.value.trim();
+      if (!value) { status.textContent = "اكتب اقتراحًا قصيرًا أولًا."; return; }
+      try { localStorage.setItem("rafid:last-suggestion", value); status.textContent = "شكرًا. حُفظ اقتراحك على هذا الجهاز دون إنشاء حساب."; input.value = ""; }
+      catch { status.textContent = "تعذر حفظ الاقتراح في هذا المتصفح."; }
+    });
   }
 
   window.addEventListener("DOMContentLoaded", async () => { await loadRuntime(); app(); });
