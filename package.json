@@ -5,25 +5,35 @@
   "description": "Authenticated, privacy-first opportunity eligibility and application readiness platform for Rafid",
   "main": "src/index.js",
   "scripts": {
+    "development": "node scripts/run-rafid.js",
     "rafid": "node scripts/run-rafid.js",
     "start": "node scripts/run-rafid.js",
     "azure": "func start",
     "frontend": "node scripts/serve-frontend.js",
-    "build:vendor": "esbuild node_modules/@supabase/supabase-js/dist/index.mjs --bundle --format=iife --global-name=rafidSupabase --minify --target=es2022 --outfile=frontend/vendor/supabase.min.js",
+    "build": "npm run build:vendor",
+    "build:vendor": "node scripts/build-vendor.js",
     "check": "node scripts/check-js.js",
-    "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/auth-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/server-smoke-test.js"
+    "lint": "eslint frontend/*.js src scripts tests.js",
+    "typecheck": "tsc --project jsconfig.json",
+    "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/env-test.js && node scripts/auth-test.js && node scripts/ingest-test.js && node scripts/research-schema-test.js && node scripts/research-prompts-test.js && node scripts/research-provider-test.js && node scripts/research-pipeline-test.js && node scripts/long-document-test.js && node scripts/results-report-test.js && node scripts/mvp-final-coverage-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/server-smoke-test.js"
   },
   "engines": {
-    "node": ">=20.16 <23"
+    "node": ">=20.19 <23"
   },
   "dependencies": {
     "@azure/functions": "^4.16.2",
     "openai": "^6.48.0"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@supabase/supabase-js": "^2.110.7",
+    "@types/node": "22.20.1",
     "esbuild": "^0.28.1",
+    "eslint": "10.8.0",
+    "globals": "16.5.0",
+    "jszip": "^3.10.1",
     "mammoth": "1.12.0",
-    "pdfjs-dist": "5.4.624"
+    "pdfjs-dist": "5.4.624",
+    "typescript": "5.9.3"
   }
 }

@@ -1,5 +1,40 @@
 node_modules/
-local.settings.json
+
+# Local configuration and secrets
 .env
+.env.local
+.env.*
+!.env.example
+local.settings.json
+local.settings.*.json
+!local.settings.example.json
+secrets/
+*.secret
+*.secrets
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+.npmrc
+.pypirc
+
+# Build, coverage, and cache output
+dist/
+build/
+coverage/
+.cache/
+
+# Temporary and upload files
+.tmp/
+tmp/
+temp/
+uploads/
+*.tmp
+*.temp
+*.upload
+
+# Logs and OS metadata
 *.log
 .DS_Store

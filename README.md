@@ -1,5 +1,11 @@
 # رافد V4.3 — حسابات دائمة + حفظ تلقائي + مفتاح Groq خادمي
 
+## بداية سريعة للنسخة الأولية
+
+رافد يحلل نصًا أو PDF/DOCX/TXT ليعرض جاهزية بحثية وتمويلية استرشادية، دون تخزين افتراضي للنص أو الملف. يتطلب Node.js 22: شغّل `npm ci` ثم `npm run development`. الفحوص: `npm test` و`npm run lint` و`npm run typecheck`، والبناء: `npm run build`.
+
+متغيرات الخادم: `GROQ_API_KEY` و`GROQ_MODEL` و`MAX_FILE_SIZE_MB` و`ANALYSIS_TIMEOUT_SECONDS`، ومتغيرات Supabase فقط عند تفعيل المصادقة. لا تضع أسرارًا في الواجهة. النشر في `docs/DEPLOYMENT.md`، الخصوصية والأمان في `docs/SECRET_ROTATION.md` و`docs/SECURITY_REVIEW.md`، والتسليم والقيود في `docs/FINAL_HANDOFF.md`.
+
 هذه النسخة تطبق قرار البداية الجديد لرافد:
 
 > **فرصة تمويل حيّة واحدة + 5 إلى 10 مشاريع حقيقية + أهلية موثقة + خطة إغلاق فجوات + قرار مؤسسي قبل الموعد.**
@@ -290,14 +296,18 @@ RAFID_PROVIDER_CONFIGURATION_MODE=server
 RAFID_AUTH_REQUIRED=true
 RAFID_AUTH_PROVIDERS=google,azure,github,email
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_ANON_KEY=replace_with_supabase_anon_key
 RAFID_ALLOWED_ORIGINS=https://your-frontend.example
+APP_NAME=Rafid
+APP_URL=https://your-frontend.example
+MAX_FILE_SIZE_MB=20
+ANALYSIS_TIMEOUT_SECONDS=60
+RATE_LIMIT_REQUESTS=12
+RATE_LIMIT_WINDOW_MINUTES=10
 RAFID_MAX_TEXT_CHARS=120000
 RAFID_MAX_OPPORTUNITY_CHARS=90000
 RAFID_MAX_PROJECT_JSON_CHARS=110000
 RAFID_MAX_REQUEST_BYTES=1500000
-RAFID_RATE_LIMIT_REQUESTS=12
-RAFID_RATE_LIMIT_WINDOW_SECONDS=600
 RAFID_GLOBAL_DAILY_AI_LIMIT=240
 RAFID_ALLOW_LEGACY_REQUESTS=false
 RAFID_DATA_POLICY=strict_zdr

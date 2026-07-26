@@ -6,23 +6,31 @@
     <meta name="theme-color" content="#0b2430" />
     <meta
       name="description"
-      content="رافد — حسم أهلية المشاريع لفرصة تمويل محددة وإغلاق فجوات التقديم قبل الموعد."
+      content="رافد — تحليل منظم لجاهزية محتوى التمويل دون حفظ افتراضي للنص أو الملف."
     />
-    <title>رافد | جاهزية الفرصة التمويلية</title>
+    <title>رافد | تحليل الجاهزية</title>
     <link rel="stylesheet" href="rafid-v4.css" />
     <script defer src="vendor/mammoth.browser.min.js"></script>
     <script defer src="vendor/supabase.min.js"></script>
+    <script defer src="rafid-config.js"></script>
+    <script defer src="rafid-ingest.js"></script>
     <script defer src="rafid-v4.js"></script>
+    <script defer src="research-ui.js"></script>
+    <script defer src="results-report.js"></script>
+    <script defer src="education-content.js"></script>
+    <script defer src="rafid-brand.js"></script>
+    <script defer src="education-pages.js"></script>
+    <script defer src="optional-feedback.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#mainContent">انتقل إلى المحتوى</a>
 
     <section id="authGate" class="auth-gate" aria-labelledby="authTitle" hidden>
       <div class="auth-card">
-        <div class="auth-brand"><span class="brand-mark" aria-hidden="true">ر</span><div><b>رافد</b><small>حساب واحد يحفظ عملك ويعيدك إليه</small></div></div>
+        <div class="auth-brand"><span class="brand-mark" aria-hidden="true">ر</span><div><b data-product-name>رافد</b><small>جلسة آمنة لتحليل الطلب الحالي</small></div></div>
         <span class="eyebrow">دخول آمن وسلس</span>
         <h1 id="authTitle">ابدأ من حيث توقفت</h1>
-        <p>سجّل مرة واحدة؛ تبقى الجلسة متجددة على هذا الجهاز حتى تسجل الخروج، وتحفظ مساحة عملك في حسابك.</p>
+        <p>سجّل عند الحاجة لحماية الطلب؛ لا تحفظ النسخة الأولية ملفك أو نصك تلقائيًا.</p>
         <div id="socialAuthButtons" class="social-auth-buttons">
           <button class="social-auth google" type="button" data-auth-provider="google"><span>G</span> المتابعة عبر Google</button>
           <button class="social-auth microsoft" type="button" data-auth-provider="azure"><span>M</span> المتابعة عبر Microsoft</button>
@@ -42,15 +50,15 @@
       <a class="brand" href="#" aria-label="رافد — الصفحة الرئيسية" data-view-link="opportunity">
         <span class="brand-mark" aria-hidden="true">ر</span>
         <span>
-          <strong>رافد</strong>
-          <small>جاهزية الفرصة التمويلية</small>
+          <strong data-product-name>رافد</strong>
+          <small>تحليل الجاهزية</small>
         </span>
       </a>
       <div class="top-actions">
-        <span class="pilot-badge"><i></i> تحليل تلقائي مع مراجعة بشرية</span>
-        <button class="button ghost compact" id="loadDemoBtn" type="button">تشغيل تجربة جاهزة</button>
-        <button class="button ghost compact" id="importWorkspaceBtn" type="button">استيراد مساحة</button>
-        <button class="button secondary compact" id="exportWorkspaceBtn" type="button">تصدير مساحة العمل</button>
+        <span class="pilot-badge"><i></i> تحليل منظم مع مراجعة بشرية</span>
+        <button class="button ghost compact" id="loadDemoBtn" type="button" hidden>تشغيل تجربة جاهزة</button>
+        <button class="button ghost compact" id="importWorkspaceBtn" type="button" hidden>استيراد مساحة</button>
+        <button class="button secondary compact" id="exportWorkspaceBtn" type="button" hidden>تصدير مساحة العمل</button>
         <div id="accountWrap" class="account-wrap" hidden>
           <button id="accountButton" class="account-button" type="button" aria-expanded="false"><span id="accountInitial">ح</span><b id="accountName">حسابي</b></button>
           <div id="accountMenu" class="account-menu" hidden>
@@ -66,26 +74,26 @@
       <aside class="sidebar" aria-label="مراحل رافد">
         <div class="focus-card">
           <span class="eyebrow">قرار البداية</span>
-          <p>فرصة حيّة واحدة، حتى 10 مشاريع حقيقية، وقرار قابل للتدقيق قبل الموعد.</p>
+          <p>ألصق نصًا أو ارفع مستندًا واحدًا لتحصل على تحليل جاهزية منظم.</p>
         </div>
 
         <nav class="side-nav">
           <button class="nav-item active" data-view-link="opportunity" type="button">
             <span class="nav-number">1</span>
-            <span><b>الفرصة الحيّة</b><small>استخرج الشروط الرسمية</small></span>
+            <span><b>التحليل</b><small>أدخل المحتوى بأمان</small></span>
             <i class="nav-state" id="navOpportunityState"></i>
           </button>
-          <button class="nav-item" data-view-link="projects" type="button">
+          <button class="nav-item" data-view-link="projects" type="button" hidden>
             <span class="nav-number">2</span>
             <span><b>المشاريع</b><small>أضف المشاريع الفعلية</small></span>
             <i class="nav-state" id="navProjectsState"></i>
           </button>
-          <button class="nav-item" data-view-link="portfolio" type="button">
+          <button class="nav-item" data-view-link="portfolio" type="button" hidden>
             <span class="nav-number">3</span>
             <span><b>الحسم</b><small>الأهلية والفجوات</small></span>
             <i class="nav-state" id="navPortfolioState"></i>
           </button>
-          <button class="nav-item" data-view-link="review" type="button">
+          <button class="nav-item" data-view-link="review" type="button" hidden>
             <span class="nav-number">4</span>
             <span><b>المراجعة</b><small>قرار المكتب البحثي</small></span>
             <i class="nav-state" id="navReviewState"></i>
@@ -96,7 +104,7 @@
           <span>فرصة</span><i>←</i><span>شرط</span><i>←</i><span>دليل</span><i>←</i><span>إجراء</span><i>←</i><span>قرار</span>
         </div>
 
-        <button class="settings-link" data-view-link="settings" type="button">
+        <button class="settings-link" data-view-link="settings" type="button" hidden>
           <span aria-hidden="true">⚙</span> الاتصال والخصوصية
         </button>
       </aside>
@@ -105,50 +113,50 @@
         <section class="view active" data-view="opportunity" aria-labelledby="opportunityTitle">
           <div class="page-heading">
             <div>
-              <span class="kicker">1 — ثبّت مرجع القرار</span>
-              <h1 id="opportunityTitle">أي فرصة نمول لها الآن؟</h1>
-              <p>ألصق الرابط الرسمي فقط، أو ارفع الدليل. يقرأ رافد المصدر ويستخرج كل بوابة أهلية مع اقتباسها.</p>
+              <span class="kicker">1 — أدخل المحتوى</span>
+              <h1 id="opportunityTitle">حلّل جاهزية محتوى التمويل</h1>
+              <p>ألصق النص أو ارفع مستندًا محليًا. لا نعرض إعدادات الذكاء الاصطناعي أو البيانات الخام للمستخدم.</p>
             </div>
-            <div class="heading-rule"><b>واحدة فقط</b><span>حتى لا يتحول القرار إلى توصيات عامة</span></div>
+            <div class="heading-rule"><b>طلب واحد</b><span>لتحليل واضح وقابل للمراجعة</span></div>
           </div>
 
           <div class="grid two-one">
             <article class="panel">
               <div class="panel-head">
-                <div><span class="eyebrow">مصدر رسمي</span><h2>بيانات الفرصة</h2></div>
-                <span class="trust-chip">لا نخمن شرطًا مفقودًا</span>
+                <div><span class="eyebrow">إدخال آمن</span><h2>المحتوى المراد تحليله</h2></div>
+                <span class="trust-chip">لا نخمن معلومة مفقودة</span>
               </div>
               <div class="form-grid two">
                 <label>اسم الفرصة
-                  <input id="oppTitleInput" autocomplete="off" placeholder="مثال: منحة حلول الاستدامة 2026" />
+                  <input id="oppTitleInput" autocomplete="off" placeholder="مثال: مسودة طلب تمويل" />
                 </label>
-                <label>الجهة الممولة
+                <label>الجهة ذات الصلة (اختياري)
                   <input id="oppFunderInput" autocomplete="off" placeholder="اسم الجهة كما ورد" />
                 </label>
-                <label>الرابط الرسمي
+                <label>رابط مرجعي (اختياري)
                   <input id="oppUrlInput" type="url" inputmode="url" placeholder="https://..." dir="ltr" />
                 </label>
                 <label>موعد الإغلاق
                   <input id="oppDeadlineInput" type="date" />
                 </label>
               </div>
-              <label class="textarea-label">نص الإعلان أو دليل التقديم
-                <textarea id="oppSourceInput" rows="13" placeholder="الصق النص الرسمي كاملًا، أو ارفع PDF / DOCX / TXT أدناه..."></textarea>
+              <label class="textarea-label">النص
+                <textarea id="oppSourceInput" rows="13" placeholder="الصق النص كاملًا، أو ارفع PDF / DOCX / TXT أدناه..."></textarea>
               </label>
               <div class="file-row">
                 <label class="file-button">
-                  <input id="oppFileInput" type="file" accept=".pdf,.docx,.txt,.md,.html,.htm,.json,.csv" />
+                  <input id="oppFileInput" type="file" accept=".pdf,.docx,.txt" />
                   <span aria-hidden="true">＋</span> قراءة ملف محليًا
                 </label>
                 <span id="oppFileStatus" class="file-status">لم يُختر ملف</span>
               </div>
               <div class="source-warning">
                 <span aria-hidden="true">!</span>
-                <p><b>ما الذي يُرسل؟</b> لن يغادر شيء المتصفح قبل عرض نسخة منقحة عليك والحصول على تأكيد صريح.</p>
+                <p><b>الخصوصية أولًا:</b> لن يغادر شيء المتصفح قبل عرض ملخص منقح عليك والحصول على تأكيد صريح. لا يُحفظ الملف أو النص تلقائيًا.</p>
               </div>
               <div class="action-row">
-                <button class="button primary" id="extractOpportunityBtn" type="button">قراءة الفرصة واستخراجها تلقائيًا</button>
-                <label class="button ghost file-inline">
+                <button class="button primary" id="extractOpportunityBtn" type="button">تحليل الجاهزية</button>
+                <label class="button ghost file-inline" hidden>
                   استيراد فرصة JSON
                   <input id="oppJsonInput" type="file" accept=".json,application/json" />
                 </label>
@@ -158,15 +166,15 @@
             <aside class="panel soft" aria-live="polite">
               <div id="oppEmptyState" class="empty-state compact-empty">
                 <div class="empty-icon">01</div>
-                <h3>ابدأ بالفرصة لا بالمشروع</h3>
-                <p>السؤال الصحيح ليس «هل المشروع جيد؟» بل «هل يستوفي شرط هذه الفرصة، وبأي دليل؟»</p>
+                <h3>ابدأ بالنص أو المستند</h3>
+                <p>سيتحقق رافد من المتطلبات والأدلة والفجوات دون عرض تفاصيل تقنية غير لازمة.</p>
               </div>
               <div id="oppResult" class="hidden"></div>
             </aside>
           </div>
         </section>
 
-        <section class="view" data-view="projects" aria-labelledby="projectsTitle">
+        <section class="view" data-view="projects" aria-labelledby="projectsTitle" hidden>
           <div class="page-heading">
             <div>
               <span class="kicker">2 — أدخل الواقع كما هو</span>
@@ -188,9 +196,6 @@
                 </label>
                 <label>الجامعة / الجهة
                   <input id="projectOrgInput" autocomplete="organization" placeholder="الجهة المالكة" />
-                </label>
-                <label>الباحث المسؤول
-                  <input id="projectOwnerInput" autocomplete="off" placeholder="سيُنقح عند الحساسية العالية" />
                 </label>
               </div>
               <label class="textarea-label">محتوى المشروع
@@ -233,7 +238,7 @@
           </div>
         </section>
 
-        <section class="view" data-view="portfolio" aria-labelledby="portfolioTitle">
+        <section class="view" data-view="portfolio" aria-labelledby="portfolioTitle" hidden>
           <div class="page-heading">
             <div>
               <span class="kicker">3 — الأهلية قبل الدرجة</span>
@@ -263,7 +268,7 @@
           </div>
         </section>
 
-        <section class="view" data-view="review" aria-labelledby="reviewTitle">
+        <section class="view" data-view="review" aria-labelledby="reviewTitle" hidden>
           <div class="page-heading review-heading">
             <div>
               <span class="kicker">4 — الإنسان يملك القرار</span>
@@ -280,7 +285,7 @@
           <div id="reviewContent" class="hidden"></div>
         </section>
 
-        <section class="view" data-view="settings" aria-labelledby="settingsTitle">
+        <section class="view" data-view="settings" aria-labelledby="settingsTitle" hidden>
           <div class="page-heading">
             <div>
               <span class="kicker">ضبط مسؤول</span>

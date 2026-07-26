@@ -54,19 +54,21 @@ az functionapp create `
   --name $FunctionAppName `
   --storage-account $storage | Out-Null
 
-$AllowedOrigins = Read-Host "أدخل نطاق واجهة رافد المسموح، أو * للاختبار"
-if ([string]::IsNullOrWhiteSpace($AllowedOrigins)) { $AllowedOrigins = "*" }
+$AllowedOrigins = Read-Host "أدخل نطاق HTTPS النهائي لواجهة رافد"
+if ([string]::IsNullOrWhiteSpace($AllowedOrigins) -or -not $AllowedOrigins.StartsWith("https://")) {
+  throw "يلزم نطاق HTTPS صريح، ولا يسمح باستخدام wildcard في النشر المشترك."
+}
 
 $SupabaseUrl = Read-Host "أدخل SUPABASE_URL، مثال https://abc.supabase.co"
-$SupabasePublishableKey = Read-Host "أدخل Supabase Publishable key (عام وليس service_role)"
+$SupabaseAnonKey = Read-Host "أدخل Supabase anon أو Publishable key العام، وليس service_role"
 if (
   [string]::IsNullOrWhiteSpace($SupabaseUrl) -or
   -not $SupabaseUrl.StartsWith("https://") -or
-  [string]::IsNullOrWhiteSpace($SupabasePublishableKey)
+  [string]::IsNullOrWhiteSpace($SupabaseAnonKey)
 ) {
   throw "SUPABASE_URL وPublishable key مطلوبان لتسجيل المستخدمين."
 }
-if ($SupabasePublishableKey -match "service_role") {
+if ($SupabaseAnonKey -match "service_role") {
   throw "لا تستخدم service_role. استخدم Publishable key فقط."
 }
 
@@ -82,18 +84,22 @@ if ($DataPolicy -eq "strict_zdr") {
 $settings = @(
   "RAFID_DEPLOYMENT_MODE=shared",
   "RAFID_PROVIDER_CONFIGURATION_MODE=server",
+  "APP_NAME=Rafid",
+  "APP_URL=$AllowedOrigins",
   "AI_PROVIDER=$Provider",
   "RAFID_AUTH_REQUIRED=true",
   "RAFID_AUTH_PROVIDERS=google,azure,github,email",
   "SUPABASE_URL=$SupabaseUrl",
-  "SUPABASE_PUBLISHABLE_KEY=$SupabasePublishableKey",
+  "SUPABASE_ANON_KEY=$SupabaseAnonKey",
   "RAFID_ALLOWED_ORIGINS=$AllowedOrigins",
+  "MAX_FILE_SIZE_MB=20",
+  "ANALYSIS_TIMEOUT_SECONDS=60",
+  "RATE_LIMIT_REQUESTS=12",
+  "RATE_LIMIT_WINDOW_MINUTES=10",
   "RAFID_MAX_TEXT_CHARS=120000",
   "RAFID_MAX_OPPORTUNITY_CHARS=90000",
   "RAFID_MAX_PROJECT_JSON_CHARS=110000",
   "RAFID_MAX_REQUEST_BYTES=1500000",
-  "RAFID_RATE_LIMIT_REQUESTS=12",
-  "RAFID_RATE_LIMIT_WINDOW_SECONDS=600",
   "RAFID_GLOBAL_DAILY_AI_LIMIT=240",
   "RAFID_DATA_POLICY=$DataPolicy",
   "RAFID_REASONING_EFFORT=high",

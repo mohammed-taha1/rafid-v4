@@ -30,6 +30,9 @@ function loadEnvironmentFile(file) {
 
 loadEnvironmentFile(path.join(root, ".env"));
 
+const { inspectEnvironment, logEnvironmentIssues } = require("../src/lib/env");
+const environmentReport = logEnvironmentIssues(inspectEnvironment());
+
 const {
   extractWithAI,
   extractOpportunityWithAI,
@@ -61,6 +64,8 @@ const {
   supabaseConfig,
 } = require("../src/lib/auth");
 const { checkRateLimit } = require("../src/lib/http");
+const { analyzeResearch } = require("../src/lib/research-pipeline");
+const { createGroqResearchProvider } = require("../src/lib/research-provider");
 
 const version = "4.3.0";
 const deploymentMode = String(process.env.RAFID_DEPLOYMENT_MODE || "local").toLowerCase();
@@ -618,6 +623,16 @@ async function handleApi(request, response, pathname) {
     return sendJson(response, 200, { ok: true, source });
   }
 
+  if (pathname === "/api/rafid/research/analyze") {
+    assertRateLimit(request, auth);
+    try {
+      const result = await analyzeResearch(body, { provider: createGroqResearchProvider(), maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 20), timeoutMs: Number(process.env.ANALYSIS_TIMEOUT_SECONDS || 60) * 1000 });
+      return sendJson(response, 200, { ok: true, ...result });
+    } catch (error) {
+      return sendJson(response, error.statusCode || 503, { ok: false, code: error.code || "PROVIDER_UNAVAILABLE", error: error.message || "تعذر إكمال التحليل الآن." });
+    }
+  }
+
   if (pathname === "/api/rafid/opportunity/extract") {
     assertRateLimit(request, auth);
     const startedAt = Date.now();
@@ -717,6 +732,10 @@ function handleStatic(request, response, pathname) {
 const server = http.createServer(async (request, response) => {
   const pathname = new URL(request.url || "/", `http://${host}:${port}`).pathname;
   try {
+    if (pathname === "/health") {
+      sendJson(response, 200, { ok: true, service: "rafid", status: "healthy" });
+      return;
+    }
     if (pathname.startsWith("/api/rafid/")) {
       await handleApi(request, response, pathname);
       return;
@@ -747,6 +766,9 @@ server.listen(port, host, () => {
     providerConfigurationMode() === "server"
       ? "The AI key is server-managed and is never sent to users or the frontend."
       : "The API key is read from memory/.env only and is never sent to the frontend.",
+  );
+  console.log(
+    `Environment readiness: public_pages=${environmentReport.publicPagesReady}, auth=${environmentReport.authReady}, analysis=${environmentReport.analysisReady}`,
   );
 });
 

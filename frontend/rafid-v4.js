@@ -2,6 +2,7 @@
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const productConfig = globalThis.RafidConfig || { productName: "رافد", mvpMode: true, copy: {} };
 
 const sameOriginEndpoint =
   typeof location !== "undefined" && /^https?:\/\//i.test(String(location.origin || ""))
@@ -27,6 +28,7 @@ let pendingPrivacyRequest = null;
 let runtimeConfig = {
   deployment_mode: "local",
   provider_configuration_mode: "local_session",
+  limits: { max_file_size_mb: 20 },
   auth: { enabled: false, required: false, sign_in_providers: [] },
   workspace_sync: { enabled: false },
 };
@@ -91,7 +93,7 @@ function toast(message, type = "info") {
   window.setTimeout(() => item.remove(), 4500);
 }
 
-function setBusy(active, title = "يعمل رافد...", message = "يربط الشروط بالأدلة دون افتراضات.", percent = 12) {
+function setBusy(active, title = productConfig.copy.busyTitle || "يحلل رافد المحتوى...", message = productConfig.copy.busyMessage || "يرتب الأدلة والتوصيات دون افتراضات.", percent = 12) {
   const overlay = $("#busyOverlay");
   overlay.hidden = !active;
   if (active) {
@@ -399,6 +401,13 @@ async function handleAuthSession(session) {
 }
 
 function applyRuntimeUi() {
+  if (productConfig.mvpMode) {
+    ["#localProviderPanel", "#serverProviderPanel", "#advancedConnectionPanel"].forEach((selector) => {
+      const panel = $(selector);
+      if (panel) panel.hidden = true;
+    });
+    return;
+  }
   const serverManaged = runtimeConfig.provider_configuration_mode === "server";
   $("#serverProviderPanel").classList.toggle("hidden", !serverManaged);
   $("#localProviderPanel").classList.toggle("hidden", serverManaged);
@@ -428,6 +437,7 @@ async function loadRuntimeConfig() {
     runtimeConfig = {
       deployment_mode: "local",
       provider_configuration_mode: "local_session",
+      limits: { max_file_size_mb: 20 },
       auth: { enabled: false, required: false, sign_in_providers: [] },
       workspace_sync: { enabled: false },
     };
@@ -677,7 +687,7 @@ function renderPrivacyPreview() {
   pendingPrivacyRequest.preview = result;
   $("#privacyPolicyNote").textContent = privacyDescriptions[classification];
   $("#privacyPolicyNote").classList.toggle("blocked", classification === "restricted");
-  $("#redactedPreview").value = JSON.stringify(result.payload, null, 2);
+  $("#redactedPreview").value = privacyPreviewText(result.payload);
   const countEntries = Object.entries(result.counts);
   $("#redactionCounts").innerHTML = countEntries.length
     ? countEntries.map(([key, count]) => `<span>${esc(redactionLabels[key] || key)}: ${count}</span>`).join("")
@@ -685,6 +695,19 @@ function renderPrivacyPreview() {
   $("#privacyConfirm").checked = false;
   $("#confirmPrivacyBtn").disabled = true;
   $("#confirmPrivacyBtn").textContent = classification === "restricted" ? "الإرسال محظور" : "تأكيد ومتابعة";
+}
+
+function privacyPreviewText(value, depth = 0) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map((item) => privacyPreviewText(item, depth + 1)).filter(Boolean).join("\n");
+  if (typeof value === "object") {
+    return Object.entries(value)
+      .map(([key, item]) => `${"  ".repeat(depth)}${key}: ${privacyPreviewText(item, depth + 1)}`)
+      .filter((line) => line.trim().length > 1)
+      .join("\n");
+  }
+  return "";
 }
 
 function openPrivacyGate(payload, label = "هذه العملية") {
@@ -729,46 +752,13 @@ function confirmPrivacyGate() {
   });
 }
 
-async function readPdf(file, progress) {
-  try {
-    window.pdfjsLib ||= await import("./vendor/pdf.min.mjs");
-  } catch {
-    throw new Error("قارئ PDF المحلي لم يُحمّل. شغّل رافد عبر npm.cmd run rafid أو استخدم TXT.");
-  }
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("vendor/pdf.worker.min.mjs", location.href).href;
-  const pdf = await window.pdfjsLib.getDocument({
-    data: await file.arrayBuffer(),
-    isEvalSupported: false,
-  }).promise;
-  const pages = [];
-  for (let index = 1; index <= pdf.numPages; index += 1) {
-    const page = await pdf.getPage(index);
-    const content = await page.getTextContent();
-    pages.push(content.items.map((item) => item.str).join(" "));
-    progress?.(`قراءة ${file.name}: صفحة ${index} من ${pdf.numPages}`);
-  }
-  return pages.join("\n\n");
-}
-
-async function readDocx(file) {
-  if (!window.mammoth) throw new Error("قارئ Word المحلي لم يُحمّل. استخدم TXT أو الصق النص.");
-  const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-  return result.value || "";
-}
-
-function htmlToText(value) {
-  const documentValue = new DOMParser().parseFromString(value, "text/html");
-  documentValue.querySelectorAll("script,style,noscript").forEach((item) => item.remove());
-  return documentValue.body?.innerText || "";
-}
-
 async function readOneFile(file, progress) {
-  if (file.size > 20 * 1024 * 1024) throw new Error(`الملف ${file.name} أكبر من 20 ميغابايت.`);
-  const extension = (file.name.split(".").pop() || "").toLowerCase();
-  if (extension === "pdf") return readPdf(file, progress);
-  if (extension === "docx") return readDocx(file);
-  const text = await file.text();
-  return ["html", "htm"].includes(extension) ? htmlToText(text) : text;
+  if (!window.RafidIngest?.read) throw new Error("طبقة إدخال الملفات غير جاهزة.");
+  const document = await window.RafidIngest.read(file, {
+    maxFileSizeMb: runtimeConfig.limits?.max_file_size_mb || 20,
+    progress,
+  });
+  return document.fullText;
 }
 
 async function readFiles(files, progress) {
@@ -912,7 +902,7 @@ async function extractProject() {
       metadata: {
         title: $("#projectTitleInput").value.trim() || null,
         university: $("#projectOrgInput").value.trim() || null,
-        owner: $("#projectOwnerInput").value.trim() || null,
+        owner: null,
         type: "مشروع بحثي أو ابتكاري",
       },
       files,
@@ -956,7 +946,6 @@ async function extractProject() {
 function clearProjectForm() {
   $("#projectTitleInput").value = "";
   $("#projectOrgInput").value = "";
-  $("#projectOwnerInput").value = "";
   $("#projectSourceInput").value = "";
   $("#projectFileInput").value = "";
   $("#projectFileStatus").textContent = "يمكن دمج عدة مرفقات";
@@ -1338,6 +1327,10 @@ function renderAll() {
 }
 
 function showView(name) {
+  if (productConfig.mvpMode && name !== "opportunity") {
+    toast(productConfig.copy.unsupportedLegacyView || "هذه الشاشة خارج نطاق النسخة الأولية الحالية.", "info");
+    name = "opportunity";
+  }
   $$(".view").forEach((view) => view.classList.toggle("active", view.dataset.view === name));
   $$(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.viewLink === name));
   history.replaceState(null, "", `#${name}`);
@@ -1805,7 +1798,7 @@ async function init() {
   renderAll();
 
   const hashValue = location.hash.slice(1);
-  const requestedView = ["opportunity", "projects", "portfolio", "review", "settings"].includes(hashValue)
+  const requestedView = !productConfig.mvpMode && ["opportunity", "projects", "portfolio", "review", "settings"].includes(hashValue)
     ? hashValue
     : "opportunity";
 

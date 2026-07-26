@@ -39,7 +39,7 @@
 RAFID_DEPLOYMENT_MODE=shared
 RAFID_PROVIDER_CONFIGURATION_MODE=server
 AI_PROVIDER=groq
-GROQ_API_KEY=مفتاحك_السري
+GROQ_API_KEY=replace_with_groq_api_key
 GROQ_MODEL=openai/gpt-oss-120b
 RAFID_DATA_POLICY=strict_zdr
 GROQ_ZERO_DATA_RETENTION_CONFIRMED=true
@@ -47,7 +47,7 @@ GROQ_ZERO_DATA_RETENTION_CONFIRMED=true
 RAFID_AUTH_REQUIRED=true
 RAFID_AUTH_PROVIDERS=google,azure,github,email
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_PUBLISHABLE_KEY=مفتاح_Supabase_العام
+SUPABASE_ANON_KEY=replace_with_supabase_anon_key
 ```
 
 في الاستضافة العامة، ضع `GROQ_API_KEY` في **Secrets / Environment Variables** لدى المستضيف، ولا ترفع ملف `.env` إلى GitHub.

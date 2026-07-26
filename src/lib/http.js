@@ -1,6 +1,7 @@
 "use strict";
 
 const { authRequired, authorizeHeaders, getHeader } = require("./auth");
+const { rateLimitEnvironment } = require("./env");
 
 const buckets = new Map();
 let globalDailyUsage = { day: "", count: 0 };
@@ -53,14 +54,9 @@ function requestIp(request) {
 }
 
 function checkRateLimit(request, principal = {}, options = {}) {
-  const limit = Math.max(
-    1,
-    Number.parseInt(process.env.RAFID_RATE_LIMIT_REQUESTS || (authRequired() ? "12" : "80"), 10),
-  );
-  const windowSeconds = Math.max(
-    60,
-    Number.parseInt(process.env.RAFID_RATE_LIMIT_WINDOW_SECONDS || "600", 10),
-  );
+  const rateLimit = rateLimitEnvironment(authRequired());
+  const limit = rateLimit.requests;
+  const windowSeconds = rateLimit.windowSeconds;
   const now = Date.now();
   const identity = principal?.user?.id ? `user:${principal.user.id}` : `ip:${requestIp(request)}`;
   const key = identity;

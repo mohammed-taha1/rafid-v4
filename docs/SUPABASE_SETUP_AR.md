@@ -14,7 +14,7 @@
 من زر **Connect** أو **Project Settings → API** انسخ:
 
 - `Project URL` إلى `SUPABASE_URL`.
-- `Publishable key` إلى `SUPABASE_PUBLISHABLE_KEY`.
+- `Publishable key` أو `anon key` إلى `SUPABASE_ANON_KEY`.
 
 مفتاح Publishable مصمم للواجهة ويعمل مع RLS. لا تستخدم `service_role` في الواجهة أو ملف عام؛ فهو يتجاوز RLS.
 
@@ -81,7 +81,7 @@ RAFID_PROVIDER_CONFIGURATION_MODE=server
 RAFID_AUTH_REQUIRED=true
 RAFID_AUTH_PROVIDERS=google,azure,github,email
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_ANON_KEY=replace_with_supabase_anon_key
 
 AI_PROVIDER=groq
 GROQ_API_KEY=gsk_...
@@ -90,8 +90,12 @@ GROQ_BASE_URL=https://api.groq.com/openai/v1
 RAFID_DATA_POLICY=strict_zdr
 GROQ_ZERO_DATA_RETENTION_CONFIRMED=true
 
-RAFID_RATE_LIMIT_REQUESTS=12
-RAFID_RATE_LIMIT_WINDOW_SECONDS=600
+APP_NAME=Rafid
+APP_URL=https://your-rafid-site.example
+MAX_FILE_SIZE_MB=20
+ANALYSIS_TIMEOUT_SECONDS=60
+RATE_LIMIT_REQUESTS=12
+RATE_LIMIT_WINDOW_MINUTES=10
 RAFID_GLOBAL_DAILY_AI_LIMIT=240
 RAFID_ALLOW_CONFIDENTIAL_CLOUD_PERSISTENCE=false
 ```
