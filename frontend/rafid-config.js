@@ -2,7 +2,7 @@
 
 // نقطة واحدة لاسم المنتج والعبارات المشتركة في واجهة النسخة الأولية.
 window.RafidConfig = Object.freeze({
-  productName: "رافد",
+  productName: "جسور",
   mvpMode: true,
   copy: Object.freeze({
     busyTitle: "يحلل رافد المحتوى...",
