@@ -15,7 +15,7 @@
     "check": "node scripts/check-js.js",
     "lint": "eslint frontend/*.js src scripts tests.js",
     "typecheck": "tsc --project jsconfig.json",
-    "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/env-test.js && node scripts/auth-test.js && node scripts/ingest-test.js && node scripts/research-schema-test.js && node scripts/research-prompts-test.js && node scripts/research-provider-test.js && node scripts/research-pipeline-test.js && node scripts/long-document-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/server-smoke-test.js"
+    "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/env-test.js && node scripts/auth-test.js && node scripts/ingest-test.js && node scripts/research-schema-test.js && node scripts/research-prompts-test.js && node scripts/research-provider-test.js && node scripts/research-pipeline-test.js && node scripts/long-document-test.js && node scripts/results-report-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/server-smoke-test.js"
   },
   "engines": {
     "node": ">=20.19 <23"
