@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: jasoor-mvp
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.20.0
+      - key: RAFID_HOST
+        value: 0.0.0.0
+      - key: MAX_FILE_SIZE_MB
+        value: 20
+      - key: ANALYSIS_TIMEOUT_SECONDS
+        value: 60
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
