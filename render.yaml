@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: jasoor-mvp
+    name: rafid-mvp
     runtime: node
     plan: starter
     buildCommand: npm ci && npm run build
