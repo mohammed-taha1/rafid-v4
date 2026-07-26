@@ -5,7 +5,7 @@
 1. اربط المستودع واختر الفرع `codex/mvp-launch` أو فرع إصدار معتمد.
 2. استخدم `render.yaml` أو اضبط Build: `npm ci && npm run build` وStart: `npm start`، والجذر هو المستودع.
 3. أضف أسرار الخادم فقط في لوحة Render: `GROQ_API_KEY` و`GROQ_MODEL` وبيانات Supabase عند تفعيل المصادقة. لا تضعها في YAML أو الواجهة.
-4. اضبط `RAFID_HOST=0.0.0.0`، `MAX_FILE_SIZE_MB=20`، و`ANALYSIS_TIMEOUT_SECONDS=60`.
+4. اضبط `RAFID_HOST=0.0.0.0`، `MAX_FILE_SIZE_MB=20`، و`MAX_ANALYSIS_INPUT_CHARS=16000`، و`ANALYSIS_TIMEOUT_SECONDS=60`. يحمي حد الإدخال طلب Groq من تجاوز السعة؛ وعند تجاوزه تظهر نتيجة مع تنبيه بأنها غطّت الجزء المقبول فقط.
 5. اجعل health check هو `/health`. يعيد حالة تشغيل عامة فقط ولا يفحص مفتاح AI ولا يكشف أسرارًا.
 
 بعد النشر: افتح `/health` ثم الصفحة العامة دون Supabase، وجرّب إدخالًا غير حساس. Cold start قد يسبب تأخرًا قصيرًا؛ تعرض الواجهة رسالة انتظار ولا تعد بزمن ثابت.

@@ -103,7 +103,7 @@
           }
           throw new Error(data.error || "تعذر التحليل الآن.");
         }
-        results(data.result);
+        results(data.result, data.meta);
       } catch (errorValue) {
         error.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. يمكنك المحاولة مجددًا." : errorValue.message;
         error.classList.add("is-error");
@@ -116,11 +116,12 @@
 
   function list(items) { return (items || []).map((item) => `<li>${esc(item)}</li>`).join("") || "<li>غير موضح</li>"; }
 
-  function results(result) {
+  function results(result, meta = {}) {
     const dimensions = (result.technicalReadiness?.dimensions || []).map((dimension) => `<li><b>${esc(dimension.id)}</b><span>${esc(dimension.explanation)}</span></li>`).join("");
+    const truncationNotice = meta.truncated ? `<p class="rafid-notice" role="status">تم تحليل الجزء المقبول من المستند الطويل فقط؛ أعد التحليل على ملخص مركز أو الأقسام المتبقية للحصول على تغطية أوسع.</p>` : "";
     root().innerHTML = `
       <header class="rafid-header"><a class="rafid-logo" href="#"><span>ر</span><b>رافد</b></a><button id="new" class="rafid-text-button" type="button">تحليل جديد</button></header>
-      <section class="rafid-report"><span class="rafid-kicker">نتيجة التحليل</span><h1>جاهزية البحث</h1><p class="report-summary">${esc(result.researchSummary || "غير موضح")}</p>
+      <section class="rafid-report"><span class="rafid-kicker">نتيجة التحليل</span><h1>جاهزية البحث</h1><p class="report-summary">${esc(result.researchSummary || "غير موضح")}</p>${truncationNotice}
         <div class="scores"><article><span>الجاهزية التقنية</span><meter min="0" max="100" value="${Number(result.technicalReadiness?.score || 0)}"></meter><b>${Number(result.technicalReadiness?.score || 0)}<small>/100</small></b></article><article><span>الجاهزية التمويلية</span><meter min="0" max="100" value="${Number(result.fundingReadiness?.score || 0)}"></meter><b>${Number(result.fundingReadiness?.score || 0)}<small>/100</small></b></article></div>
         <p class="confidence">مستوى الثقة: <b>${esc(result.confidence || "منخفض")}</b></p>
         <details open><summary>تفسير الدرجات</summary><ul class="dimension-list">${dimensions}</ul></details>

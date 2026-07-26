@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 const dns = require("node:dns").promises;
 const fs = require("node:fs");
@@ -626,7 +626,7 @@ async function handleApi(request, response, pathname) {
   if (pathname === "/api/rafid/research/analyze") {
     assertRateLimit(request, auth);
     try {
-      const result = await analyzeResearch(body, { provider: createGroqResearchProvider(), maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 20), timeoutMs: Number(process.env.ANALYSIS_TIMEOUT_SECONDS || 60) * 1000 });
+      const result = await analyzeResearch(body, { provider: createGroqResearchProvider(), maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 20), maxAnalysisInputChars: Number(process.env.MAX_ANALYSIS_INPUT_CHARS || 16000), timeoutMs: Number(process.env.ANALYSIS_TIMEOUT_SECONDS || 60) * 1000 });
       return sendJson(response, 200, { ok: true, ...result });
     } catch (error) {
       return sendJson(response, error.statusCode || 503, { ok: false, code: error.code || "PROVIDER_UNAVAILABLE", error: error.message || "تعذر إكمال التحليل الآن." });
