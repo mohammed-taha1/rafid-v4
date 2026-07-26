@@ -733,7 +733,7 @@ const server = http.createServer(async (request, response) => {
   const pathname = new URL(request.url || "/", `http://${host}:${port}`).pathname;
   try {
     if (pathname === "/health") {
-      sendJson(response, 200, { ok: true, service: "jasoor", status: "healthy" });
+      sendJson(response, 200, { ok: true, service: "rafid", status: "healthy" });
       return;
     }
     if (pathname.startsWith("/api/rafid/")) {
