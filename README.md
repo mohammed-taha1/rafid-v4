@@ -1,5 +1,11 @@
 # رافد V4.3 — حسابات دائمة + حفظ تلقائي + مفتاح Groq خادمي
 
+## بداية سريعة للنسخة الأولية
+
+رافد يحلل نصًا أو PDF/DOCX/TXT ليعرض جاهزية بحثية وتمويلية استرشادية، دون تخزين افتراضي للنص أو الملف. يتطلب Node.js 22: شغّل `npm ci` ثم `npm run development`. الفحوص: `npm test` و`npm run lint` و`npm run typecheck`، والبناء: `npm run build`.
+
+متغيرات الخادم: `GROQ_API_KEY` و`GROQ_MODEL` و`MAX_FILE_SIZE_MB` و`ANALYSIS_TIMEOUT_SECONDS`، ومتغيرات Supabase فقط عند تفعيل المصادقة. لا تضع أسرارًا في الواجهة. النشر في `docs/DEPLOYMENT.md`، الخصوصية والأمان في `docs/SECRET_ROTATION.md` و`docs/SECURITY_REVIEW.md`، والتسليم والقيود في `docs/FINAL_HANDOFF.md`.
+
 هذه النسخة تطبق قرار البداية الجديد لرافد:
 
 > **فرصة تمويل حيّة واحدة + 5 إلى 10 مشاريع حقيقية + أهلية موثقة + خطة إغلاق فجوات + قرار مؤسسي قبل الموعد.**
