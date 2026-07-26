@@ -48,7 +48,7 @@ assert.match(html, /data-auth-provider="azure"/, "Microsoft sign-in is required.
 assert.match(html, /id="emailAuthForm"/, "Passwordless email sign-in is required.");
 assert.match(html, /vendor\/supabase\.min\.js/, "Local Supabase client bundle is required.");
 assert.match(html, /rafid-config\.js/, "Central product configuration must load before the application.");
-assert.match(config, /productName:\s*"رافد"/, "Product name must be centralized.");
+assert.match(config, /productName:\s*"جسور"/, "Product name must be centralized.");
 assert.match(config, /mvpMode:\s*true/, "The focused MVP mode must be enabled.");
 assert.doesNotMatch(html, /id="projectOwnerInput"/, "Personal researcher input must not be present in the MVP flow.");
 assert.match(html, /id="oppFileInput"[^>]+accept="\.pdf,\.docx,\.txt"/, "MVP intake must only advertise supported document formats.");
