@@ -254,8 +254,9 @@ function validateProjectData(p) {
   const warnings = [];
 
   if (!p?.project_identity?.project_title) errors.push("اسم المشروع غير موجود.");
-  if (!p?.problem?.problem_statement) errors.push("المشكلة غير موجودة.");
-  if (!p?.solution?.solution_summary) errors.push("الحل غير موجود.");
+  // البحث غير المكتمل مدخل صالح للتحليل؛ الغياب يجب أن يظهر كفجوة لا كتعطل تقني.
+  if (!p?.problem?.problem_statement) warnings.push("المشكلة غير موضحة في البحث.");
+  if (!p?.solution?.solution_summary) warnings.push("الحل أو النهج التطبيقي غير موضح في البحث.");
   if (!p?.project_identity?.project_owner?.name)
     warnings.push("صاحب المشروع غير محدد.");
   if (!p?.project_identity?.university)
