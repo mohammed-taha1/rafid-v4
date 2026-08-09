@@ -21,3 +21,5 @@ services:
         sync: false
       - key: GROQ_MODEL
         sync: false
+      - key: GROQ_ASSESSMENT_REASONING_EFFORT
+        value: medium

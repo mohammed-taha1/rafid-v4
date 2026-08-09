@@ -133,6 +133,7 @@ async function testGroqContract() {
     process.env.GROQ_MODEL = "openai/gpt-oss-120b";
     process.env.GROQ_ZERO_DATA_RETENTION_CONFIRMED = "true";
     process.env.GROQ_REASONING_EFFORT = "low";
+    process.env.GROQ_ASSESSMENT_REASONING_EFFORT = "medium";
     process.env.GROQ_MAX_OUTPUT_TOKENS = "1600";
     process.env.RAFID_DATA_POLICY = "strict_zdr";
     process.env.RAFID_TEST_MODE = "true";

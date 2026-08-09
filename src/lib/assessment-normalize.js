@@ -54,6 +54,67 @@ function missingGate(requirement) {
   };
 }
 
+function gateResolution(status) {
+  if (["مستوفى", "لا ينطبق"].includes(status)) return status === "لا ينطبق" ? "لا يلزم" : "مغلق";
+  if (["مستوفى جزئيًا", "غير مستوفى"].includes(status)) return "قابل للإغلاق";
+  return "يحتاج تحقق";
+}
+
+function expandGate(requirement, gate) {
+  if (!gate) return missingGate(requirement);
+  const evidence = arr(gate.project_evidence).map((item) =>
+    typeof item === "string"
+      ? { evidence: item, source: "بيانات المشروع المنظمة", strength: "جزئي" }
+      : item,
+  );
+  return {
+    ...missingGate(requirement),
+    ...gate,
+    requirement_id: requirement.requirement_id,
+    requirement: requirement.title || requirement.description || gate.requirement || "شرط غير مسمى",
+    resolution: gate.resolution || gateResolution(gate.status),
+    project_evidence: evidence,
+    missing_evidence: arr(gate.missing_evidence),
+    remediation: gate.remediation || "استكمل الدليل واربطه بالنص الرسمي للشرط.",
+    owner_role: gate.owner_role || "فريق المشروع",
+    due_date: gate.due_date || null,
+    opportunity_source_quote: requirement.source_quote || gate.opportunity_source_quote || "",
+  };
+}
+
+function gateGap(gate) {
+  if (["مستوفى", "لا ينطبق"].includes(gate.status)) return null;
+  return {
+    gap_id: stableId("gap", gate.requirement_id, gate.status),
+    severity: gate.status === "غير مستوفى" ? "مانع" : "حرج",
+    related_requirement_id: gate.requirement_id,
+    title: `إغلاق شرط: ${gate.requirement}`,
+    current_state: gate.verdict_basis || "لا يتوفر دليل كافٍ للحسم.",
+    required_action: gate.remediation || "استكمل الدليل واربطه بالشرط الرسمي.",
+    evidence_to_produce: arr(gate.missing_evidence),
+    owner_role: gate.owner_role || "فريق المشروع",
+    due_date: gate.due_date || null,
+    completion_criterion: "اعتماد دليل صريح مقابل نص الشرط من مراجع بشري.",
+    status: "مفتوحة",
+  };
+}
+
+function projectInformationGap(missing, index) {
+  return {
+    gap_id: stableId("gap", missing.field, index),
+    severity: missing.priority === "حرجة" ? "حرج" : "مهم",
+    related_requirement_id: "project-information",
+    title: missing.field || "معلومة مشروع ناقصة",
+    current_state: "غير موضح في مادة المشروع المتاحة.",
+    required_action: missing.question_to_project_owner || "استكمل المعلومة وارفق دليلها.",
+    evidence_to_produce: [missing.why_needed || "معلومة موثقة قابلة للمراجعة"],
+    owner_role: "فريق المشروع",
+    due_date: null,
+    completion_criterion: "إضافة إجابة صريحة ودليل يمكن للمراجع التحقق منه.",
+    status: "مفتوحة",
+  };
+}
+
 function deriveEligibility(gates) {
   const blockingFailure = gates.some(
     (gate) =>
@@ -252,7 +313,7 @@ function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
     gatesByRequirement.set(gate.requirement_id, gate);
   }
   item.hard_gates = mandatoryHardRequirements(opportunity).map(
-    (requirement) => gatesByRequirement.get(requirement.requirement_id) || missingGate(requirement),
+    (requirement) => expandGate(requirement, gatesByRequirement.get(requirement.requirement_id)),
   );
 
   item.fit_dimensions = arr(item.fit_dimensions).map((dimension) => ({
@@ -268,13 +329,29 @@ function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
   item.readiness.assessment_confidence = clamp(item.readiness.assessment_confidence);
   item.readiness.summary = String(item.readiness.summary || "");
 
-  item.gaps = arr(item.gaps).map((gap, index) => ({
+  const generatedGaps = [
+    ...item.hard_gates.map(gateGap).filter(Boolean),
+    ...arr(project?.missing_information).slice(0, 6).map(projectInformationGap),
+  ];
+  item.gaps = (arr(item.gaps).length ? arr(item.gaps) : generatedGaps).map((gap, index) => ({
     ...gap,
     gap_id:
       gap.gap_id ||
       stableId("gap", item.assessment_id, gap.title, gap.related_requirement_id, index),
   }));
-  item.action_plan = arr(item.action_plan)
+  const generatedActions = item.gaps.slice(0, 8).map((gap, index) => ({
+    action: gap.required_action,
+    priority: index + 1,
+    why_now: gap.severity === "مانع" || gap.severity === "حرج"
+      ? "لأنها فجوة تؤثر مباشرة في قرار الأهلية أو التقديم."
+      : "لرفع جودة ملف التقديم وقابلية مراجعته.",
+    owner_role: gap.owner_role || "فريق المشروع",
+    due_date: gap.due_date || null,
+    dependency: null,
+    output: gap.completion_criterion,
+    related_gap_ids: [gap.gap_id],
+  }));
+  item.action_plan = (arr(item.action_plan).length ? arr(item.action_plan) : generatedActions)
     .map((action, index) => ({
       ...action,
       action_id: action.action_id || stableId("act", item.assessment_id, action.action, index),
@@ -282,7 +359,18 @@ function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
       related_gap_ids: arr(action.related_gap_ids),
     }))
     .sort((a, b) => a.priority - b.priority);
-  item.application_package = arr(item.application_package);
+  item.application_package = arr(item.application_package).length
+    ? arr(item.application_package)
+    : arr(opportunity?.submission_documents).map((document) => ({
+        document_id: document.document_id,
+        document_name: document.name || "وثيقة مطلوبة",
+        mandatory: Boolean(document.mandatory),
+        status: "غير معروف",
+        available_evidence: "لم يتم التحقق من توفر الوثيقة ضمن المادة الحالية.",
+        missing_content: document.description ? [document.description] : [],
+        next_action: "تحقق من اكتمال الوثيقة وفق المصدر الرسمي.",
+        owner_role: "فريق المشروع",
+      }));
   item.risk_disclosures = arr(item.risk_disclosures);
   item.institutional_review ||= {};
   item.institutional_review.institutional_review_required = true;

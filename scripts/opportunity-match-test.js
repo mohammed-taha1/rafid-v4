@@ -64,6 +64,9 @@ const opportunity = {
       source_quote: "يجب وجود جهة مؤهلة",
     },
   ],
+  submission_documents: [
+    { document_id: "doc-1", name: "الملخص التنفيذي", mandatory: true, description: "ملخص المشروع" },
+  ],
 };
 const project = {
   project_identity: { project_title: "مشروع تجريبي", project_owner: { name: null }, university: null },
@@ -92,6 +95,32 @@ assert.deepEqual(match.gateSummary(assessment.hard_gates), { total: 1, met: 0, p
 assert.match(match.summaryText(assessment), /غير محسوم/);
 assert.match(match.summaryText(assessment), /62 من 100/);
 assert.equal(match.decisionTone("غير مؤهل"), "ineligible");
+
+const compactAssessment = normalizeAssessmentData(
+  {
+    hard_gates: [
+      {
+        requirement_id: "req-1",
+        status: "غير معروف",
+        verdict_basis: "لا يتوفر خطاب جهة في بيانات المشروع.",
+        project_evidence: ["ذُكرت جهة أكاديمية دون خطاب."],
+        missing_evidence: ["خطاب الجهة"],
+        remediation: "إرفاق خطاب رسمي.",
+      },
+    ],
+    fit_dimensions: [],
+    readiness: { opportunity_readiness_score: 40, evidence_strength_score: 30, assessment_confidence: 55, summary: "تحتاج أدلة." },
+    institutional_review: { recommendation: "تحتاج قرارًا مؤسسيًا", rationale: "الأهلية غير محسومة.", questions_for_project_team: [], questions_for_funder: [], reviewer_attention_points: [], institutional_review_required: true },
+    risk_disclosures: [],
+  },
+  { opportunity, project },
+);
+assert.equal(compactAssessment.hard_gates[0].resolution, "يحتاج تحقق");
+assert.equal(compactAssessment.hard_gates[0].project_evidence[0].strength, "جزئي");
+assert.ok(compactAssessment.gaps.length >= 1);
+assert.ok(compactAssessment.action_plan.length >= 1);
+assert.equal(compactAssessment.application_package.length, 1);
+assert.equal(validateAssessmentData(compactAssessment).valid, true);
 
 const incompleteResearch = normalizeProjectData({
   project_identity: { project_title: "بحث ناقص", project_owner: { name: null }, project_type: [] },

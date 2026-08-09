@@ -7,7 +7,10 @@ const {
   OPPORTUNITY_SYSTEM_PROMPT,
   buildOpportunityPrompt,
 } = require("./opportunity-prompt");
-const { RAFID_ASSESSMENT_SCHEMA } = require("./assessment-schema");
+const {
+  RAFID_ASSESSMENT_SCHEMA,
+  RAFID_COMPACT_ASSESSMENT_SCHEMA,
+} = require("./assessment-schema");
 const {
   ASSESSMENT_SYSTEM_PROMPT,
   buildAssessmentPrompt,
@@ -361,10 +364,12 @@ async function assessWithAI({ opportunity, project, context, privacy }) {
       projectJson: preparedProject.text,
       context,
       truncated,
+      compact: groq,
     }),
-    schema: RAFID_ASSESSMENT_SCHEMA,
+    schema: groq ? RAFID_COMPACT_ASSESSMENT_SCHEMA : RAFID_ASSESSMENT_SCHEMA,
     maxOutputTokens: 18000,
     privacy,
+    reasoningEffort: groq ? process.env.GROQ_ASSESSMENT_REASONING_EFFORT || "medium" : undefined,
   });
 
   return { ...result, assessment: result.data, inputTruncated: truncated };
@@ -376,16 +381,20 @@ async function runStructured({
   schema,
   maxOutputTokens = 14000,
   privacy = {},
+  reasoningEffort,
 }) {
   const { client, config } = getClient();
   const dataPolicy = assertDataPolicy(config, privacy);
-  const reasoningEffort = String(
-    config.provider === "groq"
-      ? process.env.GROQ_REASONING_EFFORT || "low"
-      : process.env.RAFID_REASONING_EFFORT || "high",
+  const configuredReasoningEffort = String(
+    reasoningEffort ||
+      (config.provider === "groq"
+        ? process.env.GROQ_REASONING_EFFORT || "low"
+        : process.env.RAFID_REASONING_EFFORT || "high"),
   ).toLowerCase();
   const allowedReasoning = ["none", "low", "medium", "high", "xhigh", "max"];
-  const effectiveReasoning = allowedReasoning.includes(reasoningEffort) ? reasoningEffort : "high";
+  const effectiveReasoning = allowedReasoning.includes(configuredReasoningEffort)
+    ? configuredReasoningEffort
+    : "high";
   const effectiveMaxOutputTokens =
     config.provider === "groq"
       ? Math.min(
