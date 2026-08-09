@@ -8,7 +8,11 @@ const {
   normalizeAssessmentData,
   validateAssessmentData,
 } = require("../src/lib/assessment-normalize");
-const { normalizeProjectData, validateProjectData } = require("../src/lib/normalize");
+const {
+  fallbackProjectData,
+  normalizeProjectData,
+  validateProjectData,
+} = require("../src/lib/normalize");
 
 assert.equal(match.MATCH_VERSION, "rafid.opportunity-match.v1");
 assert.equal(match.validateInputs({ opportunityText: "قصير", researchText: "قصير" }).valid, false);
@@ -103,6 +107,15 @@ const incompleteResearch = normalizeProjectData({
 const incompleteValidation = validateProjectData(incompleteResearch);
 assert.equal(incompleteValidation.valid, true);
 assert.ok(incompleteValidation.warnings.some((warning) => /غير موضحة/.test(warning)));
+
+const fallbackProject = fallbackProjectData("نص بحث تجريبي يصف المشكلة والمنهجية دون بنية منظمة.", {
+  metadata: { title: "بحث احتياطي", type: "بحث" },
+  files: [],
+});
+assert.equal(validateProjectData(fallbackProject).valid, true);
+assert.equal(fallbackProject.project_identity.project_title, "بحث احتياطي");
+assert.match(fallbackProject.source_summary.notes, /نص بحث تجريبي/);
+assert.equal(fallbackProject.source_summary.extraction_confidence, 25);
 
 const invalid = structuredClone(assessment);
 invalid.readiness.assessment_confidence = 120;
