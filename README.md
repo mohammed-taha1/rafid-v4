@@ -1,8 +1,18 @@
-# رافد V4.3 — حسابات دائمة + حفظ تلقائي + مفتاح Groq خادمي
+# رافد — تحليل جاهزية البحث وملاءمته لفرص التمويل
 
 ## بداية سريعة للنسخة الأولية
 
-رافد يحلل نصًا أو PDF/DOCX/TXT ليعرض جاهزية بحثية وتمويلية استرشادية، دون تخزين افتراضي للنص أو الملف. يتطلب Node.js 22: شغّل `npm ci` ثم `npm run development`. الفحوص: `npm test` و`npm run lint` و`npm run typecheck`، والبناء: `npm run build`.
+رافد يحلل نصًا أو PDF/DOCX/TXT بطريقتين: تقييم جاهزية عام، أو مقارنة البحث بشروط فرصة تمويل محددة. يعرض الأهلية والملاءمة والأدلة والفجوات وخطة الإغلاق دون تخزين افتراضي للنص أو الملف. يتطلب Node.js 22: شغّل `npm ci` ثم `npm run development`. الفحوص: `npm test` و`npm run lint` و`npm run typecheck`، والبناء: `npm run build`.
+
+المسار الرئيسي الحالي:
+
+1. أدخل نص أو ملف فرصة التمويل.
+2. أدخل نص أو ملف البحث أو المشروع.
+3. راجع بوابات الأهلية قبل الدرجة.
+4. راجع أدلة البحث مقابل اقتباسات الفرصة.
+5. نفذ خطة إغلاق الفجوات وحزمة التقديم.
+
+تفاصيل العقد ومعايير القبول في [docs/OPPORTUNITY_MATCHING_SPEC.md](docs/OPPORTUNITY_MATCHING_SPEC.md).
 
 متغيرات الخادم: `GROQ_API_KEY` و`GROQ_MODEL` و`MAX_FILE_SIZE_MB` و`ANALYSIS_TIMEOUT_SECONDS`، ومتغيرات Supabase فقط عند تفعيل المصادقة. لا تضع أسرارًا في الواجهة. النشر في `docs/DEPLOYMENT.md`، الخصوصية والأمان في `docs/SECRET_ROTATION.md` و`docs/SECURITY_REVIEW.md`، والتسليم والقيود في `docs/FINAL_HANDOFF.md`.
 
