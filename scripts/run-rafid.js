@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 const dns = require("node:dns").promises;
 const fs = require("node:fs");
@@ -50,6 +50,7 @@ const {
   validateOpportunityData,
 } = require("../src/lib/opportunity-normalize");
 const {
+  fallbackAssessmentData,
   normalizeAssessmentData,
   validateAssessmentData,
 } = require("../src/lib/assessment-normalize");
@@ -412,18 +413,7 @@ function configureLocalProvider(body) {
     throw error;
   }
   if (!["strict_zdr", "standard"].includes(dataPolicy)) {
-    const error = new Error("وضع الخصوصية غير صالح.");
-    error.statusCode = 400;
-    throw error;
-  }
-  if (!["groq", "openai"].includes(provider)) {
-    const error = new Error("الإعداد السريع يدعم Groq أو OpenAI أو Ollama المحلي؛ يمكن ضبط Azure عبر متغيرات الخادم.");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  if (provider === "groq") {
-    const model = String(body.model || "openai/gpt-oss-120b").trim() || "openai/gpt-oss-120b";
+    const erro׎��G����ƭy�l || "openai/gpt-oss-120b").trim() || "openai/gpt-oss-120b";
     if (!["openai/gpt-oss-120b", "openai/gpt-oss-20b"].includes(model)) {
       const error = new Error("اختر openai/gpt-oss-120b أو openai/gpt-oss-20b مع Groq.");
       error.statusCode = 400;
@@ -711,8 +701,25 @@ async function handleApi(request, response, pathname) {
     assertRateLimit(request, auth);
     const startedAt = Date.now();
     const input = normalizeAssessmentRequest(body);
-    const ai = await assessWithAI(input);
-    const assessment = normalizeAssessmentData(ai.assessment, input);
+    let ai;
+    let assessmentData;
+    let fallbackReason = null;
+    try {
+      ai = await assessWithAI(input);
+      assessmentData = ai.assessment;
+    } catch (error) {
+      if (error?.code !== "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED") throw error;
+      fallbackReason = error.code;
+      assessmentData = fallbackAssessmentData(input);
+      ai = {
+        provider: "deterministic-fallback",
+        model: null,
+        inputTruncated: false,
+        usage: null,
+        dataPolicy: "no_additional_storage",
+      };
+    }
+    const assessment = normalizeAssessmentData(assessmentData, input);
     const validation = validateAssessmentData(assessment);
     return sendJson(response, validation.valid ? 200 : 422, {
       ok: validation.valid,
@@ -727,6 +734,8 @@ async function handleApi(request, response, pathname) {
         duration_ms: Date.now() - startedAt,
         usage: ai.usage,
         data_policy: ai.dataPolicy,
+        fallback_used: Boolean(fallbackReason),
+        fallback_reason: fallbackReason,
       },
     });
   }

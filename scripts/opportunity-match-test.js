@@ -5,6 +5,7 @@ const match = require("../frontend/opportunity-match");
 const {
   ASSESSMENT_VERSION,
   FUNDING_DISCLAIMER,
+  fallbackAssessmentData,
   normalizeAssessmentData,
   validateAssessmentData,
 } = require("../src/lib/assessment-normalize");
@@ -116,6 +117,22 @@ assert.equal(validateProjectData(fallbackProject).valid, true);
 assert.equal(fallbackProject.project_identity.project_title, "بحث احتياطي");
 assert.match(fallbackProject.source_summary.notes, /نص بحث تجريبي/);
 assert.equal(fallbackProject.source_summary.extraction_confidence, 25);
+
+const fallbackAssessment = normalizeAssessmentData(
+  fallbackAssessmentData({ opportunity, project: fallbackProject }),
+  { opportunity, project: fallbackProject },
+);
+assert.equal(validateAssessmentData(fallbackAssessment).valid, true);
+assert.equal(match.validateAssessment(fallbackAssessment).valid, true);
+assert.equal(fallbackAssessment.eligibility.status, "غير محسوم");
+assert.equal(fallbackAssessment.readiness.assessment_confidence, 35);
+assert.equal(fallbackAssessment.fit_dimensions.length, 9);
+assert.equal(
+  fallbackAssessment.fit_dimensions.reduce((sum, dimension) => sum + dimension.weight_percent, 0),
+  100,
+);
+assert.ok(fallbackAssessment.gaps.length >= 1);
+assert.match(fallbackAssessment.readiness.summary, /قراءة محافظة/);
 
 const invalid = structuredClone(assessment);
 invalid.readiness.assessment_confidence = 120;

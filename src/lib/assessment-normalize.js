@@ -99,6 +99,128 @@ function deriveEligibility(gates) {
   };
 }
 
+function present(value) {
+  if (value === null || value === undefined || value === "") return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.values(value).some(present);
+  return true;
+}
+
+function fallbackAssessmentData({ opportunity, project } = {}) {
+  const dimensions = [
+    ["توافق النطاق", 15, present(opportunity?.purpose_and_scope?.objectives) && present(project?.project_identity?.project_type), "تحتاج مطابقة النطاق والتخصص يدويًا مع النص الرسمي."],
+    ["قوة المشكلة", 12, present(project?.problem?.problem_statement), "أضف تعريفًا محددًا للمشكلة وحجمها ودليلها."],
+    ["قوة الحل", 12, present(project?.solution?.solution_summary), "وضح الحل المقترح وتميزه وصلته المباشرة بالمشكلة."],
+    ["الأدلة والاختبارات", 12, present(project?.prototype_and_data?.test_results) || present(project?.claims_and_evidence), "أرفق نتائج اختبار قابلة للتحقق ومصادر الأدلة."],
+    ["الفريق والشراكات", 10, present(project?.team) || present(project?.partnerships?.existing_partners), "حدد أدوار الفريق والشركاء وخطابات الالتزام المتاحة."],
+    ["خطة التنفيذ", 10, present(project?.implementation_plan?.duration) || present(project?.implementation_plan?.implementation_summary), "حوّل العمل إلى مراحل ومخرجات ومسؤوليات وجدول زمني."],
+    ["الميزانية", 10, present(project?.budget?.requested_amount) || present(project?.budget?.budget_items), "جهز ميزانية مفصلة ومبررة ومتوافقة مع بنود الفرصة."],
+    ["الأثر", 10, present(project?.impact?.expected_impact) || present(project?.impact?.target_metrics), "حدد أثرًا قابلًا للقياس ومستفيدين ومؤشرات نجاح."],
+    ["معايير المفاضلة", 9, present(opportunity?.evaluation_criteria) && present(project?.claims_and_evidence), "اربط كل معيار مفاضلة بدليل صريح من المشروع."],
+  ].map(([dimension, weight_percent, available, improvement]) => ({
+    dimension,
+    score: available ? 55 : 20,
+    weight_percent,
+    rationale: available
+      ? "توجد معلومة أولية في بيانات المشروع، لكن تعذر التحقق الآلي الكامل منها ويلزم فحص بشري."
+      : "لم تتوفر معلومة منظمة كافية للحكم، لذلك لم يفترض رافد استيفاء هذا البعد.",
+    evidence: [],
+    improvement,
+  }));
+
+  const readinessScore = Math.round(
+    dimensions.reduce((total, item) => total + item.score * item.weight_percent, 0) / 100,
+  );
+  const sourceConfidence = clamp(project?.source_summary?.extraction_confidence || 0);
+  const evidenceStrength = Math.min(45, Math.round(sourceConfidence * 0.45));
+
+  const requirementGaps = mandatoryHardRequirements(opportunity).map((requirement) => ({
+    gap_id: stableId("gap", requirement.requirement_id, "manual-verification"),
+    severity: "حرج",
+    related_requirement_id: requirement.requirement_id,
+    title: `التحقق من شرط: ${requirement.title || requirement.description || "شرط إلزامي"}`,
+    current_state: "غير محسوم لعدم توفر حكم آلي موثوق.",
+    required_action: "راجع الشرط في المصدر الرسمي واربطه بدليل صريح من المشروع.",
+    evidence_to_produce: arr(requirement.evidence_required).length
+      ? arr(requirement.evidence_required)
+      : ["دليل موثق على استيفاء الشرط"],
+    owner_role: "فريق المشروع",
+    due_date: null,
+    completion_criterion: "اعتماد مراجع بشري للدليل مقابل النص الرسمي للشرط.",
+    status: "مفتوحة",
+  }));
+
+  const informationGaps = arr(project?.missing_information).slice(0, 6).map((missing, index) => ({
+    gap_id: stableId("gap", missing.field, index),
+    severity: missing.priority === "حرجة" ? "حرج" : "مهم",
+    related_requirement_id: "project-information",
+    title: missing.field || "معلومة مشروع ناقصة",
+    current_state: "غير موضح في مادة المشروع المتاحة.",
+    required_action: missing.question_to_project_owner || "استكمل المعلومة وارفق دليلها.",
+    evidence_to_produce: [missing.why_needed || "معلومة موثقة قابلة للمراجعة"],
+    owner_role: "فريق المشروع",
+    due_date: null,
+    completion_criterion: "إضافة إجابة صريحة ودليل يمكن للمراجع التحقق منه.",
+    status: "مفتوحة",
+  }));
+  const gaps = [...requirementGaps, ...informationGaps];
+  const actionPlan = gaps.slice(0, 8).map((gap, index) => ({
+    action_id: stableId("act", gap.gap_id),
+    priority: index + 1,
+    action: gap.required_action,
+    why_now: gap.severity === "حرج" ? "لأنها فجوة حرجة قبل قرار التقديم." : "لرفع جودة ووضوح ملف التقديم.",
+    owner_role: gap.owner_role,
+    due_date: null,
+    dependency: null,
+    output: gap.completion_criterion,
+    related_gap_ids: [gap.gap_id],
+  }));
+
+  return {
+    hard_gates: [],
+    fit_dimensions: dimensions,
+    readiness: {
+      opportunity_readiness_score: readinessScore,
+      evidence_strength_score: evidenceStrength,
+      assessment_confidence: 35,
+      summary: "تعذر التحقق من مخرجات التقييم الآلي، لذلك يعرض رافد قراءة محافظة مبنية فقط على اكتمال البيانات المنظمة. جميع شروط الأهلية تحتاج مراجعة بشرية.",
+    },
+    gaps,
+    action_plan: actionPlan,
+    application_package: arr(opportunity?.submission_documents).map((document) => ({
+      document_id: document.document_id,
+      document_name: document.name || "وثيقة مطلوبة",
+      mandatory: Boolean(document.mandatory),
+      status: "غير معروف",
+      available_evidence: "لم يتم التحقق آليًا من توفر الوثيقة.",
+      missing_content: document.description ? [document.description] : [],
+      next_action: "تحقق من توفر الوثيقة واكتمالها وفق المصدر الرسمي.",
+      owner_role: "فريق المشروع",
+    })),
+    institutional_review: {
+      recommendation: "تحتاج قرارًا مؤسسيًا",
+      rationale: "المسار الاحتياطي لا يصدر توصية تقديم نهائية؛ يلزم التحقق البشري من الأهلية والأدلة.",
+      questions_for_project_team: arr(project?.missing_information)
+        .slice(0, 8)
+        .map((item) => item.question_to_project_owner)
+        .filter(Boolean),
+      questions_for_funder: arr(opportunity?.missing_information)
+        .slice(0, 8)
+        .map((item) => item.question_for_funder)
+        .filter(Boolean),
+      reviewer_attention_points: [
+        "تحقق يدويًا من كل بوابة أهلية صارمة.",
+        "لا تعتمد على الدرجات وحدها قبل مراجعة الأدلة والمصدر الرسمي.",
+      ],
+      institutional_review_required: true,
+    },
+    risk_disclosures: [
+      "استُخدم مسار احتياطي محافظ بعد تعذر مطابقة مخرجات المزود للبنية المطلوبة.",
+      "الدرجات لا تثبت الأهلية أو القبول ولا تستبدل قرار الجهة الممولة.",
+    ],
+  };
+}
+
 function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
   const item = structuredClone(assessment || {});
   item.analysis_version = ASSESSMENT_VERSION;
@@ -222,6 +344,7 @@ module.exports = {
   STATUS_RANK,
   mandatoryHardRequirements,
   deriveEligibility,
+  fallbackAssessmentData,
   normalizeAssessmentData,
   validateAssessmentData,
   portfolioSort,

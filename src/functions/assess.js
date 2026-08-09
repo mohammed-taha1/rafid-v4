@@ -10,6 +10,7 @@ const {
 } = require("../lib/http");
 const { assessWithAI } = require("../lib/ai");
 const {
+  fallbackAssessmentData,
   normalizeAssessmentData,
   validateAssessmentData,
 } = require("../lib/assessment-normalize");
@@ -80,8 +81,26 @@ async function assessHandler(request, context) {
       `Rafid assessment started: request_id=${correlationId}, requirements=${input.opportunity.requirements.length}, classification=${input.privacy.classification}`,
     );
 
-    const ai = await assessWithAI(input);
-    const assessment = normalizeAssessmentData(ai.assessment, input);
+    let ai;
+    let assessmentData;
+    let fallbackReason = null;
+    try {
+      ai = await assessWithAI(input);
+      assessmentData = ai.assessment;
+    } catch (error) {
+      if (error?.code !== "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED") throw error;
+      fallbackReason = error.code;
+      assessmentData = fallbackAssessmentData(input);
+      ai = {
+        provider: "deterministic-fallback",
+        model: null,
+        responseId: null,
+        inputTruncated: false,
+        usage: null,
+        dataPolicy: "no_additional_storage",
+      };
+    }
+    const assessment = normalizeAssessmentData(assessmentData, input);
     const validation = validateAssessmentData(assessment);
 
     context.log(
@@ -101,6 +120,8 @@ async function assessHandler(request, context) {
         duration_ms: Date.now() - startedAt,
         usage: ai.usage,
         data_policy: ai.dataPolicy,
+        fallback_used: Boolean(fallbackReason),
+        fallback_reason: fallbackReason,
       },
     });
   } catch (error) {
