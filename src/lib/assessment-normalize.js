@@ -2,6 +2,10 @@
 
 const { arr, clamp, stableId } = require("./opportunity-normalize");
 
+const ASSESSMENT_VERSION = "rafid.opportunity-match.v1";
+const FUNDING_DISCLAIMER =
+  "هذا التقييم استرشادي ولا يضمن القبول أو التمويل. المصدر الرسمي وقرار الجهة الممولة هما المرجع النهائي، وقد توجد شروط إضافية للتخصص أو الشريك أو الجاهزية التقنية أو الملكية الفكرية أو التراخيص.";
+
 const STATUS_RANK = {
   "مؤهل": 0,
   "مؤهل بشروط": 1,
@@ -97,6 +101,8 @@ function deriveEligibility(gates) {
 
 function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
   const item = structuredClone(assessment || {});
+  item.analysis_version = ASSESSMENT_VERSION;
+  item.funding_disclaimer = FUNDING_DISCLAIMER;
   item.project_snapshot = {
     project_title: projectTitle(project),
     project_owner: projectOwner(project),
@@ -191,6 +197,8 @@ function validateAssessmentData(assessment) {
   if (!assessment?.opportunity_snapshot?.opportunity_id)
     errors.push("معرف الفرصة غير موجود.");
   if (!assessment?.eligibility?.status) errors.push("لم يمكن اشتقاق حالة الأهلية.");
+  if (assessment?.analysis_version !== ASSESSMENT_VERSION)
+    errors.push("إصدار تحليل الملاءمة غير صالح.");
   if (!arr(assessment?.hard_gates).length)
     warnings.push("لم تحتوِ الفرصة على بوابات أهلية صارمة؛ يلزم تحقق بشري موسع.");
   if (assessment?.readiness?.assessment_confidence < 60)
@@ -209,6 +217,8 @@ function portfolioSort(a, b) {
 }
 
 module.exports = {
+  ASSESSMENT_VERSION,
+  FUNDING_DISCLAIMER,
   STATUS_RANK,
   mandatoryHardRequirements,
   deriveEligibility,
