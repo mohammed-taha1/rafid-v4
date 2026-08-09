@@ -12,6 +12,19 @@ const STATUS_RANK = {
   "غير محسوم": 2,
   "غير مؤهل": 3,
 };
+const GATE_STATUSES = new Set(["مستوفى", "مستوفى جزئيًا", "غير مستوفى", "غير معروف", "لا ينطبق"]);
+const REVIEW_RECOMMENDATIONS = new Set(["يوصى بالتقديم", "يوصى بعد استكمال الشروط", "لا يوصى لهذه الدورة", "تحتاج قرارًا مؤسسيًا"]);
+const FIT_DIMENSION_WEIGHTS = [
+  ["توافق النطاق", 15],
+  ["قوة المشكلة", 12],
+  ["قوة الحل", 12],
+  ["الأدلة والاختبارات", 12],
+  ["الفريق والشراكات", 10],
+  ["خطة التنفيذ", 10],
+  ["الميزانية", 10],
+  ["الأثر", 10],
+  ["معايير المفاضلة", 9],
+];
 
 function projectTitle(project) {
   return project?.project_identity?.project_title || "مشروع غير مسمى";
@@ -72,7 +85,8 @@ function expandGate(requirement, gate) {
     ...gate,
     requirement_id: requirement.requirement_id,
     requirement: requirement.title || requirement.description || gate.requirement || "شرط غير مسمى",
-    resolution: gate.resolution || gateResolution(gate.status),
+    status: GATE_STATUSES.has(gate.status) ? gate.status : "غير معروف",
+    resolution: gate.resolution || gateResolution(GATE_STATUSES.has(gate.status) ? gate.status : "غير معروف"),
     project_evidence: evidence,
     missing_evidence: arr(gate.missing_evidence),
     remediation: gate.remediation || "استكمل الدليل واربطه بالنص الرسمي للشرط.",
@@ -80,6 +94,25 @@ function expandGate(requirement, gate) {
     due_date: gate.due_date || null,
     opportunity_source_quote: requirement.source_quote || gate.opportunity_source_quote || "",
   };
+}
+
+function normalizeFitDimensions(dimensions) {
+  const byName = new Map();
+  for (const dimension of arr(dimensions)) {
+    if (!dimension?.dimension || byName.has(dimension.dimension)) continue;
+    byName.set(dimension.dimension, dimension);
+  }
+  return FIT_DIMENSION_WEIGHTS.map(([name, weight]) => {
+    const source = byName.get(name) || {};
+    return {
+      dimension: name,
+      score: clamp(source.score),
+      weight_percent: weight,
+      rationale: String(source.rationale || "لم تتوفر معلومات منظمة كافية لتفسير هذا البعد."),
+      evidence: arr(source.evidence).map(String).slice(0, 6),
+      improvement: String(source.improvement || "استكمل الأدلة المرتبطة بهذا البعد وراجعها بشريًا."),
+    };
+  });
 }
 
 function gateGap(gate) {
@@ -316,14 +349,13 @@ function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
     (requirement) => expandGate(requirement, gatesByRequirement.get(requirement.requirement_id)),
   );
 
-  item.fit_dimensions = arr(item.fit_dimensions).map((dimension) => ({
-    ...dimension,
-    score: clamp(dimension.score),
-    weight_percent: Math.max(0, Math.min(100, Number(dimension.weight_percent) || 0)),
-  }));
+  item.fit_dimensions = normalizeFitDimensions(item.fit_dimensions);
   item.readiness ||= {};
-  item.readiness.opportunity_readiness_score = clamp(
-    item.readiness.opportunity_readiness_score,
+  item.readiness.opportunity_readiness_score = Math.round(
+    item.fit_dimensions.reduce(
+      (total, dimension) => total + dimension.score * dimension.weight_percent,
+      0,
+    ) / 100,
   );
   item.readiness.evidence_strength_score = clamp(item.readiness.evidence_strength_score);
   item.readiness.assessment_confidence = clamp(item.readiness.assessment_confidence);
@@ -373,6 +405,14 @@ function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
       }));
   item.risk_disclosures = arr(item.risk_disclosures);
   item.institutional_review ||= {};
+  item.institutional_review.recommendation = REVIEW_RECOMMENDATIONS.has(
+    item.institutional_review.recommendation,
+  )
+    ? item.institutional_review.recommendation
+    : "تحتاج قرارًا مؤسسيًا";
+  item.institutional_review.rationale = String(
+    item.institutional_review.rationale || "يلزم اعتماد النتيجة من مراجع بشري.",
+  );
   item.institutional_review.institutional_review_required = true;
   item.institutional_review.questions_for_project_team = arr(
     item.institutional_review.questions_for_project_team,

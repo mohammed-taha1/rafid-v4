@@ -370,6 +370,7 @@ async function assessWithAI({ opportunity, project, context, privacy }) {
     maxOutputTokens: 18000,
     privacy,
     reasoningEffort: groq ? process.env.GROQ_ASSESSMENT_REASONING_EFFORT || "medium" : undefined,
+    responseMode: groq ? "json_object" : "json_schema",
   });
 
   return { ...result, assessment: result.data, inputTruncated: truncated };
@@ -382,6 +383,7 @@ async function runStructured({
   maxOutputTokens = 14000,
   privacy = {},
   reasoningEffort,
+  responseMode = "json_schema",
 }) {
   const { client, config } = getClient();
   const dataPolicy = assertDataPolicy(config, privacy);
@@ -408,17 +410,21 @@ async function runStructured({
       { role: "system", content: systemPrompt },
       {
         role: "user",
-        content: `${userPrompt}\n\nالتزم بمخطط JSON المرفق في response_format دون إضافة نص خارجه. اجعل النصوص موجزة، ولا تكرر الدليل نفسه.`,
+        content: responseMode === "json_object"
+          ? `${userPrompt}\n\nأعد كائن JSON فقط دون نص خارجه، مطابقًا لهذه البنية وأسماء الحقول والقيم المسموحة:\n${JSON.stringify(schema.schema)}\nاجعل النصوص موجزة ولا تكرر الدليل نفسه.`
+          : `${userPrompt}\n\nالتزم بمخطط JSON المرفق في response_format دون إضافة نص خارجه. اجعل النصوص موجزة، ولا تكرر الدليل نفسه.`,
       },
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: schema.name,
-        strict: schema.strict,
-        schema: schema.schema,
-      },
-    },
+    response_format: responseMode === "json_object"
+      ? { type: "json_object" }
+      : {
+          type: "json_schema",
+          json_schema: {
+            name: schema.name,
+            strict: schema.strict,
+            schema: schema.schema,
+          },
+        },
     reasoning_effort: ["none", "low", "medium", "high"].includes(effectiveReasoning)
       ? effectiveReasoning
       : "high",
@@ -436,7 +442,11 @@ async function runStructured({
     try {
       response = await client.chat.completions.create(chatRequest);
     } catch (error) {
-      if (config.provider !== "groq" || !isStructuredOutputSchemaError(error)) throw error;
+      if (
+        config.provider !== "groq" ||
+        responseMode !== "json_schema" ||
+        !isStructuredOutputSchemaError(error)
+      ) throw error;
 
       // Groq قد يعيد 400 إذا أنشأ النموذج قيمة لا تطابق enum حرفيًا.
       // نعيد المحاولة مرة واحدة بتعليمات تصحيح صريحة بدل إظهار الخطأ للمستخدم مباشرة.
@@ -492,9 +502,12 @@ async function runStructured({
   try {
     parsed = JSON.parse(outputText);
   } catch (error) {
-    throw new Error(`أعاد النموذج مخرجات غير صالحة كـ JSON: ${error.message}`, {
+    const wrapped = new Error(`أعاد النموذج مخرجات غير صالحة كـ JSON: ${error.message}`, {
       cause: error,
     });
+    wrapped.statusCode = 422;
+    wrapped.code = "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED";
+    throw wrapped;
   }
 
   return {

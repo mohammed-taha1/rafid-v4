@@ -93,7 +93,7 @@ assert.equal(validateAssessmentData(assessment).valid, true);
 assert.equal(match.validateAssessment(assessment).valid, true);
 assert.deepEqual(match.gateSummary(assessment.hard_gates), { total: 1, met: 0, partial: 0, missing: 0, unknown: 1 });
 assert.match(match.summaryText(assessment), /غير محسوم/);
-assert.match(match.summaryText(assessment), /62 من 100/);
+assert.match(match.summaryText(assessment), /0 من 100/);
 assert.equal(match.decisionTone("غير مؤهل"), "ineligible");
 
 const compactAssessment = normalizeAssessmentData(
