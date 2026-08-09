@@ -413,7 +413,18 @@ function configureLocalProvider(body) {
     throw error;
   }
   if (!["strict_zdr", "standard"].includes(dataPolicy)) {
-    const erro׎��G����ƭy�l || "openai/gpt-oss-120b").trim() || "openai/gpt-oss-120b";
+    const error = new Error("وضع الخصوصية غير صالح.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!["groq", "openai"].includes(provider)) {
+    const error = new Error("الإعداد السريع يدعم Groq أو OpenAI أو Ollama المحلي؛ يمكن ضبط Azure عبر متغيرات الخادم.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (provider === "groq") {
+    const model = String(body.model || "openai/gpt-oss-120b").trim() || "openai/gpt-oss-120b";
     if (!["openai/gpt-oss-120b", "openai/gpt-oss-20b"].includes(model)) {
       const error = new Error("اختر openai/gpt-oss-120b أو openai/gpt-oss-20b مع Groq.");
       error.statusCode = 400;
