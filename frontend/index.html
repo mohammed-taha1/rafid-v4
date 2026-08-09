@@ -9,6 +9,7 @@
       content="رافد — تحليل منظم لجاهزية محتوى التمويل دون حفظ افتراضي للنص أو الملف."
     />
     <title>رافد | تحليل الجاهزية</title>
+    <link rel="preload" as="image" href="assets/rafid-logo.png" fetchpriority="high" />
     <link rel="stylesheet" href="rafid-v4.css" />
     <script defer src="vendor/mammoth.browser.min.js"></script>
     <script defer src="vendor/supabase.min.js"></script>
@@ -28,7 +29,7 @@
 
     <section id="authGate" class="auth-gate" aria-labelledby="authTitle" hidden>
       <div class="auth-card">
-        <div class="auth-brand"><span class="brand-mark" aria-hidden="true">ر</span><div><b data-product-name>رافد</b><small>جلسة آمنة لتحليل الطلب الحالي</small></div></div>
+        <div class="auth-brand"><span class="brand-logo-crop brand-logo-crop--compact"><img src="assets/rafid-logo.png" alt="رافد" width="1254" height="1254" /></span><div><small>جلسة آمنة لتحليل الطلب الحالي</small></div></div>
         <span class="eyebrow">دخول آمن وسلس</span>
         <h1 id="authTitle">ابدأ من حيث توقفت</h1>
         <p>سجّل عند الحاجة لحماية الطلب؛ لا تحفظ النسخة الأولية ملفك أو نصك تلقائيًا.</p>
@@ -49,11 +50,8 @@
 
     <header class="topbar">
       <a class="brand" href="#" aria-label="رافد — الصفحة الرئيسية" data-view-link="opportunity">
-        <span class="brand-mark" aria-hidden="true">ر</span>
-        <span>
-          <strong data-product-name>رافد</strong>
-          <small>تحليل الجاهزية</small>
-        </span>
+        <span class="brand-logo-crop"><img src="assets/rafid-logo.png" alt="" width="1254" height="1254" /></span>
+        <span class="brand-tagline"><small>تحليل الجاهزية</small></span>
       </a>
       <div class="top-actions">
         <span class="pilot-badge"><i></i> تحليل منظم مع مراجعة بشرية</span>

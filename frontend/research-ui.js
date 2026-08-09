@@ -2,6 +2,7 @@
 
 (() => {
   let controller;
+  let elapsedTimer;
   let requestInFlight = false;
   let runtime = { auth: { enabled: false, required: false }, limits: { max_file_size_mb: 20 } };
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -21,9 +22,32 @@
 
   function header(action = "") {
     return `<header class="rafid-header">
-      <a class="rafid-logo" href="#" aria-label="رافد، الصفحة الرئيسية"><span>ر</span><b>رافد</b></a>
+      <a class="rafid-logo" href="#" aria-label="رافد، الصفحة الرئيسية"><span class="brand-logo-crop"><img src="assets/rafid-logo.png" alt="" width="1254" height="1254" /></span><b class="sr-only">رافد</b></a>
       ${action}
     </header>`;
+  }
+
+  function stopElapsedTimer() {
+    if (elapsedTimer) clearInterval(elapsedTimer);
+    elapsedTimer = undefined;
+  }
+
+  function startElapsedTimer(main) {
+    stopElapsedTimer();
+    const node = main.querySelector("#analysisElapsed");
+    if (!node) return;
+    const startedAt = Date.now();
+    node.hidden = false;
+    const update = () => {
+      const seconds = Math.floor((Date.now() - startedAt) / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const remainder = seconds % 60;
+      node.textContent = minutes
+        ? `الوقت المنقضي: ${minutes} د ${remainder} ث — الخطة المجانية قد تحتاج عدة دقائق.`
+        : `الوقت المنقضي: ${seconds} ث — لا تغلق الصفحة أثناء التحليل.`;
+    };
+    update();
+    elapsedTimer = setInterval(update, 1000);
   }
 
   function app() {
@@ -51,6 +75,7 @@
         <article><span>٣</span><b>راجع القرار</b><p>شاهد الأهلية والملاءمة والأدلة وخطة الإغلاق.</p></article>
       </section>
       <section class="rafid-benefits"><div><span class="rafid-kicker">ما ستحصل عليه</span><h2>قرار أوضح قبل استهلاك وقت التقديم</h2></div><ul><li>بوابات الأهلية</li><li>درجة ملاءمة مفسّرة</li><li>الأدلة المفقودة</li><li>خطة تجهيز الطلب</li></ul></section>
+      <section class="rafid-roadmap" aria-labelledby="roadmapTitle"><div><span class="rafid-kicker">طريق رافد</span><h2 id="roadmapTitle">نبني الطريق من البحث إلى التمويل خطوة بخطوة</h2><p>النسخة الحالية تثبت قرار الملاءمة لفرصة محددة. المراحل التالية تُبنى فوق نفس بيانات الشروط والأدلة، دون التضحية بالخصوصية.</p></div><ol><li class="is-live"><span>متاح الآن</span><b>ملاءمة البحث لفرصة محددة</b><small>أهلية، أدلة، فجوات، وخطة إغلاق.</small></li><li><span>المرحلة التالية</span><b>اقتراح الفرص المناسبة</b><small>ترشيح موثق يبدأ بالشروط المانعة.</small></li><li><span>لاحقًا</span><b>محفظة المؤسسات البحثية</b><small>مقارنة الجاهزية دون كشف النصوص الخام.</small></li><li><span>لاحقًا</span><b>بوابة الجهات الممولة</b><small>مطابقة المعايير مع المشاريع بمراجعة بشرية.</small></li></ol></section>
       <footer><p id="privacy">النتائج استرشادية، ولا تضمن القبول أو التمويل. راجع المصدر الرسمي قبل التقديم.</p><a id="terms" href="#terms">شروط الاستخدام</a></footer>`;
     document.body.prepend(main);
     main.querySelector("#startMatch").addEventListener("click", matchView);
@@ -135,6 +160,7 @@
             <span data-stage="assessment">مطابقة الأهلية والملاءمة</span>
             <span data-stage="report">إعداد خطة الإغلاق</span>
           </div>
+          <p id="analysisElapsed" class="analysis-elapsed" role="status" hidden></p>
           <p id="error" class="rafid-error" role="alert"></p>
           <div class="form-actions"><button id="go" class="rafid-primary" type="button">حلّل الملاءمة للفرصة</button><button id="cancel" class="rafid-secondary" type="button" hidden>إلغاء التحليل</button></div>
         </article>
@@ -186,6 +212,7 @@
       errorNode.textContent = "";
       errorNode.classList.remove("is-error");
       controller = new AbortController();
+      startElapsedTimer(main);
 
       setStage("opportunity");
       const [opportunitySource, researchSource] = await Promise.all([
@@ -245,6 +272,7 @@
         },
       });
     } catch (errorValue) {
+      stopElapsedTimer();
       errorNode.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. بقيت المدخلات لتستطيع المحاولة مجددًا." : errorValue.message;
       errorNode.classList.add("is-error");
       requestInFlight = false;
@@ -286,6 +314,7 @@
   }
 
   function renderMatchResults({ opportunity, assessment, meta }) {
+    stopElapsedTimer();
     requestInFlight = false;
     const identity = opportunity.identity || {};
     const readiness = assessment.readiness || {};
