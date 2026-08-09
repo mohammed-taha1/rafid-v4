@@ -319,6 +319,7 @@ async function extractOpportunityWithAI({ sourceText, metadata, privacy }) {
     schema: RAFID_OPPORTUNITY_SCHEMA,
     maxOutputTokens: 16000,
     privacy,
+    responseMode: activeProviderName() === "groq" ? "json_object" : "json_schema",
   });
 
   return {

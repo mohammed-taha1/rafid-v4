@@ -14,6 +14,7 @@ const {
   normalizeProjectData,
   validateProjectData,
 } = require("../src/lib/normalize");
+const { normalizeOpportunityData } = require("../src/lib/opportunity-normalize");
 
 assert.equal(match.MATCH_VERSION, "rafid.opportunity-match.v1");
 assert.equal(match.validateInputs({ opportunityText: "قصير", researchText: "قصير" }).valid, false);
@@ -162,6 +163,18 @@ assert.equal(
 );
 assert.ok(fallbackAssessment.gaps.length >= 1);
 assert.match(fallbackAssessment.readiness.summary, /قراءة محافظة/);
+
+const sanitizedOpportunity = normalizeOpportunityData({
+  identity: { title: "فرصة", status: "قيد الاستقبال" },
+  requirements: [{ title: "شرط", requirement_type: "شرط واجب", gate_type: "حاسم", category: "غير مصنف", evidence_required: [] }],
+  missing_information: [{ topic: "موعد", impact: "غير محدد" }],
+  source_summary: { information_completeness: "غير محددة", extraction_confidence: 120 },
+});
+assert.equal(sanitizedOpportunity.identity.status, "غير معروف");
+assert.equal(sanitizedOpportunity.requirements[0].requirement_type, "معلومة إرشادية");
+assert.equal(sanitizedOpportunity.requirements[0].gate_type, "ليس بوابة");
+assert.equal(sanitizedOpportunity.missing_information[0].impact, "تحسين فقط");
+assert.equal(sanitizedOpportunity.source_summary.information_completeness, "منخفضة");
 
 const invalid = structuredClone(assessment);
 invalid.readiness.assessment_confidence = 120;

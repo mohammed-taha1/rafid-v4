@@ -17,6 +17,11 @@ const REQUIREMENT_CATEGORIES = Object.freeze([
 ]);
 
 const REQUIREMENT_CATEGORY_SET = new Set(REQUIREMENT_CATEGORIES);
+const OPPORTUNITY_STATUSES = new Set(["مفتوحة", "قادمة", "مغلقة", "غير معروف"]);
+const REQUIREMENT_TYPES = new Set(["إلزامي", "مفضل", "معلومة إرشادية"]);
+const GATE_TYPES = new Set(["بوابة صارمة", "عامل مفاضلة", "ليس بوابة"]);
+const COMPLETENESS_LEVELS = new Set(["مرتفعة", "متوسطة", "منخفضة"]);
+const MISSING_IMPACTS = new Set(["يمنع تحديد الأهلية", "يؤثر في الجاهزية", "تحسين فقط"]);
 
 const CATEGORY_ALIASES = Object.freeze({
   "الأهلية": "أهلية مقدم الطلب",
@@ -153,6 +158,9 @@ function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
   item.identity.official_source_url =
     metadata.official_source_url || item.identity.official_source_url || null;
   item.identity.deadline = metadata.deadline || item.identity.deadline || null;
+  item.identity.status = OPPORTUNITY_STATUSES.has(item.identity.status)
+    ? item.identity.status
+    : "غير معروف";
   item.identity.opportunity_id =
     item.identity.opportunity_id ||
     stableId(
@@ -179,6 +187,12 @@ function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
     seenIds.add(id);
     normalized.requirement_id = id;
     normalized.category = normalizeRequirementCategory(normalized.category);
+    normalized.requirement_type = REQUIREMENT_TYPES.has(normalized.requirement_type)
+      ? normalized.requirement_type
+      : "معلومة إرشادية";
+    normalized.gate_type = GATE_TYPES.has(normalized.gate_type)
+      ? normalized.gate_type
+      : "ليس بوابة";
     normalized.evidence_required = arr(normalized.evidence_required);
     return normalized;
   });
@@ -197,7 +211,10 @@ function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
 
   item.evaluation_criteria = arr(item.evaluation_criteria);
   item.contradictions = arr(item.contradictions);
-  item.missing_information = arr(item.missing_information);
+  item.missing_information = arr(item.missing_information).map((missing) => ({
+    ...missing,
+    impact: MISSING_IMPACTS.has(missing?.impact) ? missing.impact : "تحسين فقط",
+  }));
   item.source_summary ||= {};
   item.source_summary.source_name =
     metadata.source_name || item.source_summary.source_name || "نص الفرصة المرفق";
@@ -205,6 +222,11 @@ function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
   item.source_summary.extraction_confidence = clamp(
     item.source_summary.extraction_confidence,
   );
+  item.source_summary.information_completeness = COMPLETENESS_LEVELS.has(
+    item.source_summary.information_completeness,
+  )
+    ? item.source_summary.information_completeness
+    : "منخفضة";
 
   return item;
 }

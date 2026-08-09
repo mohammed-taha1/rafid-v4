@@ -111,13 +111,13 @@ async function testOllamaContract() {
 }
 
 async function testGroqContract() {
-  let captured;
+  const captured = [];
   await withFakeServer(async (request, response) => {
-    captured = {
+    captured.push({
       url: request.url,
       authorization: request.headers.authorization,
       body: await readBody(request),
-    };
+    });
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify({
       id: "chatcmpl_groq_test",
@@ -148,15 +148,28 @@ async function testGroqContract() {
     assert.deepEqual(result.data, { ok: true });
     assert.equal(result.dataPolicy.zero_data_retention_confirmed, true);
     assert.equal(result.dataPolicy.usage_metadata_retained, true);
+    const objectResult = await runStructured({
+      systemPrompt: "System",
+      userPrompt: "User",
+      schema,
+      privacy: { classification: "internal" },
+      maxOutputTokens: 1200,
+      responseMode: "json_object",
+      reasoningEffort: "medium",
+    });
+    assert.deepEqual(objectResult.data, { ok: true });
   });
-  assert.equal(captured.url, "/v1/chat/completions");
-  assert.equal(captured.authorization, "Bearer test-groq-key-not-real");
-  assert.equal(captured.body.reasoning_effort, "low");
-  assert.equal(captured.body.reasoning_format, "hidden");
-  assert.equal(captured.body.max_completion_tokens, 1600);
-  assert.equal(captured.body.max_tokens, undefined);
-  assert.equal(captured.body.response_format.type, "json_schema");
-  assert.equal(captured.body.response_format.json_schema.strict, true);
+  assert.equal(captured[0].url, "/v1/chat/completions");
+  assert.equal(captured[0].authorization, "Bearer test-groq-key-not-real");
+  assert.equal(captured[0].body.reasoning_effort, "low");
+  assert.equal(captured[0].body.reasoning_format, "hidden");
+  assert.equal(captured[0].body.max_completion_tokens, 1600);
+  assert.equal(captured[0].body.max_tokens, undefined);
+  assert.equal(captured[0].body.response_format.type, "json_schema");
+  assert.equal(captured[0].body.response_format.json_schema.strict, true);
+  assert.equal(captured[1].body.response_format.type, "json_object");
+  assert.equal(captured[1].body.reasoning_effort, "medium");
+  assert.match(captured[1].body.messages[1].content, /أعد كائن JSON فقط/);
 }
 
 Promise.resolve()
