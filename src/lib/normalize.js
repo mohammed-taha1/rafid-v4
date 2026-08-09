@@ -275,8 +275,39 @@ function validateProjectData(p) {
   };
 }
 
+function fallbackProjectData(rawText, { metadata = {}, files = [] } = {}) {
+  const sourceText = String(rawText || "").trim();
+  return normalizeProjectData(
+    {
+      project_identity: {
+        project_title: metadata.title || "بحث أو مشروع المستخدم",
+        university: metadata.university || null,
+        project_type: metadata.type ? [metadata.type] : [],
+        project_owner: { name: null, email: null, phone: null },
+      },
+      project_stage: { current_stage: "غير محدد" },
+      source_summary: {
+        sources_reviewed: files.map((file) => file?.name).filter(Boolean),
+        information_completeness: "منخفضة",
+        extraction_confidence: 25,
+        notes: `تعذر تنظيم الاستخراج الأولي آليًا. يعاد تمرير النص المصدر كما هو إلى مرحلة المطابقة دون اختلاق حقول:\n${sourceText}`,
+      },
+      prototype_and_data: {
+        prototype_exists: false,
+        attachments_or_links: [],
+      },
+      claims_and_evidence: [],
+      risks: [],
+      contradictions: [],
+      assumptions_explicitly_stated_in_source: [],
+    },
+    { metadata, files },
+  );
+}
+
 module.exports = {
   normalizeProjectData,
+  fallbackProjectData,
   validateProjectData,
   buildMissingInformation,
   readinessNotes,
