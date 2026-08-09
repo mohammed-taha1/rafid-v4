@@ -83,6 +83,9 @@ const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
 };
 
 function securityHeaders(contentType = "application/json; charset=utf-8") {

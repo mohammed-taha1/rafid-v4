@@ -44,6 +44,11 @@ async function main() {
     assert.match(await index.text(), /تحليل الجاهزية/);
     assert.match(index.headers.get("content-security-policy") || "", /default-src 'self'/);
 
+    const logo = await fetch(`http://127.0.0.1:${port}/assets/rafid-logo.png`);
+    assert.equal(logo.status, 200);
+    assert.equal(logo.headers.get("content-type"), "image/png");
+    assert.ok((await logo.arrayBuffer()).byteLength > 1000);
+
     const publicConfig = await fetch(`http://127.0.0.1:${port}/api/rafid/public/config`);
     assert.equal(publicConfig.status, 200);
     const runtime = await publicConfig.json();
