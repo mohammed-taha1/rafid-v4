@@ -246,7 +246,7 @@ function structuredOutputErrorText(error) {
 function isStructuredOutputSchemaError(error) {
   const status = Number(error?.status || error?.statusCode || 0);
   if (status !== 400) return false;
-  return /failed_generation|does not match the expected schema|does not validate|json.?schema|response_format|schema validation/i.test(
+  return /failed_generation|json_validate_failed|does not match the expected schema|does not validate|json.?schema|response_format|schema validation/i.test(
     structuredOutputErrorText(error),
   );
 }
@@ -445,12 +445,11 @@ async function runStructured({
     } catch (error) {
       if (
         config.provider !== "groq" ||
-        responseMode !== "json_schema" ||
         !isStructuredOutputSchemaError(error)
       ) throw error;
 
-      // Groq قد يعيد 400 إذا أنشأ النموذج قيمة لا تطابق enum حرفيًا.
-      // نعيد المحاولة مرة واحدة بتعليمات تصحيح صريحة بدل إظهار الخطأ للمستخدم مباشرة.
+      // Groq قد يعيد 400 عندما يفشل JSON أو لا تطابق قيمة enum المخطط حرفيًا.
+      // نعيد المحاولة مرة واحدة فقط بتعليمات تصحيح صريحة لكل وضعي JSON.
       const retryRequest = {
         ...chatRequest,
         messages: [

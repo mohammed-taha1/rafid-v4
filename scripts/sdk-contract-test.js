@@ -172,10 +172,47 @@ async function testGroqContract() {
   assert.match(captured[1].body.messages[1].content, /أعد كائن JSON فقط/);
 }
 
+async function testGroqJsonRepairContract() {
+  let calls = 0;
+  await withFakeServer(async (request, response) => {
+    calls += 1;
+    await readBody(request);
+    if (calls === 1) {
+      response.writeHead(400, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ error: { code: "json_validate_failed", message: "JSON validation failed" } }));
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({
+      id: "chatcmpl_groq_repaired",
+      choices: [{ message: { content: "{\"ok\":true}" }, finish_reason: "stop" }],
+    }));
+  }, async (baseURL) => {
+    process.env.AI_PROVIDER = "groq";
+    process.env.GROQ_API_KEY = "test-groq-key-not-real";
+    process.env.GROQ_BASE_URL = baseURL;
+    process.env.GROQ_MODEL = "openai/gpt-oss-120b";
+    process.env.GROQ_ZERO_DATA_RETENTION_CONFIRMED = "true";
+    process.env.RAFID_DATA_POLICY = "strict_zdr";
+    process.env.RAFID_TEST_MODE = "true";
+    resetAIClient();
+    const repaired = await runStructured({
+      systemPrompt: "System",
+      userPrompt: "User",
+      schema,
+      privacy: { classification: "internal" },
+      responseMode: "json_object",
+    });
+    assert.deepEqual(repaired.data, { ok: true });
+  });
+  assert.equal(calls, 2);
+}
+
 Promise.resolve()
   .then(testResponsesContract)
   .then(testOllamaContract)
   .then(testGroqContract)
+  .then(testGroqJsonRepairContract)
   .then(() => console.log("Rafid OpenAI/Ollama/Groq SDK contract tests passed."))
   .catch((error) => {
     console.error(error);
