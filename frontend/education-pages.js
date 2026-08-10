@@ -18,41 +18,41 @@
       return;
     }
     const c = content();
+    const english = window.RafidI18n?.isEnglish();
     let title = "";
     let lead = "";
     let body = "";
     if (key === "how") {
-      title = "كيف يعمل رافد؟";
-      lead = "رحلة واضحة من الملف إلى تقرير يمكن مراجعته وتنفيذه.";
+      title = english ? "How does Rafid work?" : "كيف يعمل رافد؟";
+      lead = english ? "A clear journey from a file to a reviewable, actionable report." : "رحلة واضحة من الملف إلى تقرير يمكن مراجعته وتنفيذه.";
       body = `<ol class="process-list">${c.howItWorks.map((item, index) => `<li><span>${index + 1}</span><div><h2>${esc(item.title)}</h2><p>${esc(item.text)}</p></div></li>`).join("")}</ol>`;
     }
     if (key === "faq") {
-      title = "الأسئلة الشائعة";
-      lead = "إجابات مباشرة عن الدقة والخصوصية والملفات وطريقة اتخاذ القرار.";
+      title = english ? "Frequently asked questions" : "الأسئلة الشائعة";
+      lead = english ? "Direct answers about accuracy, privacy, files, and responsible decision-making." : "إجابات مباشرة عن الدقة والخصوصية والملفات وطريقة اتخاذ القرار.";
       body = c.faq.map((item, index) => `<details ${index < 2 ? "open" : ""}><summary>${esc(item[0])}</summary><p>${esc(item[1])}</p></details>`).join("");
     }
     if (key === "learn") {
-      title = "مركز التعلم";
-      lead = "دروس قصيرة تساعدك على تحويل البحث إلى ملف تمويلي أوضح.";
-      body = c.lessons.map((item) => `<details><summary>${esc(item.title)}</summary><div class="lesson-body"><p><b>التعريف:</b> ${esc(item.definition)}</p><p><b>لماذا يهم؟</b> ${esc(item.why)}</p><p><b>مثال:</b> ${esc(item.example)}</p><p><b>خطأ شائع:</b> ${esc(item.mistake)}</p><p><b>خطوة عملية:</b> ${esc(item.action)}</p></div></details>`).join("");
+      title = english ? "Learning center" : "مركز التعلم";
+      lead = english ? "Short lessons that help turn research into a clearer funding case." : "دروس قصيرة تساعدك على تحويل البحث إلى ملف تمويلي أوضح.";
+      body = c.lessons.map((item) => `<details><summary>${esc(item.title)}</summary><div class="lesson-body"><p><b>${english ? "Definition:" : "التعريف:"}</b> ${esc(item.definition)}</p><p><b>${english ? "Why it matters:" : "لماذا يهم؟"}</b> ${esc(item.why)}</p><p><b>${english ? "Example:" : "مثال:"}</b> ${esc(item.example)}</p><p><b>${english ? "Common mistake:" : "خطأ شائع:"}</b> ${esc(item.mistake)}</p><p><b>${english ? "Practical step:" : "خطوة عملية:"}</b> ${esc(item.action)}</p></div></details>`).join("");
     }
     if (key === "about") {
-      title = "عن رافد والأثر";
-      lead = "نساعد الباحث والمبتكر على رؤية الطريق بين البحث والتمويل والتنفيذ.";
+      title = english ? "About Rafid and its impact" : "عن رافد والأثر";
+      lead = english ? "We help researchers and innovators see the path between research, funding, and execution." : "نساعد الباحث والمبتكر على رؤية الطريق بين البحث والتمويل والتنفيذ.";
       body = cards(c.about);
     }
     if (key === "privacy") {
-      title = "الخصوصية ومعالجة البيانات";
-      lead = "ماذا يعالج رافد، وما الذي لا يخزنه، وأين تقع مسؤولية المستخدم.";
-      body = `<div class="privacy-banner"><b>الخلاصة</b><p>لا حفظ افتراضي للبحث، ولا تحليل سري إذا لم يكن ZDR مؤكدًا في الوضع الصارم، ولا حاجة لتسجيل الدخول لإجراء التحليل العام.</p></div>${cards(c.privacy)}`;
+      title = english ? "Privacy and data processing" : "الخصوصية ومعالجة البيانات";
+      lead = english ? "What Rafid processes, what it does not store, and where user responsibility applies." : "ماذا يعالج رافد، وما الذي لا يخزنه، وأين تقع مسؤولية المستخدم.";
+      body = `<div class="privacy-banner"><b>${english ? "Summary" : "الخلاصة"}</b><p>${english ? "Research is not stored by default. Strict mode does not process confidential content unless ZDR is confirmed, and public analysis does not require sign-in." : "لا حفظ افتراضي للبحث، ولا تحليل سري إذا لم يكن ZDR مؤكدًا في الوضع الصارم، ولا حاجة لتسجيل الدخول لإجراء التحليل العام."}</p></div>${cards(c.privacy)}`;
     }
     if (key === "terms") {
-      title = "شروط الاستخدام";
-      lead = "حدود واضحة لاستخدام النتيجة بصورة مسؤولة.";
+      title = english ? "Terms of use" : "شروط الاستخدام";
+      lead = english ? "Clear boundaries for responsible use of the result." : "حدود واضحة لاستخدام النتيجة بصورة مسؤولة.";
       body = cards(c.terms);
     }
     if (key === "contact") {
-      const english = window.RafidI18n?.isEnglish();
       title = english ? "Contact and suggestions" : "تواصل معنا والاقتراحات";
       lead = english ? "Help us improve Rafid through a short, privacy-safe suggestion." : "ساعدنا في تحسين رافد باقتراح مختصر يحترم الخصوصية.";
       body = `<section class="contact-panel"><h2>${english ? "Before sending" : "قبل الإرسال"}</h2><p>${english ? "Do not include research text, personal data, credentials, or confidential information. This form currently prepares a message on your device and does not upload it to Rafid." : "لا تضع نص بحث، أو بيانات شخصية، أو مفاتيح، أو معلومات سرية. النموذج حاليًا يجهز الرسالة على جهازك ولا يرفعها إلى رافد."}</p><form id="contactForm"><label>${english ? "Suggestion" : "الاقتراح"}<textarea id="contactMessage" maxlength="1000" required></textarea></label><button class="rafid-primary" type="submit">${english ? "Copy suggestion" : "نسخ الاقتراح"}</button><p id="contactStatus" role="status"></p></form></section>`;
