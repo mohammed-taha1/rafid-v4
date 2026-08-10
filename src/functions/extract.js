@@ -11,6 +11,8 @@ const {
 const { extractWithAI } = require("../lib/ai");
 const {
   normalizeProjectData,
+  augmentProjectDataFromText,
+  fallbackProjectData,
   validateProjectData,
 } = require("../lib/normalize");
 const {
@@ -37,7 +39,8 @@ function normalizeRequestBody(body) {
   assertInputSize(body, "طلب استخراج المشروع");
   const privacy = normalizePrivacy(body, { allowLegacy: allowLegacyRequests() });
 
-  return { rawText, metadata, files, privacy };
+  const outputLanguage = body.output_language === "en" ? "en" : "ar";
+  return { rawText, metadata, files, privacy, outputLanguage };
 }
 
 async function extractHandler(request, context) {
@@ -74,11 +77,31 @@ async function extractHandler(request, context) {
       `Rafid project extraction started: request_id=${correlationId}, chars=${input.rawText.length}, files=${input.files.length}, classification=${input.privacy.classification}`,
     );
 
-    const ai = await extractWithAI(input);
-    const projectData = normalizeProjectData(ai.project, {
-      metadata: input.metadata,
-      files: input.files,
-    });
+    let ai;
+    let projectData;
+    let fallbackReason = null;
+    try {
+      ai = await extractWithAI(input);
+      projectData = normalizeProjectData(augmentProjectDataFromText(ai.project, input.rawText), {
+        metadata: input.metadata,
+        files: input.files,
+      });
+    } catch (error) {
+      if (error?.code !== "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED") throw error;
+      fallbackReason = error.code;
+      projectData = fallbackProjectData(input.rawText, {
+        metadata: input.metadata,
+        files: input.files,
+      });
+      ai = {
+        provider: "deterministic-fallback",
+        model: null,
+        responseId: null,
+        inputTruncated: false,
+        usage: null,
+        dataPolicy: "no_additional_storage",
+      };
+    }
     const validation = validateProjectData(projectData);
 
     context.log(
@@ -99,6 +122,8 @@ async function extractHandler(request, context) {
         duration_ms: Date.now() - startedAt,
         usage: ai.usage,
         data_policy: ai.dataPolicy,
+        fallback_used: Boolean(fallbackReason),
+        fallback_reason: fallbackReason,
       },
     });
   } catch (error) {

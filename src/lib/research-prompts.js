@@ -7,7 +7,8 @@ function dataBlock(text) { return `<DATA_UNTRUSTED>\n${String(text)}\n</DATA_UNT
 function stagePrompt(stage, payload) {
   const base = { extraction:"استخرج العناصر والأدلة فقط؛ لا تمنح درجات.", merge:"ادمج الاستخراجات وأزل التكرار مع حفظ الأدلة.", score:"قيّم العقد فقط باستخدام الحقائق المتاحة وفسر كل بعد.", verify:"تحقق من اكتمال العقد، وحوّل الغائب إلى غير موضح، ولا تضف حقائق." }[stage];
   if (!base) throw new Error("مرحلة prompt غير معروفة.");
-  return `${base}\nإصدار prompt: ${PROMPT_VERSION}\nإخلاء ثابت: ${FUNDING_DISCLAIMER}\n${dataBlock(JSON.stringify(payload))}`;
+  const language = payload?.output_language === "en" ? "English" : "العربية";
+  return `${base}\nلغة النصوص الوصفية المطلوبة: ${language}. استخدمها في الملخصات والتفسيرات والتوصيات، وأبق مفاتيح JSON والقيم المقيدة بالمخطط كما هي.\nإصدار prompt: ${PROMPT_VERSION}\nإخلاء ثابت: ${FUNDING_DISCLAIMER}\n${dataBlock(JSON.stringify(payload))}`;
 }
 function requestFor(stage, payload) { return { modelSettings:{ temperature:0.1, responseFormat:"json_schema" }, messages:[{role:"system",content:SYSTEM_PROMPT},{role:"user",content:stagePrompt(stage,payload)}] }; }
 module.exports={PROMPT_VERSION,SYSTEM_PROMPT,dataBlock,stagePrompt,requestFor};

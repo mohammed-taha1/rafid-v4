@@ -1,13 +1,20 @@
+"use strict";
+
 const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const projectRoot = path.resolve(__dirname, "..");
+const requiredAssets = [
+  "frontend/vendor/mammoth.browser.min.js",
+  "frontend/vendor/pdf.min.mjs",
+  "frontend/vendor/pdf.worker.min.mjs",
+  "frontend/assets/rafid-logo.png",
+];
 
-const source = path.join(projectRoot, "node_modules", "@supabase", "supabase-js", "dist", "umd", "supabase.js");
-const destination = path.join(projectRoot, "frontend", "vendor", "supabase.min.js");
-
-fs.copyFile(source, destination).catch((error) => {
-  console.error("Unable to build the browser Supabase client.");
-  console.error(error.message);
-  process.exitCode = 1;
-});
+Promise.all(requiredAssets.map((asset) => fs.access(path.join(projectRoot, asset))))
+  .then(() => console.log(`Verified ${requiredAssets.length} local browser assets.`))
+  .catch((error) => {
+    console.error("A required local browser asset is missing.");
+    console.error(error.message);
+    process.exitCode = 1;
+  });

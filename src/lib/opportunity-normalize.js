@@ -17,6 +17,11 @@ const REQUIREMENT_CATEGORIES = Object.freeze([
 ]);
 
 const REQUIREMENT_CATEGORY_SET = new Set(REQUIREMENT_CATEGORIES);
+const OPPORTUNITY_STATUSES = new Set(["مفتوحة", "قادمة", "مغلقة", "غير معروف"]);
+const REQUIREMENT_TYPES = new Set(["إلزامي", "مفضل", "معلومة إرشادية"]);
+const GATE_TYPES = new Set(["بوابة صارمة", "عامل مفاضلة", "ليس بوابة"]);
+const COMPLETENESS_LEVELS = new Set(["مرتفعة", "متوسطة", "منخفضة"]);
+const MISSING_IMPACTS = new Set(["يمنع تحديد الأهلية", "يؤثر في الجاهزية", "تحسين فقط"]);
 
 const CATEGORY_ALIASES = Object.freeze({
   "الأهلية": "أهلية مقدم الطلب",
@@ -153,6 +158,9 @@ function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
   item.identity.official_source_url =
     metadata.official_source_url || item.identity.official_source_url || null;
   item.identity.deadline = metadata.deadline || item.identity.deadline || null;
+  item.identity.status = OPPORTUNITY_STATUSES.has(item.identity.status)
+    ? item.identity.status
+    : "غير معروف";
   item.identity.opportunity_id =
     item.identity.opportunity_id ||
     stableId(
@@ -179,6 +187,12 @@ function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
     seenIds.add(id);
     normalized.requirement_id = id;
     normalized.category = normalizeRequirementCategory(normalized.category);
+    normalized.requirement_type = REQUIREMENT_TYPES.has(normalized.requirement_type)
+      ? normalized.requirement_type
+      : "معلومة إرشادية";
+    normalized.gate_type = GATE_TYPES.has(normalized.gate_type)
+      ? normalized.gate_type
+      : "ليس بوابة";
     normalized.evidence_required = arr(normalized.evidence_required);
     return normalized;
   });
@@ -197,7 +211,10 @@ function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
 
   item.evaluation_criteria = arr(item.evaluation_criteria);
   item.contradictions = arr(item.contradictions);
-  item.missing_information = arr(item.missing_information);
+  item.missing_information = arr(item.missing_information).map((missing) => ({
+    ...missing,
+    impact: MISSING_IMPACTS.has(missing?.impact) ? missing.impact : "تحسين فقط",
+  }));
   item.source_summary ||= {};
   item.source_summary.source_name =
     metadata.source_name || item.source_summary.source_name || "نص الفرصة المرفق";
@@ -205,6 +222,11 @@ function normalizeOpportunityData(opportunity, { metadata = {} } = {}) {
   item.source_summary.extraction_confidence = clamp(
     item.source_summary.extraction_confidence,
   );
+  item.source_summary.information_completeness = COMPLETENESS_LEVELS.has(
+    item.source_summary.information_completeness,
+  )
+    ? item.source_summary.information_completeness
+    : "منخفضة";
 
   return item;
 }
@@ -227,6 +249,62 @@ function validateOpportunityData(opportunity) {
   return { valid: errors.length === 0, errors, warnings };
 }
 
+function fallbackOpportunityData(sourceText, { metadata = {} } = {}) {
+  const clean = String(sourceText || "").replace(/\s+/g, " ").trim();
+  const sentences = clean
+    .split(/(?<=[.!؟؛\n])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 20);
+  const mandatoryPattern = /(?:يجب|يشترط|يلزم|إلزام|إلزامي|لا بد|لابد|الأهلية|غير مؤهل|لا يقبل|لا تُقبل|المتطلبات)/;
+  const preferredPattern = /(?:يفضل|الأولوية|أفضلية|معيار|المفاضلة|نقاط إضافية)/;
+  const candidates = sentences.filter((sentence) => mandatoryPattern.test(sentence)).slice(0, 18);
+  const supplemental = sentences.filter((sentence) => preferredPattern.test(sentence) && !candidates.includes(sentence)).slice(0, 8);
+  const selected = [...candidates, ...supplemental];
+  const requirements = (selected.length ? selected : sentences.slice(0, 5)).map((sentence, index) => {
+    const mandatory = mandatoryPattern.test(sentence);
+    return {
+      requirement_id: stableId("req", metadata.title, sentence, index),
+      title: sentence.slice(0, 120),
+      description: sentence.slice(0, 500),
+      category: normalizeRequirementCategory(sentence),
+      requirement_type: mandatory ? "إلزامي" : preferredPattern.test(sentence) ? "مفضل" : "معلومة إرشادية",
+      gate_type: mandatory ? "بوابة صارمة" : preferredPattern.test(sentence) ? "عامل مفاضلة" : "ليس بوابة",
+      evidence_required: mandatory ? ["دليل صريح يثبت استيفاء هذا الشرط"] : [],
+      source_quote: sentence.slice(0, 500),
+    };
+  });
+  return {
+    identity: {
+      title: metadata.title || "فرصة تحتاج مراجعة",
+      funder: metadata.funder || null,
+      official_source_url: metadata.official_source_url || null,
+      deadline: metadata.deadline || null,
+      status: "غير معروف",
+    },
+    purpose_and_scope: {
+      objectives: sentences.slice(0, 3),
+      eligible_activities: [],
+      excluded_activities: [],
+    },
+    requirements,
+    submission_documents: [],
+    evaluation_criteria: supplemental.map((sentence) => ({ criterion: sentence.slice(0, 220), weight: null, source_quote: sentence.slice(0, 500) })),
+    contradictions: [],
+    missing_information: [{
+      topic: "التحقق من الاستخراج الحتمي",
+      impact: "يمنع تحديد الأهلية",
+      question_for_funder: "أكد نصوص الأهلية والوثائق ومعايير المفاضلة من المصدر الرسمي.",
+    }],
+    source_summary: {
+      source_name: metadata.source_name || "نص الفرصة المرفق",
+      sections_reviewed: ["النص المتاح"],
+      extraction_confidence: 25,
+      information_completeness: "منخفضة",
+      notes: "استخدم رافد استخراجًا حتميًا محافظًا بعد تعذر التحقق من مخرجات المزود؛ جميع البوابات تحتاج مراجعة بشرية.",
+    },
+  };
+}
+
 module.exports = {
   arr,
   clamp,
@@ -235,4 +313,5 @@ module.exports = {
   normalizeRequirementCategory,
   normalizeOpportunityData,
   validateOpportunityData,
+  fallbackOpportunityData,
 };

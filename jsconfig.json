@@ -12,14 +12,13 @@
     "strict": false
   },
   "include": [
-    "frontend/rafid-v4.js",
+    "frontend/*.js",
     "scripts/**/*.js",
     "src/**/*.js",
     "tests.js"
   ],
   "exclude": [
     "frontend/vendor/**",
-    "frontend/rafid_v3_1_ai_connected.html",
     "node_modules/**"
   ]
 }

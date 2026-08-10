@@ -28,6 +28,8 @@ async function main() {
   assert.equal(ingestText("نص عربي صالح للتحليل").wordCount, 4);
   const txt = await ingestFile({ name: "طلب.txt", mimeType: "text/plain", data: Buffer.from("نص عربي صالح للتحليل") });
   assert.equal(txt.sourceType, "txt");
+  const markdown = await ingestFile({ name: "ملخص.md", mimeType: "text/markdown", data: Buffer.from("# عنوان\n\nنص عربي صالح للتحليل") });
+  assert.equal(markdown.sourceType, "md");
   const pdfResult = await ingestFile({ name: "ready.pdf", mimeType: "application/pdf", data: pdf() });
   assert.equal(pdfResult.pagesOrSections[0].pageNumber, 1);
   const docxResult = await ingestFile({ name: "ready.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", data: await docx() });

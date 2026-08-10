@@ -42,13 +42,17 @@ const {
 } = require("../src/lib/ai");
 const {
   normalizeProjectData,
+  augmentProjectDataFromText,
+  fallbackProjectData,
   validateProjectData,
 } = require("../src/lib/normalize");
 const {
   normalizeOpportunityData,
   validateOpportunityData,
+  fallbackOpportunityData,
 } = require("../src/lib/opportunity-normalize");
 const {
+  fallbackAssessmentData,
   normalizeAssessmentData,
   validateAssessmentData,
 } = require("../src/lib/assessment-normalize");
@@ -66,6 +70,8 @@ const {
 const { checkRateLimit } = require("../src/lib/http");
 const { analyzeResearch } = require("../src/lib/research-pipeline");
 const { createGroqResearchProvider } = require("../src/lib/research-provider");
+const { discoverOpportunities, publicCatalog } = require("../src/lib/funding-discovery");
+const { comparePortfolio } = require("../src/lib/institutional-portfolio");
 
 const version = "4.3.0";
 const deploymentMode = String(process.env.RAFID_DEPLOYMENT_MODE || "local").toLowerCase();
@@ -81,6 +87,9 @@ const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
 };
 
 function securityHeaders(contentType = "application/json; charset=utf-8") {
@@ -564,6 +573,9 @@ async function handleApi(request, response, pathname) {
   if (request.method === "GET" && pathname === "/api/rafid/public/config") {
     return sendJson(response, 200, { ok: true, ...publicRuntimeConfig() });
   }
+  if (request.method === "GET" && pathname === "/api/rafid/opportunities/catalog") {
+    return sendJson(response, 200, { ok: true, ...publicCatalog() });
+  }
   const auth = await assertAccess(request);
 
   if (request.method === "GET" && pathname === "/api/rafid/health") {
@@ -592,6 +604,9 @@ async function handleApi(request, response, pathname) {
         "/api/rafid/opportunity/extract",
         "/api/rafid/extract",
         "/api/rafid/opportunity/assess",
+        "/api/rafid/opportunities/catalog",
+        "/api/rafid/opportunities/discover",
+        "/api/rafid/portfolio/compare",
       ],
     });
   }
@@ -633,12 +648,49 @@ async function handleApi(request, response, pathname) {
     }
   }
 
+  if (pathname === "/api/rafid/opportunities/discover") {
+    assertRateLimit(request, auth, { countGlobal: false });
+    assertInputSize(body, "طلب اكتشاف الفرص");
+    normalizePrivacy(body);
+    const startedAt = Date.now();
+    const result = discoverOpportunities(body.project_data, body.filters || {});
+    return sendJson(response, 200, {
+      ok: true,
+      result,
+      meta: { request_id: requestId(), duration_ms: Date.now() - startedAt, provider: "deterministic", stored: false },
+    });
+  }
+
+  if (pathname === "/api/rafid/portfolio/compare") {
+    assertRateLimit(request, auth, { countGlobal: false });
+    assertInputSize(body, "طلب مقارنة المحفظة");
+    normalizePrivacy(body);
+    const startedAt = Date.now();
+    const result = comparePortfolio(body.opportunity, body.projects);
+    return sendJson(response, 200, {
+      ok: true,
+      result,
+      meta: { request_id: requestId(), duration_ms: Date.now() - startedAt, provider: "deterministic", stored: false },
+    });
+  }
+
   if (pathname === "/api/rafid/opportunity/extract") {
     assertRateLimit(request, auth);
     const startedAt = Date.now();
     const input = normalizeOpportunityRequest(body);
-    const ai = await extractOpportunityWithAI(input);
-    const opportunity = normalizeOpportunityData(ai.opportunity, { metadata: input.metadata });
+    let ai;
+    let opportunityData;
+    let fallbackReason = null;
+    try {
+      ai = await extractOpportunityWithAI(input);
+      opportunityData = ai.opportunity;
+    } catch (error) {
+      if (error?.code !== "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED") throw error;
+      fallbackReason = error.code;
+      opportunityData = fallbackOpportunityData(input.sourceText, { metadata: input.metadata });
+      ai = { provider: "deterministic-fallback", model: null, inputTruncated: false, usage: null, dataPolicy: "no_additional_storage" };
+    }
+    const opportunity = normalizeOpportunityData(opportunityData, { metadata: input.metadata });
     const validation = validateOpportunityData(opportunity);
     return sendJson(response, validation.valid ? 200 : 422, {
       ok: validation.valid,
@@ -653,6 +705,8 @@ async function handleApi(request, response, pathname) {
         duration_ms: Date.now() - startedAt,
         usage: ai.usage,
         data_policy: ai.dataPolicy,
+        fallback_used: Boolean(fallbackReason),
+        fallback_reason: fallbackReason,
       },
     });
   }
@@ -661,11 +715,31 @@ async function handleApi(request, response, pathname) {
     assertRateLimit(request, auth);
     const startedAt = Date.now();
     const input = normalizeProjectRequest(body);
-    const ai = await extractWithAI(input);
-    const projectData = normalizeProjectData(ai.project, {
-      metadata: input.metadata,
-      files: input.files,
-    });
+    let ai;
+    let projectData;
+    let fallbackReason = null;
+    try {
+      ai = await extractWithAI(input);
+      projectData = normalizeProjectData(augmentProjectDataFromText(ai.project, input.rawText), {
+        metadata: input.metadata,
+        files: input.files,
+      });
+    } catch (error) {
+      if (error?.code !== "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED") throw error;
+      fallbackReason = error.code;
+      projectData = fallbackProjectData(input.rawText, {
+        metadata: input.metadata,
+        files: input.files,
+      });
+      ai = {
+        provider: "deterministic-fallback",
+        model: null,
+        responseId: null,
+        inputTruncated: false,
+        usage: null,
+        dataPolicy: "no_additional_storage",
+      };
+    }
     const validation = validateProjectData(projectData);
     return sendJson(response, validation.valid ? 200 : 422, {
       ok: validation.valid,
@@ -680,6 +754,8 @@ async function handleApi(request, response, pathname) {
         duration_ms: Date.now() - startedAt,
         usage: ai.usage,
         data_policy: ai.dataPolicy,
+        fallback_used: Boolean(fallbackReason),
+        fallback_reason: fallbackReason,
       },
     });
   }
@@ -688,8 +764,25 @@ async function handleApi(request, response, pathname) {
     assertRateLimit(request, auth);
     const startedAt = Date.now();
     const input = normalizeAssessmentRequest(body);
-    const ai = await assessWithAI(input);
-    const assessment = normalizeAssessmentData(ai.assessment, input);
+    let ai;
+    let assessmentData;
+    let fallbackReason = null;
+    try {
+      ai = await assessWithAI(input);
+      assessmentData = ai.assessment;
+    } catch (error) {
+      if (error?.code !== "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED") throw error;
+      fallbackReason = error.code;
+      assessmentData = fallbackAssessmentData(input);
+      ai = {
+        provider: "deterministic-fallback",
+        model: null,
+        inputTruncated: false,
+        usage: null,
+        dataPolicy: "no_additional_storage",
+      };
+    }
+    const assessment = normalizeAssessmentData(assessmentData, input);
     const validation = validateAssessmentData(assessment);
     return sendJson(response, validation.valid ? 200 : 422, {
       ok: validation.valid,
@@ -704,6 +797,8 @@ async function handleApi(request, response, pathname) {
         duration_ms: Date.now() - startedAt,
         usage: ai.usage,
         data_policy: ai.dataPolicy,
+        fallback_used: Boolean(fallbackReason),
+        fallback_reason: fallbackReason,
       },
     });
   }

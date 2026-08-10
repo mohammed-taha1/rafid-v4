@@ -10,3 +10,5 @@ require("./functions/source");
 require("./functions/extract");
 require("./functions/opportunity");
 require("./functions/assess");
+require("./functions/discovery");
+require("./functions/portfolio");

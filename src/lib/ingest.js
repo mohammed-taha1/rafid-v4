@@ -6,6 +6,7 @@ const ACCEPTED_TYPES = Object.freeze({
   pdf: new Set(["application/pdf"]),
   docx: new Set(["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
   txt: new Set(["text/plain"]),
+  md: new Set(["text/markdown", "text/plain"]),
 });
 const MIN_WORDS = 3;
 
@@ -27,7 +28,7 @@ function safeDisplayName(value) {
 
 function extensionOf(name) {
   const extension = path.extname(safeDisplayName(name)).slice(1).toLowerCase();
-  return ["pdf", "docx", "txt"].includes(extension) ? extension : "";
+  return ["pdf", "docx", "txt", "md"].includes(extension) ? extension : "";
 }
 
 function wordCount(value) {
@@ -55,7 +56,7 @@ function assertMetadata(file, maxFileSizeMb) {
   const name = safeDisplayName(file?.name);
   const sourceType = extensionOf(name);
   const data = Buffer.isBuffer(file?.data) ? file.data : Buffer.from(file?.data || []);
-  if (!sourceType) throw new IngestError("INGEST_UNSUPPORTED_TYPE", "يدعم رافد PDF وDOCX وTXT فقط.");
+  if (!sourceType) throw new IngestError("INGEST_UNSUPPORTED_TYPE", "يدعم رافد PDF وDOCX وTXT وMD.");
   if (!data.length) throw new IngestError("INGEST_EMPTY_FILE", "الملف فارغ.");
   const limit = Math.max(1, Number(maxFileSizeMb) || 20) * 1024 * 1024;
   if (data.length > limit) throw new IngestError("INGEST_FILE_TOO_LARGE", `حجم الملف يتجاوز الحد المسموح (${Math.floor(limit / 1024 / 1024)} ميغابايت).`);
@@ -69,7 +70,7 @@ function assertMetadata(file, maxFileSizeMb) {
   if (sourceType === "docx" && !(data[0] === 0x50 && data[1] === 0x4b)) {
     throw new IngestError("INGEST_CORRUPT_DOCUMENT", "ملف DOCX غير صالح أو تالف.");
   }
-  if (sourceType === "txt" && data.includes(0)) {
+  if (["txt", "md"].includes(sourceType) && data.includes(0)) {
     throw new IngestError("INGEST_UNREADABLE_TEXT", "الملف النصي يحتوي بيانات ثنائية غير قابلة للقراءة.");
   }
   return { data, safeDisplayName: name, sourceType };
@@ -113,9 +114,9 @@ function completed(sourceType, safeName, text, pagesOrSections) {
 
 async function ingestFile(file, { maxFileSizeMb = 20 } = {}) {
   const checked = assertMetadata(file, maxFileSizeMb);
-  if (checked.sourceType === "txt") {
+  if (["txt", "md"].includes(checked.sourceType)) {
     const text = decodeText(checked.data);
-    return completed("txt", checked.safeDisplayName, text, [{ sectionNumber: 1, text }]);
+    return completed(checked.sourceType, checked.safeDisplayName, text, [{ sectionNumber: 1, text }]);
   }
   if (checked.sourceType === "docx") {
     const text = await extractDocx(checked.data);

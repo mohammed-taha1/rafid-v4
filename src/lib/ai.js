@@ -7,7 +7,10 @@ const {
   OPPORTUNITY_SYSTEM_PROMPT,
   buildOpportunityPrompt,
 } = require("./opportunity-prompt");
-const { RAFID_ASSESSMENT_SCHEMA } = require("./assessment-schema");
+const {
+  RAFID_ASSESSMENT_SCHEMA,
+  RAFID_COMPACT_ASSESSMENT_SCHEMA,
+} = require("./assessment-schema");
 const {
   ASSESSMENT_SYSTEM_PROMPT,
   buildAssessmentPrompt,
@@ -243,7 +246,7 @@ function structuredOutputErrorText(error) {
 function isStructuredOutputSchemaError(error) {
   const status = Number(error?.status || error?.statusCode || 0);
   if (status !== 400) return false;
-  return /failed_generation|does not match the expected schema|does not validate|json.?schema|response_format|schema validation/i.test(
+  return /failed_generation|json_validate_failed|does not match the expected schema|does not validate|json.?schema|response_format|schema validation/i.test(
     structuredOutputErrorText(error),
   );
 }
@@ -270,7 +273,7 @@ function smartTruncate(text, maxChars) {
   };
 }
 
-async function extractWithAI({ rawText, metadata, files, privacy }) {
+async function extractWithAI({ rawText, metadata, files, privacy, outputLanguage = "ar" }) {
   const maxChars = providerTextLimit({
     standardEnv: "RAFID_MAX_TEXT_CHARS",
     standardDefault: 120_000,
@@ -287,6 +290,7 @@ async function extractWithAI({ rawText, metadata, files, privacy }) {
       metadata,
       files,
       truncated: prepared.truncated,
+      outputLanguage,
     }),
     schema: RAFID_EXTRACTION_SCHEMA,
     maxOutputTokens: 14000,
@@ -296,7 +300,7 @@ async function extractWithAI({ rawText, metadata, files, privacy }) {
   return { ...result, project: result.data, inputTruncated: prepared.truncated };
 }
 
-async function extractOpportunityWithAI({ sourceText, metadata, privacy }) {
+async function extractOpportunityWithAI({ sourceText, metadata, privacy, outputLanguage = "ar" }) {
   const maxChars = providerTextLimit({
     standardEnv: "RAFID_MAX_TEXT_CHARS",
     standardDefault: 120_000,
@@ -312,10 +316,12 @@ async function extractOpportunityWithAI({ sourceText, metadata, privacy }) {
       sourceText: prepared.text,
       metadata,
       truncated: prepared.truncated,
+      outputLanguage,
     }),
     schema: RAFID_OPPORTUNITY_SCHEMA,
     maxOutputTokens: 16000,
     privacy,
+    responseMode: activeProviderName() === "groq" ? "json_object" : "json_schema",
   });
 
   return {
@@ -325,7 +331,7 @@ async function extractOpportunityWithAI({ sourceText, metadata, privacy }) {
   };
 }
 
-async function assessWithAI({ opportunity, project, context, privacy }) {
+async function assessWithAI({ opportunity, project, context, privacy, outputLanguage = "ar" }) {
   const groq = activeProviderName() === "groq";
   const opportunityMax = providerTextLimit({
     standardEnv: "RAFID_MAX_OPPORTUNITY_CHARS",
@@ -361,10 +367,14 @@ async function assessWithAI({ opportunity, project, context, privacy }) {
       projectJson: preparedProject.text,
       context,
       truncated,
+      compact: groq,
+      outputLanguage,
     }),
-    schema: RAFID_ASSESSMENT_SCHEMA,
+    schema: groq ? RAFID_COMPACT_ASSESSMENT_SCHEMA : RAFID_ASSESSMENT_SCHEMA,
     maxOutputTokens: 18000,
     privacy,
+    reasoningEffort: groq ? process.env.GROQ_ASSESSMENT_REASONING_EFFORT || "medium" : undefined,
+    responseMode: groq ? "json_object" : "json_schema",
   });
 
   return { ...result, assessment: result.data, inputTruncated: truncated };
@@ -376,16 +386,21 @@ async function runStructured({
   schema,
   maxOutputTokens = 14000,
   privacy = {},
+  reasoningEffort,
+  responseMode = "json_schema",
 }) {
   const { client, config } = getClient();
   const dataPolicy = assertDataPolicy(config, privacy);
-  const reasoningEffort = String(
-    config.provider === "groq"
-      ? process.env.GROQ_REASONING_EFFORT || "low"
-      : process.env.RAFID_REASONING_EFFORT || "high",
+  const configuredReasoningEffort = String(
+    reasoningEffort ||
+      (config.provider === "groq"
+        ? process.env.GROQ_REASONING_EFFORT || "low"
+        : process.env.RAFID_REASONING_EFFORT || "high"),
   ).toLowerCase();
   const allowedReasoning = ["none", "low", "medium", "high", "xhigh", "max"];
-  const effectiveReasoning = allowedReasoning.includes(reasoningEffort) ? reasoningEffort : "high";
+  const effectiveReasoning = allowedReasoning.includes(configuredReasoningEffort)
+    ? configuredReasoningEffort
+    : "high";
   const effectiveMaxOutputTokens =
     config.provider === "groq"
       ? Math.min(
@@ -399,17 +414,21 @@ async function runStructured({
       { role: "system", content: systemPrompt },
       {
         role: "user",
-        content: `${userPrompt}\n\nالتزم بمخطط JSON المرفق في response_format دون إضافة نص خارجه. اجعل النصوص موجزة، ولا تكرر الدليل نفسه.`,
+        content: responseMode === "json_object"
+          ? `${userPrompt}\n\nأعد كائن JSON فقط دون نص خارجه، مطابقًا لهذه البنية وأسماء الحقول والقيم المسموحة:\n${JSON.stringify(schema.schema)}\nاجعل النصوص موجزة ولا تكرر الدليل نفسه.`
+          : `${userPrompt}\n\nالتزم بمخطط JSON المرفق في response_format دون إضافة نص خارجه. اجعل النصوص موجزة، ولا تكرر الدليل نفسه.`,
       },
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: schema.name,
-        strict: schema.strict,
-        schema: schema.schema,
-      },
-    },
+    response_format: responseMode === "json_object"
+      ? { type: "json_object" }
+      : {
+          type: "json_schema",
+          json_schema: {
+            name: schema.name,
+            strict: schema.strict,
+            schema: schema.schema,
+          },
+        },
     reasoning_effort: ["none", "low", "medium", "high"].includes(effectiveReasoning)
       ? effectiveReasoning
       : "high",
@@ -427,10 +446,13 @@ async function runStructured({
     try {
       response = await client.chat.completions.create(chatRequest);
     } catch (error) {
-      if (config.provider !== "groq" || !isStructuredOutputSchemaError(error)) throw error;
+      if (
+        config.provider !== "groq" ||
+        !isStructuredOutputSchemaError(error)
+      ) throw error;
 
-      // Groq قد يعيد 400 إذا أنشأ النموذج قيمة لا تطابق enum حرفيًا.
-      // نعيد المحاولة مرة واحدة بتعليمات تصحيح صريحة بدل إظهار الخطأ للمستخدم مباشرة.
+      // Groq قد يعيد 400 عندما يفشل JSON أو لا تطابق قيمة enum المخطط حرفيًا.
+      // نعيد المحاولة مرة واحدة فقط بتعليمات تصحيح صريحة لكل وضعي JSON.
       const retryRequest = {
         ...chatRequest,
         messages: [
@@ -483,9 +505,12 @@ async function runStructured({
   try {
     parsed = JSON.parse(outputText);
   } catch (error) {
-    throw new Error(`أعاد النموذج مخرجات غير صالحة كـ JSON: ${error.message}`, {
+    const wrapped = new Error(`أعاد النموذج مخرجات غير صالحة كـ JSON: ${error.message}`, {
       cause: error,
     });
+    wrapped.statusCode = 422;
+    wrapped.code = "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED";
+    throw wrapped;
   }
 
   return {

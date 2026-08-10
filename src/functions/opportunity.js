@@ -12,6 +12,7 @@ const { extractOpportunityWithAI } = require("../lib/ai");
 const {
   normalizeOpportunityData,
   validateOpportunityData,
+  fallbackOpportunityData,
 } = require("../lib/opportunity-normalize");
 const {
   requestId,
@@ -29,7 +30,8 @@ function normalizeOpportunityRequest(body) {
   const metadata =
     body.metadata && typeof body.metadata === "object" ? body.metadata : {};
   const privacy = normalizePrivacy(body);
-  return { sourceText, metadata, privacy };
+  const outputLanguage = body.output_language === "en" ? "en" : "ar";
+  return { sourceText, metadata, privacy, outputLanguage };
 }
 
 function errorStatus(error) {
@@ -65,8 +67,26 @@ async function opportunityHandler(request, context) {
       `Rafid opportunity extraction started: request_id=${correlationId}, chars=${input.sourceText.length}, classification=${input.privacy.classification}`,
     );
 
-    const ai = await extractOpportunityWithAI(input);
-    const opportunity = normalizeOpportunityData(ai.opportunity, {
+    let ai;
+    let opportunityData;
+    let fallbackReason = null;
+    try {
+      ai = await extractOpportunityWithAI(input);
+      opportunityData = ai.opportunity;
+    } catch (error) {
+      if (error?.code !== "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED") throw error;
+      fallbackReason = error.code;
+      opportunityData = fallbackOpportunityData(input.sourceText, { metadata: input.metadata });
+      ai = {
+        provider: "deterministic-fallback",
+        model: null,
+        responseId: null,
+        inputTruncated: false,
+        usage: null,
+        dataPolicy: "no_additional_storage",
+      };
+    }
+    const opportunity = normalizeOpportunityData(opportunityData, {
       metadata: input.metadata,
     });
     const validation = validateOpportunityData(opportunity);
@@ -88,6 +108,8 @@ async function opportunityHandler(request, context) {
         duration_ms: Date.now() - startedAt,
         usage: ai.usage,
         data_policy: ai.dataPolicy,
+        fallback_used: Boolean(fallbackReason),
+        fallback_reason: fallbackReason,
       },
     });
   } catch (error) {

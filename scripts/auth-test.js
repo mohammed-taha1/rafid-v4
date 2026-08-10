@@ -58,7 +58,10 @@ async function main() {
     assert.equal(config.auth.required, true);
     assert.equal(config.auth.persist_session, true);
     assert.deepEqual(config.auth.sign_in_providers, ["google", "azure", "github", "email"]);
-    assert.equal(config.workspace_sync.enabled, false);
+    assert.equal(config.workspace_sync.enabled, true);
+    assert.equal(config.workspace_sync.mode, "user_jwt_rls");
+    assert.ok(config.workspace_sync.tables.includes("rafid_organizations"));
+    assert.equal(config.workspace_sync.service_role_exposed, false);
     assert.equal(config.workspace_sync.raw_content_persisted, false);
     assert.equal(config.provider_configuration_mode, "server");
     assert.equal(Object.prototype.hasOwnProperty.call(config, "GROQ_API_KEY"), false);

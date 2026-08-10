@@ -7,7 +7,7 @@ const { join } = require("node:path");
 const root = join(__dirname, "..");
 const targets = [
   join(root, "src"),
-  join(root, "frontend", "rafid-v4.js"),
+  join(root, "frontend"),
   join(root, "scripts", "run-rafid.js"),
   join(root, "scripts", "sdk-contract-test.js"),
   join(root, "scripts", "auth-test.js"),

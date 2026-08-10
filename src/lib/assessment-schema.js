@@ -139,7 +139,48 @@ const RAFID_ASSESSMENT_SCHEMA = {
   schema: assessmentSchema,
 };
 
+// Groq free-tier requests benefit from a smaller contract. The model makes only
+// evidence judgments; the server deterministically builds gaps, actions, and the
+// application package so the user still receives the complete Rafid report.
+const compactHardGate = object({
+  requirement_id: string,
+  status: enumString(["مستوفى", "مستوفى جزئيًا", "غير مستوفى", "غير معروف", "لا ينطبق"]),
+  verdict_basis: string,
+  project_evidence: array(string),
+  missing_evidence: array(string),
+  remediation: string,
+});
+
+const compactAssessmentSchema = object({
+  hard_gates: array(compactHardGate),
+  fit_dimensions: array(fitDimension),
+  readiness: object({
+    opportunity_readiness_score: integer,
+    evidence_strength_score: integer,
+    assessment_confidence: integer,
+    summary: string,
+  }),
+  institutional_review: object({
+    recommendation: enumString(["يوصى بالتقديم", "يوصى بعد استكمال الشروط", "لا يوصى لهذه الدورة", "تحتاج قرارًا مؤسسيًا"]),
+    rationale: string,
+    questions_for_project_team: array(string),
+    questions_for_funder: array(string),
+    reviewer_attention_points: array(string),
+    institutional_review_required: boolean,
+  }),
+  risk_disclosures: array(string),
+});
+
+const RAFID_COMPACT_ASSESSMENT_SCHEMA = {
+  type: "json_schema",
+  name: "rafid_opportunity_assessment_core",
+  strict: true,
+  schema: compactAssessmentSchema,
+};
+
 module.exports = {
   RAFID_ASSESSMENT_SCHEMA,
+  RAFID_COMPACT_ASSESSMENT_SCHEMA,
   assessmentSchema,
+  compactAssessmentSchema,
 };

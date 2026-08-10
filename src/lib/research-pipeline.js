@@ -63,7 +63,7 @@ async function analyzeResearch(payload, {
     if (controller.signal.aborted) throw apiError("TIMEOUT", "انتهت مهلة التحليل أو أُلغي الطلب.", 504);
 
     const rawResult = provider.analyze
-      ? await provider.analyze({ requestId, textSize: input.fullText.length, chunks: chunks.chunks, signal: controller.signal })
+      ? await provider.analyze({ requestId, textSize: input.fullText.length, chunks: chunks.chunks, outputLanguage: payload.output_language === "en" ? "en" : "ar", signal: controller.signal })
       : createAnalysis({ elements: emptyElements() });
     const result = chunks.truncated
       ? { ...rawResult, limitations: [...new Set([...(rawResult.limitations || []), LONG_DOCUMENT_LIMITATION])] }

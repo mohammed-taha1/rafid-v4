@@ -41,14 +41,28 @@ async function main() {
     const index = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(index.status, 200);
     assert.match(index.headers.get("content-type") || "", /text\/html/);
-    assert.match(await index.text(), /تحليل الجاهزية/);
+    const indexHtml = await index.text();
+    assert.match(indexHtml, /قرار أوضح لبحثك قبل التقديم/);
+    assert.doesNotMatch(indexHtml, /class="topbar"|class="app-shell"|id="authGate"/);
     assert.match(index.headers.get("content-security-policy") || "", /default-src 'self'/);
+
+    const logo = await fetch(`http://127.0.0.1:${port}/assets/rafid-logo.png`);
+    assert.equal(logo.status, 200);
+    assert.equal(logo.headers.get("content-type"), "image/png");
+    assert.ok((await logo.arrayBuffer()).byteLength > 1000);
 
     const publicConfig = await fetch(`http://127.0.0.1:${port}/api/rafid/public/config`);
     assert.equal(publicConfig.status, 200);
     const runtime = await publicConfig.json();
     assert.equal(runtime.auth.required, false);
     assert.equal(runtime.provider_configuration_mode, "local_session");
+
+    const catalogResponse = await fetch(`http://127.0.0.1:${port}/api/rafid/opportunities/catalog`);
+    assert.equal(catalogResponse.status, 200);
+    const catalog = await catalogResponse.json();
+    assert.equal(catalog.ok, true);
+    assert.ok(catalog.opportunities.length >= 8);
+    assert.ok(catalog.opportunities.every((item) => item.application_status === "تحقق من المصدر الرسمي"));
 
     const health = await fetch(`http://127.0.0.1:${port}/api/rafid/health`);
     assert.equal(health.status, 503);
@@ -84,6 +98,12 @@ async function main() {
     assert.equal(pdf.status, 200);
     assert.match(pdf.headers.get("content-type") || "", /javascript/);
     assert.equal(pdf.headers.get("x-content-type-options"), "nosniff");
+
+    const removedLegacyApp = await fetch(`http://127.0.0.1:${port}/rafid-v4.js`);
+    assert.equal(removedLegacyApp.status, 404);
+
+    const removedLegacyPage = await fetch(`http://127.0.0.1:${port}/rafid_v3_1_ai_connected.html`);
+    assert.equal(removedLegacyPage.status, 404);
 
     const missing = await fetch(`http://127.0.0.1:${port}/does-not-exist`);
     assert.equal(missing.status, 404);
