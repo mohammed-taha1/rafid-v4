@@ -10,6 +10,7 @@
   const match = () => window.RafidOpportunityMatch;
   const items = (value) => Array.isArray(value) ? value : [];
   const clamp = (value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  const t = (arabic, english) => window.RafidI18n?.t(arabic, english) || arabic;
 
   function resetView(focusSelector = "h1") {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -484,8 +485,8 @@
     const go = main.querySelector("#go");
     const goIntro = main.querySelector("#goIntro");
     const cancel = main.querySelector("#cancel");
-    const updateGeneralAction = () => { const ready = text.value.trim().length >= 30 || file.files.length > 0; goIntro.disabled = !ready; goIntro.textContent = ready ? "ابدأ تحليل الجاهزية" : "أضف محتوى للبدء"; };
-    text.addEventListener("input", () => { main.querySelector("#count").textContent = `${text.value.length} حرف`; updateGeneralAction(); });
+    const updateGeneralAction = () => { const ready = text.value.trim().length >= 30 || file.files.length > 0; goIntro.disabled = !ready; goIntro.textContent = ready ? t("ابدأ تحليل الجاهزية", "Start readiness analysis") : t("أضف محتوى للبدء", "Add content to begin"); };
+    text.addEventListener("input", () => { main.querySelector("#count").textContent = t(`${text.value.length} حرف`, `${text.value.length} characters`); updateGeneralAction(); });
     file.addEventListener("change", () => { const selected = Array.from(file.files || []); if (selected.length) main.querySelector("#textHint").textContent = selected.length === 1 ? `تم اختيار: ${selected[0].name}` : `تم اختيار ${selected.length} ملفات`; updateGeneralAction(); });
     bindDropZone(file, main.querySelector("#generalDrop"));
     goIntro.addEventListener("click", () => go.click());
@@ -498,7 +499,7 @@
         go.disabled = true;
         cancel.hidden = false;
         error.classList.remove("is-error");
-        error.textContent = "قراءة المحتوى… تحليل العناصر… تقييم الجاهزية… إعداد التوصيات…";
+        error.textContent = t("قراءة المحتوى… تحليل العناصر… تقييم الجاهزية… إعداد التوصيات…", "Reading content… Analyzing elements… Scoring readiness… Preparing recommendations…");
         controller = new AbortController();
         const data = await callApi("research/analyze", { text: source.text, output_language: window.RafidI18n?.language || "ar" }, controller.signal);
         generalResults(data.result, data.meta);
@@ -518,7 +519,9 @@
     requestInFlight = false;
     const dimensions = items(result.technicalReadiness?.dimensions).map((dimension) => `<li><b>${esc(dimension.id)}</b><span>${esc(dimension.explanation)}</span></li>`).join("");
     const truncationNotice = meta.truncated ? '<p class="rafid-notice">تم تحليل الجزء المقبول من المستند الطويل فقط؛ أعد التحليل على ملخص مركز للحصول على تغطية أوسع.</p>' : "";
-    root().innerHTML = `${header('<button id="new" class="rafid-text-button" type="button">تحليل جديد</button>')}<section class="rafid-report"><span class="rafid-kicker">نتيجة التقييم العام</span><h1>جاهزية البحث</h1><p class="report-summary">${esc(result.researchSummary || "غير موضح")}</p>${truncationNotice}<div class="scores"><article><span>الجاهزية التقنية</span><meter min="0" max="100" value="${clamp(result.technicalReadiness?.score)}"></meter><b>${clamp(result.technicalReadiness?.score)}<small>/100</small></b></article><article><span>الجاهزية التمويلية</span><meter min="0" max="100" value="${clamp(result.fundingReadiness?.score)}"></meter><b>${clamp(result.fundingReadiness?.score)}<small>/100</small></b></article></div><p class="confidence">مستوى الثقة: <b>${esc(result.confidence || "منخفض")}</b></p><details open><summary>تفسير الدرجات</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>النواقص الحرجة</summary>${safeList(result.criticalGaps)}</details><details><summary>خطة العمل</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(result.fundingDisclaimer || "هذا التحليل إرشادي ولا يضمن الحصول على تمويل.")}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">نسخ الملخص</button><button id="print" class="rafid-primary" type="button">طباعة التقرير</button></div></section>`;
+    const confidence = t(result.confidence || "منخفض", ({ مرتفع: "High", متوسط: "Medium", منخفض: "Low" })[result.confidence] || result.confidence || "Low");
+    const disclaimer = t(result.fundingDisclaimer || "هذا التحليل إرشادي ولا يضمن الحصول على تمويل.", "This assessment is advisory and does not guarantee funding or acceptance. Verify the official opportunity criteria before applying.");
+    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${esc(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores"><article><span>${t("الجاهزية التقنية", "Technical readiness")}</span><meter min="0" max="100" value="${clamp(result.technicalReadiness?.score)}"></meter><b>${clamp(result.technicalReadiness?.score)}<small>/100</small></b></article><article><span>${t("الجاهزية التمويلية", "Funding readiness")}</span><meter min="0" max="100" value="${clamp(result.fundingReadiness?.score)}"></meter><b>${clamp(result.fundingReadiness?.score)}<small>/100</small></b></article></div><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الدرجات", "Score explanations")}</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${safeList(result.criticalGaps)}</details><details><summary>${t("خطة العمل", "Action plan")}</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير", "Print report")}</button></div></section>`;
     root().querySelector("#new").addEventListener("click", generalView);
     root().querySelector("#copy").addEventListener("click", () => navigator.clipboard?.writeText(result.researchSummary || ""));
     root().querySelector("#print").addEventListener("click", () => window.print());
