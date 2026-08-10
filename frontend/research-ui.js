@@ -61,7 +61,7 @@
     main.id = "rafidApp";
     main.className = "rafid";
     main.removeAttribute("aria-busy");
-    main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#services">الخدمات</a><a href="#how">كيف يعمل؟</a><a href="#privacy">الخصوصية</a></nav>')}
+    main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#services">الخدمات</a><a href="#institution">للمؤسسات</a><a href="#how">كيف يعمل؟</a><a href="#learn">مركز التعلم</a><a href="#about">عن رافد</a><a href="#contact">تواصل معنا</a></nav>')}
       <section class="portal-hero">
         <div><span class="rafid-kicker"><i aria-hidden="true"></i> منصة الجاهزية البحثية والتمويلية</span><h1 tabindex="-1">قرار أوضح لبحثك، <em>قبل أن تبدأ التقديم</em></h1><p>حلّل جاهزية بحثك أو قارنه مباشرة بفرصة تمويل. خطوات قصيرة، ملفات متعددة، ونتيجة عربية قابلة للمراجعة.</p></div>
         <aside><b>مصمم للعمل المؤسسي</b><ul><li>لا يحتاج تسجيل دخول</li><li>لا نخزن البحث افتراضيًا</li><li>لا نعرض نتيجة بلا تفسير</li></ul></aside>
@@ -77,7 +77,7 @@
       </section>
       <section id="how" class="institutional-flow"><div><span class="rafid-kicker">رحلة مختصرة</span><h2>من الملف إلى قرار قابل للتنفيذ</h2></div><ol><li><span>١</span><b>أضف المحتوى</b><small>PDF أو DOCX أو TXT أو MD، ويمكن جمع عدة ملفات بحثية.</small></li><li><span>٢</span><b>نحلل الأدلة</b><small>نفصل المعلومات الموجودة عن الاستنتاجات والفجوات.</small></li><li><span>٣</span><b>راجع القرار</b><small>درجات مفسرة وخطة عمل مرتبة قبل التقديم.</small></li></ol></section>
       <section class="trust-rail" aria-label="مبادئ رافد"><div><span aria-hidden="true">01</span><b>الخصوصية أصل</b><small>المعالجة للطلب الحالي دون حفظ افتراضي</small></div><div><span aria-hidden="true">02</span><b>الدليل قبل الحكم</b><small>كل نتيجة مرتبطة بما ورد في المحتوى</small></div><div><span aria-hidden="true">03</span><b>خطة قابلة للتنفيذ</b><small>الفجوات تتحول إلى إجراءات ومخرجات واضحة</small></div></section>
-      <footer><div><b>رافد</b><p>النتائج استرشادية ولا تضمن القبول أو التمويل. المصدر الرسمي هو المرجع النهائي.</p></div><nav><a href="#about">عن رافد</a><a href="#learn">مركز التعلم</a><a href="#privacy">الخصوصية</a><a id="terms" href="#terms">الشروط</a></nav></footer>`;
+      <footer class="site-footer"><div><b>رافد</b><p>النتائج استرشادية ولا تضمن القبول أو التمويل. المصدر الرسمي هو المرجع النهائي.</p></div><nav><a href="#services">الخدمات</a><a href="#institution">للمؤسسات</a><a href="#how">طريقة الاستخدام</a><a href="#faq">الأسئلة الشائعة</a><a href="#learn">مركز التعلم</a><a href="#about">عن رافد</a><a href="#privacy">الخصوصية</a><a id="terms" href="#terms">الشروط</a><a href="#contact">تواصل معنا</a></nav></footer>`;
     if (!existing) document.body.prepend(main);
     main.querySelector("#startMatch").addEventListener("click", matchView);
     main.querySelector("#startGeneral").addEventListener("click", generalView);
@@ -327,9 +327,11 @@
         projectFiles: researchSource.files,
         privacy,
       });
+      opportunityRequest.output_language = window.RafidI18n?.language || "ar";
       const opportunityResponse = await callApi("opportunity/extract", opportunityRequest, controller.signal);
 
       setStage("research");
+      projectRequest.output_language = window.RafidI18n?.language || "ar";
       const projectResponse = await callApi("extract", projectRequest, controller.signal);
 
       setStage("assessment");
@@ -338,6 +340,7 @@
         project: projectResponse.project_data,
         privacy,
       });
+      assessmentRequest.output_language = window.RafidI18n?.language || "ar";
       const assessmentResponse = await callApi("opportunity/assess", assessmentRequest, controller.signal);
       const assessmentValidation = match().validateAssessment(assessmentResponse.assessment);
       if (!assessmentValidation.valid) throw new Error("أعاد الخادم نتيجة غير مكتملة. أعد المحاولة لاحقًا.");
@@ -497,7 +500,7 @@
         error.classList.remove("is-error");
         error.textContent = "قراءة المحتوى… تحليل العناصر… تقييم الجاهزية… إعداد التوصيات…";
         controller = new AbortController();
-        const data = await callApi("research/analyze", { text: source.text }, controller.signal);
+        const data = await callApi("research/analyze", { text: source.text, output_language: window.RafidI18n?.language || "ar" }, controller.signal);
         generalResults(data.result, data.meta);
       } catch (errorValue) {
         error.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. يمكنك المحاولة مجددًا." : errorValue.message;

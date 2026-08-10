@@ -1,8 +1,8 @@
 "use strict";
 
 (() => {
-  const ROUTES = new Set(["how", "faq", "learn", "about", "privacy", "terms"]);
-  const content = () => window.RafidEducation;
+  const ROUTES = new Set(["how", "faq", "learn", "about", "privacy", "terms", "contact"]);
+  const content = () => window.RafidI18n?.isEnglish() ? window.RafidEducationEn : window.RafidEducation;
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 
   function cards(entries) {
@@ -51,9 +51,21 @@
       lead = "حدود واضحة لاستخدام النتيجة بصورة مسؤولة.";
       body = cards(c.terms);
     }
+    if (key === "contact") {
+      const english = window.RafidI18n?.isEnglish();
+      title = english ? "Contact and suggestions" : "تواصل معنا والاقتراحات";
+      lead = english ? "Help us improve Rafid through a short, privacy-safe suggestion." : "ساعدنا في تحسين رافد باقتراح مختصر يحترم الخصوصية.";
+      body = `<section class="contact-panel"><h2>${english ? "Before sending" : "قبل الإرسال"}</h2><p>${english ? "Do not include research text, personal data, credentials, or confidential information. This form currently prepares a message on your device and does not upload it to Rafid." : "لا تضع نص بحث، أو بيانات شخصية، أو مفاتيح، أو معلومات سرية. النموذج حاليًا يجهز الرسالة على جهازك ولا يرفعها إلى رافد."}</p><form id="contactForm"><label>${english ? "Suggestion" : "الاقتراح"}<textarea id="contactMessage" maxlength="1000" required></textarea></label><button class="rafid-primary" type="submit">${english ? "Copy suggestion" : "نسخ الاقتراح"}</button><p id="contactStatus" role="status"></p></form></section>`;
+    }
     root.innerHTML = `<header class="rafid-header"><a class="rafid-logo" href="#home" aria-label="رافد، الصفحة الرئيسية"><span class="brand-logo-crop"><img src="assets/rafid-logo.png" alt="" width="1254" height="1254" /></span><b class="sr-only">رافد</b></a><nav aria-label="التنقل"><a href="#home">الرئيسية</a><a href="#how">كيف يعمل؟</a><a href="#faq">الأسئلة الشائعة</a><a href="#privacy">الخصوصية</a></nav></header><main class="content-page"><div class="content-heading"><span class="rafid-kicker">مركز معرفة رافد</span><h1 tabindex="-1">${esc(title)}</h1><p>${esc(lead)}</p></div>${body}<div class="content-actions"><button id="contentGeneral" class="rafid-primary" type="button">تحليل جاهزية بحث واحد</button><button id="contentMatch" class="rafid-secondary" type="button">مطابقة بحث مع فرصة محددة</button></div></main><footer><div><b>رافد</b><p>الدليل قبل الحكم، والخصوصية جزء من التصميم.</p></div><nav><a href="#about">عن رافد</a><a href="#terms">الشروط</a></nav></footer>`;
     root.querySelector("#contentGeneral").addEventListener("click", () => window.RafidApp?.general());
     root.querySelector("#contentMatch").addEventListener("click", () => window.RafidApp?.match());
+    root.querySelector("#contactForm")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = root.querySelector("#contactMessage").value.trim();
+      await navigator.clipboard.writeText(message);
+      root.querySelector("#contactStatus").textContent = window.RafidI18n?.isEnglish() ? "Suggestion copied. Share it through Rafid's official channel." : "تم نسخ الاقتراح. أرسله عبر قناة رافد الرسمية.";
+    });
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     requestAnimationFrame(() => root.querySelector("h1")?.focus({ preventScroll: true }));
   }

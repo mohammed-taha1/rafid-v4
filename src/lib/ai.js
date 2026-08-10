@@ -273,7 +273,7 @@ function smartTruncate(text, maxChars) {
   };
 }
 
-async function extractWithAI({ rawText, metadata, files, privacy }) {
+async function extractWithAI({ rawText, metadata, files, privacy, outputLanguage = "ar" }) {
   const maxChars = providerTextLimit({
     standardEnv: "RAFID_MAX_TEXT_CHARS",
     standardDefault: 120_000,
@@ -290,6 +290,7 @@ async function extractWithAI({ rawText, metadata, files, privacy }) {
       metadata,
       files,
       truncated: prepared.truncated,
+      outputLanguage,
     }),
     schema: RAFID_EXTRACTION_SCHEMA,
     maxOutputTokens: 14000,
@@ -299,7 +300,7 @@ async function extractWithAI({ rawText, metadata, files, privacy }) {
   return { ...result, project: result.data, inputTruncated: prepared.truncated };
 }
 
-async function extractOpportunityWithAI({ sourceText, metadata, privacy }) {
+async function extractOpportunityWithAI({ sourceText, metadata, privacy, outputLanguage = "ar" }) {
   const maxChars = providerTextLimit({
     standardEnv: "RAFID_MAX_TEXT_CHARS",
     standardDefault: 120_000,
@@ -315,6 +316,7 @@ async function extractOpportunityWithAI({ sourceText, metadata, privacy }) {
       sourceText: prepared.text,
       metadata,
       truncated: prepared.truncated,
+      outputLanguage,
     }),
     schema: RAFID_OPPORTUNITY_SCHEMA,
     maxOutputTokens: 16000,
@@ -329,7 +331,7 @@ async function extractOpportunityWithAI({ sourceText, metadata, privacy }) {
   };
 }
 
-async function assessWithAI({ opportunity, project, context, privacy }) {
+async function assessWithAI({ opportunity, project, context, privacy, outputLanguage = "ar" }) {
   const groq = activeProviderName() === "groq";
   const opportunityMax = providerTextLimit({
     standardEnv: "RAFID_MAX_OPPORTUNITY_CHARS",
@@ -366,6 +368,7 @@ async function assessWithAI({ opportunity, project, context, privacy }) {
       context,
       truncated,
       compact: groq,
+      outputLanguage,
     }),
     schema: groq ? RAFID_COMPACT_ASSESSMENT_SCHEMA : RAFID_ASSESSMENT_SCHEMA,
     maxOutputTokens: 18000,

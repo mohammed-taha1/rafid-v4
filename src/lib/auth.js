@@ -69,10 +69,14 @@ function publicRuntimeConfig() {
       persist_session: supabase.configured,
     },
     workspace_sync: {
-      enabled: false,
-      table: null,
+      enabled: supabase.configured,
+      mode: supabase.configured ? "user_jwt_rls" : "disabled",
+      tables: supabase.configured
+        ? ["rafid_organizations", "rafid_departments", "rafid_institution_projects", "rafid_project_reviews"]
+        : [],
       raw_content_persisted: false,
       allow_confidential: false,
+      service_role_exposed: false,
     },
   };
 }

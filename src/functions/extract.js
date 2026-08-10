@@ -39,7 +39,8 @@ function normalizeRequestBody(body) {
   assertInputSize(body, "طلب استخراج المشروع");
   const privacy = normalizePrivacy(body, { allowLegacy: allowLegacyRequests() });
 
-  return { rawText, metadata, files, privacy };
+  const outputLanguage = body.output_language === "en" ? "en" : "ar";
+  return { rawText, metadata, files, privacy, outputLanguage };
 }
 
 async function extractHandler(request, context) {

@@ -56,7 +56,8 @@
   }
 
   async function extractProject(source, title, signal) {
-    const response = await callApi("extract", {
+      const response = await callApi("extract", {
+        output_language: window.RafidI18n?.language || "ar",
       raw_text: source.text,
       metadata: { title: title || source.name, type: "بحث أو مشروع" },
       files: [{ name: source.name }],
@@ -66,7 +67,8 @@
   }
 
   async function extractOpportunity(source, metadata, signal) {
-    const response = await callApi("opportunity/extract", {
+      const response = await callApi("opportunity/extract", {
+        output_language: window.RafidI18n?.language || "ar",
       source_text: source.text,
       metadata: { title: metadata.title, funder: metadata.funder, official_source_url: metadata.url, source_name: source.name },
       privacy: privacy(),
@@ -102,7 +104,7 @@
         progress.textContent = "١/٢ استخراج عناصر البحث والأدلة…";
         const project = await extractProject(source, main.querySelector("#discoveryTitle").value.trim(), activeController.signal);
         progress.textContent = "٢/٢ مقارنة المشروع بالفرص وترتيبها…";
-        const response = await callApi("opportunities/discover", { project_data: project, filters: { limit: 8 }, privacy: privacy() }, activeController.signal);
+        const response = await callApi("opportunities/discover", { project_data: project, filters: { limit: 8 }, output_language: window.RafidI18n?.language || "ar", privacy: privacy() }, activeController.signal);
         renderDiscovery(response.result);
       } catch (value) {
         error.textContent = value.name === "AbortError" ? "أُلغي الطلب، ويمكنك البدء مجددًا." : value.message;
@@ -165,7 +167,7 @@
           projects.push(await extractProject(sources[index], sources[index].name, activeController.signal));
         }
         progress.textContent = "٣/٣ تطبيق قواعد الأهلية وترتيب المحفظة…";
-        const response = await callApi("portfolio/compare", { opportunity, projects, privacy: privacy() }, activeController.signal);
+        const response = await callApi("portfolio/compare", { opportunity, projects, output_language: window.RafidI18n?.language || "ar", privacy: privacy() }, activeController.signal);
         renderPortfolio(response.result);
       } catch (value) {
         error.textContent = value.name === "AbortError" ? "أُلغيت المقارنة، ويمكنك البدء مجددًا." : value.message;

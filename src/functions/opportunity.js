@@ -30,7 +30,8 @@ function normalizeOpportunityRequest(body) {
   const metadata =
     body.metadata && typeof body.metadata === "object" ? body.metadata : {};
   const privacy = normalizePrivacy(body);
-  return { sourceText, metadata, privacy };
+  const outputLanguage = body.output_language === "en" ? "en" : "ar";
+  return { sourceText, metadata, privacy, outputLanguage };
 }
 
 function errorStatus(error) {

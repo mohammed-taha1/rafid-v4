@@ -54,7 +54,8 @@ function normalizeAssessmentRequest(body) {
 
   const context = body.context && typeof body.context === "object" ? body.context : {};
   const privacy = normalizePrivacy(body);
-  return { opportunity, project, context, privacy };
+  const outputLanguage = body.output_language === "en" ? "en" : "ar";
+  return { opportunity, project, context, privacy, outputLanguage };
 }
 
 async function assessHandler(request, context) {
