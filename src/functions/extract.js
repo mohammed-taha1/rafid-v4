@@ -11,6 +11,7 @@ const {
 const { extractWithAI } = require("../lib/ai");
 const {
   normalizeProjectData,
+  augmentProjectDataFromText,
   fallbackProjectData,
   validateProjectData,
 } = require("../lib/normalize");
@@ -80,7 +81,7 @@ async function extractHandler(request, context) {
     let fallbackReason = null;
     try {
       ai = await extractWithAI(input);
-      projectData = normalizeProjectData(ai.project, {
+      projectData = normalizeProjectData(augmentProjectDataFromText(ai.project, input.rawText), {
         metadata: input.metadata,
         files: input.files,
       });

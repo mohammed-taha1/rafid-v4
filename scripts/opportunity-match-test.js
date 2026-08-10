@@ -11,6 +11,7 @@ const {
 } = require("../src/lib/assessment-normalize");
 const {
   fallbackProjectData,
+  augmentProjectDataFromText,
   normalizeProjectData,
   validateProjectData,
 } = require("../src/lib/normalize");
@@ -182,6 +183,25 @@ assert.equal(validateProjectData(fallbackProject).valid, true);
 assert.equal(fallbackProject.project_identity.project_title, "بحث احتياطي");
 assert.match(fallbackProject.source_summary.notes, /نص بحث تجريبي/);
 assert.equal(fallbackProject.source_summary.extraction_confidence, 25);
+
+const augmentedProject = normalizeProjectData(
+  augmentProjectDataFromText({}, `عنوان المشروع: نظام لاكتشاف التسربات
+المشكلة: تتأخر فرق الصيانة في تحديد التسرب.
+الهدف: تطوير نموذج أولي منخفض التكلفة.
+المنهجية: جمع بيانات الضغط ومقارنة نموذجين خلال ستة أشهر.
+النتائج الأولية: نجح اختبار مختبري أولي ويحتاج توثيق حجم العينة.
+الابتكار: تحليل طرفي قليل الطاقة.
+المستفيدون: مرافق المياه، البلديات.
+الفريق: مهندس مياه، مهندس نظم.
+المخاطر: تعطل الحساسات، تغير ضغط الشبكة.
+الميزانية: تقدير أولي للأجهزة والبرمجيات دون أسعار.`),
+  { metadata: { title: "مشروع مستخرج حتميًا", type: "بحث" } },
+);
+assert.match(augmentedProject.problem.problem_statement, /فرق الصيانة/);
+assert.equal(augmentedProject.prototype_and_data.prototype_exists, true);
+assert.ok(augmentedProject.project_identity.team_members.length >= 2);
+assert.ok(augmentedProject.claims_and_evidence.length >= 1);
+assert.equal(augmentedProject.budget.budget_status, "تقديرية");
 
 const fallbackAssessment = normalizeAssessmentData(
   fallbackAssessmentData({ opportunity, project: fallbackProject }),
