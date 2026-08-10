@@ -20,6 +20,9 @@ for (const text of [
   "أهم فجوة الآن",
   "الإجراء التالي",
   "المراجعة البشرية",
+  "الأدلة والتناقضات",
+  "مراجع ثانٍ مستقل",
+  "إصدار الـRubric",
 ]) assert.match(source, new RegExp(text));
 
 assert.match(source, /text\/plain;charset=utf-8/);

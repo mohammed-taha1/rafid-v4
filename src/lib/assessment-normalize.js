@@ -1,6 +1,7 @@
 "use strict";
 
 const { arr, clamp, stableId } = require("./opportunity-normalize");
+const { applySecondReview } = require("./assessment-quality");
 
 const ASSESSMENT_VERSION = "rafid.opportunity-match.v1";
 const FUNDING_DISCLAIMER =
@@ -361,6 +362,10 @@ function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
   item.readiness.assessment_confidence = clamp(item.readiness.assessment_confidence);
   item.readiness.summary = String(item.readiness.summary || "");
 
+  // تمر نتيجة النموذج بمراجع ثانٍ حتمي قبل اشتقاق الأهلية والفجوات.
+  // يحظر هذا المسار اعتماد شرط بلا دليل ويستبدل درجات النموذج بروبريك ثابت.
+  applySecondReview(item, { opportunity, project });
+
   const generatedGaps = [
     ...item.hard_gates.map(gateGap).filter(Boolean),
     ...arr(project?.missing_information).slice(0, 6).map(projectInformationGap),
@@ -437,6 +442,25 @@ function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
       "بوابات الأهلية مستوفاة، لكن توجد فجوة مانعة أو حرجة يجب إغلاقها قبل الإرسال.";
   }
 
+  const recommendationByDecision =
+    item.eligibility.status === "غير مؤهل"
+      ? "لا يوصى لهذه الدورة"
+      : item.eligibility.status === "غير محسوم"
+        ? "تحتاج قرارًا مؤسسيًا"
+        : item.eligibility.status === "مؤهل بشروط" || blockingGaps
+          ? "يوصى بعد استكمال الشروط"
+          : item.readiness.opportunity_readiness_score >= 65
+            ? "يوصى بالتقديم"
+            : "يوصى بعد استكمال الشروط";
+  if (item.institutional_review.recommendation !== recommendationByDecision) {
+    item.quality_review.corrections.push(
+      `وُحّدت توصية المراجعة مع الأهلية والفجوات: ${recommendationByDecision}.`,
+    );
+    item.quality_review.corrections_count += 1;
+    item.institutional_review.recommendation = recommendationByDecision;
+  }
+  item.readiness.summary = `${item.eligibility.reason} الدرجة ${item.readiness.opportunity_readiness_score} من 100 حُسبت بروبريك ثابت، وقوة الأدلة ${item.readiness.evidence_strength_score} من 100.`;
+
   return item;
 }
 
@@ -449,6 +473,8 @@ function validateAssessmentData(assessment) {
   if (!assessment?.eligibility?.status) errors.push("لم يمكن اشتقاق حالة الأهلية.");
   if (assessment?.analysis_version !== ASSESSMENT_VERSION)
     errors.push("إصدار تحليل الملاءمة غير صالح.");
+  if (assessment?.quality_review?.rubric_version !== "rafid.deterministic-rubric.v2")
+    errors.push("لم تمر النتيجة بمحرك التقييم الحتمي والمراجع الثاني.");
   if (!arr(assessment?.hard_gates).length)
     warnings.push("لم تحتوِ الفرصة على بوابات أهلية صارمة؛ يلزم تحقق بشري موسع.");
   if (assessment?.readiness?.assessment_confidence < 60)

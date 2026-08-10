@@ -94,7 +94,10 @@ assert.equal(validateAssessmentData(assessment).valid, true);
 assert.equal(match.validateAssessment(assessment).valid, true);
 assert.deepEqual(match.gateSummary(assessment.hard_gates), { total: 1, met: 0, partial: 0, missing: 0, unknown: 1 });
 assert.match(match.summaryText(assessment), /غير محسوم/);
-assert.match(match.summaryText(assessment), /0 من 100/);
+assert.match(match.summaryText(assessment), /\d+ من 100/);
+assert.equal(assessment.quality_review.rubric_version, "rafid.deterministic-rubric.v2");
+assert.equal(assessment.quality_review.second_review_passed, true);
+assert.equal(assessment.fit_dimensions.every((item) => item.score_basis === "rubric_deterministic"), true);
 assert.equal(match.decisionTone("غير مؤهل"), "ineligible");
 
 const compactAssessment = normalizeAssessmentData(
@@ -122,6 +125,34 @@ assert.ok(compactAssessment.gaps.length >= 1);
 assert.ok(compactAssessment.action_plan.length >= 1);
 assert.equal(compactAssessment.application_package.length, 1);
 assert.equal(validateAssessmentData(compactAssessment).valid, true);
+
+const contradictoryProject = {
+  ...project,
+  prototype_and_data: {
+    prototype_exists: false,
+    prototype_description: "نموذج أولي مكتمل",
+    tests_completed: ["اختبار ميداني"],
+    test_results: ["نجح الاختبار"],
+    data_available: false,
+  },
+  contradictions: [],
+};
+const guardedAssessment = normalizeAssessmentData(
+  {
+    hard_gates: [{ requirement_id: "req-1", status: "مستوفى", verdict_basis: "مستوفى", project_evidence: [], missing_evidence: [], remediation: "" }],
+    fit_dimensions: [],
+    readiness: { assessment_confidence: 90, summary: "" },
+    institutional_review: { recommendation: "يوصى بالتقديم", rationale: "", questions_for_project_team: [], questions_for_funder: [], reviewer_attention_points: [], institutional_review_required: true },
+    risk_disclosures: [],
+  },
+  { opportunity, project: contradictoryProject },
+);
+assert.equal(guardedAssessment.hard_gates[0].status, "غير معروف");
+assert.equal(guardedAssessment.eligibility.status, "غير محسوم");
+assert.equal(guardedAssessment.institutional_review.recommendation, "تحتاج قرارًا مؤسسيًا");
+assert.ok(guardedAssessment.quality_review.corrections_count >= 2);
+assert.ok(guardedAssessment.quality_review.contradiction_count >= 1);
+assert.ok(guardedAssessment.readiness.assessment_confidence < 90);
 
 const incompleteResearch = normalizeProjectData({
   project_identity: { project_title: "بحث ناقص", project_owner: { name: null }, project_type: [] },
@@ -155,14 +186,14 @@ const fallbackAssessment = normalizeAssessmentData(
 assert.equal(validateAssessmentData(fallbackAssessment).valid, true);
 assert.equal(match.validateAssessment(fallbackAssessment).valid, true);
 assert.equal(fallbackAssessment.eligibility.status, "غير محسوم");
-assert.equal(fallbackAssessment.readiness.assessment_confidence, 35);
+assert.ok(fallbackAssessment.readiness.assessment_confidence <= 35);
 assert.equal(fallbackAssessment.fit_dimensions.length, 9);
 assert.equal(
   fallbackAssessment.fit_dimensions.reduce((sum, dimension) => sum + dimension.weight_percent, 0),
   100,
 );
 assert.ok(fallbackAssessment.gaps.length >= 1);
-assert.match(fallbackAssessment.readiness.summary, /قراءة محافظة/);
+assert.match(fallbackAssessment.readiness.summary, /روبريك ثابت/);
 
 const sanitizedOpportunity = normalizeOpportunityData({
   identity: { title: "فرصة", status: "قيد الاستقبال" },

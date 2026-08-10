@@ -27,7 +27,7 @@
 
   function header(action = "") {
     return `<header class="rafid-header">
-      <a class="rafid-logo" href="#" aria-label="رافد، الصفحة الرئيسية"><span class="brand-logo-crop"><img src="assets/rafid-logo.png" alt="" width="1254" height="1254" /></span><b class="sr-only">رافد</b></a>
+      <a class="rafid-logo" href="#home" aria-label="رافد، الصفحة الرئيسية"><span class="brand-logo-crop"><img src="assets/rafid-logo.png" alt="" width="1254" height="1254" /></span><b class="sr-only">رافد</b></a>
       ${action}
     </header>`;
   }
@@ -61,7 +61,7 @@
     main.id = "rafidApp";
     main.className = "rafid";
     main.removeAttribute("aria-busy");
-    main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#services">الخدمات</a><a href="#how">كيف يعمل؟</a><a href="#privacy">الخصوصية</a><span class="pilot-badge">نسخة تجريبية</span></nav>')}
+    main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#services">الخدمات</a><a href="#how">كيف يعمل؟</a><a href="#privacy">الخصوصية</a></nav>')}
       <section class="portal-hero">
         <div><span class="rafid-kicker"><i aria-hidden="true"></i> منصة الجاهزية البحثية والتمويلية</span><h1 tabindex="-1">قرار أوضح لبحثك، <em>قبل أن تبدأ التقديم</em></h1><p>حلّل جاهزية بحثك أو قارنه مباشرة بفرصة تمويل. خطوات قصيرة، ملفات متعددة، ونتيجة عربية قابلة للمراجعة.</p></div>
         <aside><b>مصمم للعمل المؤسسي</b><ul><li>لا يحتاج تسجيل دخول</li><li>لا نخزن البحث افتراضيًا</li><li>لا نعرض نتيجة بلا تفسير</li></ul></aside>
@@ -69,14 +69,14 @@
       <section id="services" class="service-console" aria-labelledby="servicesTitle">
         <div class="section-heading"><span class="rafid-kicker">ابدأ من احتياجك</span><h2 id="servicesTitle">ماذا تريد أن تنجز الآن؟</h2><p>اختر خدمة واحدة. لن ننقلك إلى نموذج طويل قبل أن تعرف المطلوب.</p></div>
         <div class="service-grid">
-          <button id="startGeneral" class="service-card is-primary" type="button"><span class="service-number">01</span><span class="service-status">متاح الآن</span><strong>حلّل جاهزية بحثك</strong><small>ارفع البحث أو الصق النص واحصل على تقييم الجاهزية والفجوات وخطة العمل.</small><i>ابدأ التحليل <b aria-hidden="true">←</b></i></button>
-          <button id="startMatch" class="service-card" type="button"><span class="service-number">02</span><span class="service-status">متاح الآن</span><strong>قارن بحثك بفرصة تمويل</strong><small>أضف دليل الفرصة والبحث، ثم راجع الأهلية والملاءمة والأدلة الناقصة.</small><i>ابدأ المقارنة <b aria-hidden="true">←</b></i></button>
+          <button id="startGeneral" class="service-card is-primary" type="button"><span class="service-number">01</span><span class="service-status">لدي بحث فقط</span><strong>قيّم جاهزية البحث</strong><small>اختر هذا المسار إذا لم تحدد فرصة تمويل بعد. ستحصل على تقييم عام للفجوات وخطة التحسين.</small><i>تحليل بحث واحد دون فرصة <b aria-hidden="true">←</b></i></button>
+          <button id="startMatch" class="service-card" type="button"><span class="service-number">02</span><span class="service-status">لدي بحث وفرصة</span><strong>طابق البحث مع فرصة محددة</strong><small>اختر هذا المسار إذا لديك شروط فرصة بعينها. سنفحص الأهلية والأدلة والملاءمة لهذه الفرصة فقط.</small><i>مطابقة بحث + فرصة <b aria-hidden="true">←</b></i></button>
           <article class="service-card is-upcoming" aria-label="اقتراح فرص التمويل، قريبًا"><span class="service-number">03</span><span class="service-status">قريبًا</span><strong>اكتشف الفرص المناسبة</strong><small>ترشيح فرص بحسب مجال البحث وجاهزيته وشروط الأهلية.</small><i>ضمن المرحلة التالية</i></article>
         </div>
       </section>
       <section id="how" class="institutional-flow"><div><span class="rafid-kicker">رحلة مختصرة</span><h2>من الملف إلى قرار قابل للتنفيذ</h2></div><ol><li><span>١</span><b>أضف المحتوى</b><small>PDF أو DOCX أو TXT أو MD، ويمكن جمع عدة ملفات بحثية.</small></li><li><span>٢</span><b>نحلل الأدلة</b><small>نفصل المعلومات الموجودة عن الاستنتاجات والفجوات.</small></li><li><span>٣</span><b>راجع القرار</b><small>درجات مفسرة وخطة عمل مرتبة قبل التقديم.</small></li></ol></section>
       <section class="trust-rail" aria-label="مبادئ رافد"><div><span aria-hidden="true">01</span><b>الخصوصية أصل</b><small>المعالجة للطلب الحالي دون حفظ افتراضي</small></div><div><span aria-hidden="true">02</span><b>الدليل قبل الحكم</b><small>كل نتيجة مرتبطة بما ورد في المحتوى</small></div><div><span aria-hidden="true">03</span><b>خطة قابلة للتنفيذ</b><small>الفجوات تتحول إلى إجراءات ومخرجات واضحة</small></div></section>
-      <footer><div><b>رافد</b><p id="privacy">النتائج استرشادية ولا تضمن القبول أو التمويل. المصدر الرسمي هو المرجع النهائي.</p></div><nav><a href="#privacy">الخصوصية</a><a id="terms" href="#terms">الشروط</a></nav></footer>`;
+      <footer><div><b>رافد</b><p>النتائج استرشادية ولا تضمن القبول أو التمويل. المصدر الرسمي هو المرجع النهائي.</p></div><nav><a href="#about">عن رافد</a><a href="#learn">مركز التعلم</a><a href="#privacy">الخصوصية</a><a id="terms" href="#terms">الشروط</a></nav></footer>`;
     if (!existing) document.body.prepend(main);
     main.querySelector("#startMatch").addEventListener("click", matchView);
     main.querySelector("#startGeneral").addEventListener("click", generalView);
@@ -318,15 +318,15 @@
         opportunitySourceName: opportunitySource.sourceName,
         privacy,
       });
-      const opportunityResponse = await callApi("opportunity/extract", opportunityRequest, controller.signal);
-
-      setStage("research");
       const projectRequest = match().buildProjectRequest({
         researchText: researchSource.text,
         projectTitle: main.querySelector("#projectTitle").value,
         projectFiles: researchSource.files,
         privacy,
       });
+      const opportunityResponse = await callApi("opportunity/extract", opportunityRequest, controller.signal);
+
+      setStage("research");
       const projectResponse = await callApi("extract", projectRequest, controller.signal);
 
       setStage("assessment");
@@ -406,6 +406,9 @@
     const packageItems = items(assessment.application_package);
     const dimensions = items(assessment.fit_dimensions);
     const review = assessment.institutional_review || {};
+    const quality = assessment.quality_review || {};
+    const evidenceLedger = items(quality.evidence_ledger);
+    const contradictions = items(quality.contradictions);
     const topGap = gaps[0] || {};
     const topAction = actions[0] || {};
     const truncated = Boolean(meta?.opportunity?.input_truncated || meta?.project?.input_truncated || meta?.assessment?.input_truncated);
@@ -417,14 +420,15 @@
         <article class="decision-card ${tone}"><div><span>قرار الأهلية الاسترشادي</span><h2>${esc(eligibility.status || "غير محسوم")}</h2><p>${esc(eligibility.reason || readiness.summary || "تحتاج النتيجة إلى مراجعة بشرية.")}</p></div><div class="decision-recommendation"><span>توصية المراجعة</span><b>${esc(review.recommendation || "تحتاج مراجعة بشرية")}</b><p>${esc(review.rationale || "راجع الأدلة والشروط قبل القرار.")}</p></div></article>
         ${truncated ? '<p class="rafid-notice">تم اختصار جزء من أحد المدخلات بسبب حد المعالجة. خفّض رافد الثقة، ويُنصح بإعادة التحليل بنص مركز أو تقسيم المستند.</p>' : ""}
         <section class="report-command" aria-label="الخلاصة التنفيذية"><article><span>أهم فجوة الآن</span><b>${esc(topGap.title || "مراجعة شروط الأهلية")}</b><p>${esc(topGap.required_action || "تحقق من المصدر الرسمي قبل اتخاذ القرار.")}</p></article><article><span>الإجراء التالي</span><b>${esc(topAction.action || "استكمال الأدلة الناقصة")}</b><p>${esc(topAction.output || "ملف موثق وقابل للمراجعة")}</p></article><article><span>المراجعة البشرية</span><b>${review.institutional_review_required === false ? "موصى بها" : "مطلوبة"}</b><p>${esc(review.recommendation || "راجع الحكم مع مسؤول البرنامج.")}</p></article></section>
-        <nav class="report-nav" aria-label="أقسام التقرير"><a href="#gates">الأهلية</a><a href="#fit">الملاءمة</a><a href="#gaps">الفجوات</a><a href="#actions">خطة العمل</a><a href="#package">حزمة التقديم</a></nav>
+        <nav class="report-nav" aria-label="أقسام التقرير"><a href="#gates">الأهلية</a><a href="#fit">الملاءمة</a><a href="#quality">الأدلة والتدقيق</a><a href="#gaps">الفجوات</a><a href="#actions">خطة العمل</a><a href="#package">حزمة التقديم</a></nav>
         <div class="match-scores">
           <article><div class="score-ring" style="--score:${clamp(readiness.opportunity_readiness_score)}" role="img" aria-label="الملاءمة والجاهزية ${clamp(readiness.opportunity_readiness_score)} من 100"><b>${clamp(readiness.opportunity_readiness_score)}<small>/100</small></b></div><span>الملاءمة والجاهزية</span><small>بعد احتساب الأهلية والأدلة</small></article>
           <article><div class="score-ring" style="--score:${clamp(readiness.evidence_strength_score)}" role="img" aria-label="قوة الأدلة ${clamp(readiness.evidence_strength_score)} من 100"><b>${clamp(readiness.evidence_strength_score)}<small>/100</small></b></div><span>قوة الأدلة</span><small>مدى دعم البحث لشروط الفرصة</small></article>
           <article><div class="score-ring" style="--score:${clamp(readiness.assessment_confidence)}" role="img" aria-label="ثقة التحليل ${clamp(readiness.assessment_confidence)} من 100"><b>${clamp(readiness.assessment_confidence)}<small>/100</small></b></div><span>ثقة التحليل</span><small>تتأثر باكتمال ووضوح النص</small></article>
         </div>
         <section id="gates" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">الأهلية قبل الدرجة</span><h2>الشروط الصارمة</h2></div><p>${gateSummary.total} شروط · ${gateSummary.met} مستوفاة · ${gateSummary.partial} جزئية · ${gateSummary.missing} غير مستوفاة · ${gateSummary.unknown} غير محسومة</p></div><div class="match-gates">${gates.length ? gates.map(renderGate).join("") : '<p class="empty-value">لم تُستخرج شروط أهلية صارمة؛ يلزم فحص المصدر يدويًا.</p>'}</div></section>
-        <section id="fit" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بعد الأهلية</span><h2>أبعاد الملاءمة</h2></div></div><div class="fit-grid">${dimensions.length ? dimensions.map((dimension) => `<article><div><b>${esc(dimension.dimension)}</b><span>${clamp(dimension.score)}/100</span></div><p>${esc(dimension.rationale || "غير موضح")}</p><small><b>التحسين:</b> ${esc(dimension.improvement || "لا يوجد اقتراح محدد")}</small></article>`).join("") : '<p class="empty-value">لم تتوفر أبعاد ملاءمة كافية.</p>'}</div></section>
+        <section id="fit" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بعد الأهلية</span><h2>أبعاد الملاءمة</h2></div><p>الأوزان ثابتة ومجموعها 100</p></div><div class="fit-grid">${dimensions.length ? dimensions.map((dimension) => `<article><div><b>${esc(dimension.dimension)}</b><span>${clamp(dimension.score)}/100</span></div><p>${esc(dimension.rationale || "غير موضح")}</p><small><b>الوزن:</b> ${esc(dimension.weight_percent)}% · <b>التحسين:</b> ${esc(dimension.improvement || "لا يوجد اقتراح محدد")}</small></article>`).join("") : '<p class="empty-value">لم تتوفر أبعاد ملاءمة كافية.</p>'}</div></section>
+        <section id="quality" class="match-section quality-review"><div class="match-section-heading"><div><span class="rafid-kicker">مراجع ثانٍ مستقل عن صياغة النموذج</span><h2>الأدلة والتناقضات</h2></div><p>${quality.second_review_passed ? "اكتمل التحقق" : "يحتاج تحقق"} · ${Number(quality.corrections_count || 0)} تصحيحات · ${contradictions.length} تناقضات</p></div><div class="quality-summary"><article><span>طريقة الدرجة</span><b>${esc(quality.score_method || "غير موضح")}</b></article><article><span>تغطية الأدلة</span><b>${clamp(quality.evidence_coverage_score)}/100</b></article><article><span>إصدار الـRubric</span><b>${esc(quality.rubric_version || "غير موضح")}</b></article></div>${items(quality.corrections).length ? `<details open><summary>تصحيحات المراجع الثاني</summary>${safeList(quality.corrections)}</details>` : '<p class="quality-ok">✓ لم يعتمد المراجع الثاني حكم استيفاء بلا دليل.</p>'}<details ${contradictions.length ? "open" : ""}><summary>التناقضات التي تحتاج حسمًا (${contradictions.length})</summary>${contradictions.length ? `<div class="contradiction-list">${contradictions.map((item) => `<article><b>${esc(item.topic)}</b><p>${esc(item.first_statement)} ↔ ${esc(item.conflicting_statement)}</p><small>${esc(item.clarification_needed)}</small></article>`).join("")}</div>` : '<p class="empty-value">لم يكتشف الفحص الحتمي تناقضًا مباشرًا في البيانات المنظمة.</p>'}</details><details><summary>سجل الأدلة القابلة للمراجعة (${evidenceLedger.length})</summary>${evidenceLedger.length ? `<div class="evidence-ledger">${evidenceLedger.map((item) => `<article><span>${esc(item.category)}</span><b>${esc(item.statement)}</b><small>${esc(item.strength)} · ${esc(item.source)}</small></article>`).join("")}</div>` : '<p class="empty-value">لم تتوفر أدلة موثقة كافية؛ لذلك خُفضت قوة الأدلة والثقة.</p>'}</details></section>
         <section id="gaps" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">ما يمنع أو يؤخر التقديم</span><h2>الفجوات</h2></div></div><div class="match-gap-grid">${gaps.length ? gaps.map((gap) => `<article class="severity-${esc(gap.severity)}"><span>${esc(gap.severity)}</span><h3>${esc(gap.title)}</h3><p>${esc(gap.current_state || "غير موضح")}</p><dl><dt>المطلوب</dt><dd>${esc(gap.required_action || "غير موضح")}</dd><dt>معيار الإغلاق</dt><dd>${esc(gap.completion_criterion || "غير موضح")}</dd></dl></article>`).join("") : '<p class="empty-value">لم تُسجل فجوات، لكن تبقى المراجعة البشرية مطلوبة.</p>'}</div></section>
         <section id="actions" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بالترتيب</span><h2>خطة إغلاق الفجوات</h2></div></div><ol class="match-actions">${actions.length ? actions.map(renderAction).join("") : '<li><span>١</span><div><b>راجع المصدر الرسمي</b><p>لم تتوفر إجراءات منظمة كافية.</p></div></li>'}</ol></section>
         <section id="package" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">قبل الإرسال</span><h2>حزمة التقديم</h2></div></div><div class="package-grid match-package">${packageItems.length ? packageItems.map((entry) => `<article><span class="package-status ${statusClass(entry.status === "جاهز" ? "مستوفى" : entry.status === "ناقص" ? "غير مستوفى" : "غير معروف")}">${esc(entry.status)}</span><b>${esc(entry.document_name)}</b><p>${esc(entry.available_evidence || "لا يتوفر دليل واضح")}</p><small>${esc(entry.next_action || "راجع متطلبات الوثيقة")}</small></article>`).join("") : '<p class="empty-value">لم تُستخرج قائمة وثائق واضحة.</p>'}</div></section>
@@ -519,4 +523,12 @@
     app();
     void loadRuntime();
   });
+  document.addEventListener("click", (event) => {
+    const logo = event.target.closest?.(".rafid-logo");
+    if (!logo) return;
+    event.preventDefault();
+    if (location.hash !== "#home") history.pushState(null, "", "#home");
+    app();
+  });
+  window.RafidApp = Object.freeze({ home: app, general: generalView, match: matchView });
 })();
