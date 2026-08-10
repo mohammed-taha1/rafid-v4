@@ -17,8 +17,13 @@ for (const text of [
   "طباعة التقرير",
   "تنزيل تقرير مقروء",
   "بدء تحليل جديد",
+  "أهم فجوة الآن",
+  "الإجراء التالي",
+  "المراجعة البشرية",
 ]) assert.match(source, new RegExp(text));
 
 assert.match(source, /text\/plain;charset=utf-8/);
 assert.match(source, /URL\.revokeObjectURL/);
+assert.match(source, /class="score-ring"/);
+assert.match(source, /aria-label="الملاءمة والجاهزية/);
 console.log("Rafid opportunity report render contract passed.");

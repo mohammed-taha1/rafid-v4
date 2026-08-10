@@ -42,9 +42,9 @@
       const seconds = Math.floor((Date.now() - startedAt) / 1000);
       const minutes = Math.floor(seconds / 60);
       const remainder = seconds % 60;
-      node.textContent = minutes
-        ? `الوقت المنقضي: ${minutes} د ${remainder} ث — الخطة المجانية قد تحتاج عدة دقائق.`
-        : `الوقت المنقضي: ${seconds} ث — لا تغلق الصفحة أثناء التحليل.`;
+      node.textContent = seconds >= 45
+        ? `الوقت المنقضي: ${minutes} د ${remainder} ث — قد تكون الخدمة في بدء بارد أو تعالج مستندًا طويلًا؛ المدخلات محفوظة في هذه الصفحة.`
+        : `الوقت المنقضي: ${seconds} ث — نراجع الشروط والأدلة دون نسبة تقدم مصطنعة.`;
     };
     update();
     elapsedTimer = setInterval(update, 1000);
@@ -56,26 +56,37 @@
     main.id = "rafidApp";
     main.className = "rafid";
     main.removeAttribute("aria-busy");
-    main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#how">طريقة الاستخدام</a><a href="#privacy">الخصوصية</a><a href="#terms">الشروط</a></nav>')}
+    main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#how">كيف يعمل؟</a><a href="#who">لمن؟</a><a href="#learn">التعلم</a><a href="#privacy">الخصوصية</a></nav>')}
       <section class="hero">
-        <span class="rafid-kicker">تحليل بحثي عربي · خاص افتراضيًا</span>
-        <h1>اعرف مدى ملاءمة بحثك لفرصة التمويل</h1>
-        <p>قارن البحث بشروط فرصة محددة، افحص الأهلية والأدلة، واحصل على خطة عملية لإغلاق الفجوات قبل التقديم.</p>
-        <div class="hero-actions">
-          <button id="startMatch" class="rafid-primary" type="button">قارن بحثك بفرصة <span aria-hidden="true">←</span></button>
-          <button id="startGeneral" class="rafid-hero-secondary" type="button">تقييم جاهزية عام</button>
+        <div class="hero-copy">
+          <span class="rafid-kicker"><i aria-hidden="true"></i> تحليل عربي · خصوصية أولًا</span>
+          <h1>من بحثٍ جيد إلى <em>فرصة تمويل أوضح</em></h1>
+          <p>يقارن رافد بحثك بالشروط الفعلية للفرصة، يفصل الأهلية عن الانطباع، ثم يحول النواقص إلى خطة تجهيز قابلة للتنفيذ.</p>
+          <div class="hero-actions">
+            <button id="startMatch" class="rafid-primary" type="button">ابدأ مطابقة البحث <span aria-hidden="true">←</span></button>
+            <button id="startGeneral" class="rafid-hero-secondary" type="button">قيّم الجاهزية العامة</button>
+          </div>
+          <small class="hero-privacy"><span aria-hidden="true">◆</span> لا نطلب اسم الباحث، ولا نخزن النص أو الملف افتراضيًا.</small>
         </div>
-        <small class="hero-privacy">لا نطلب اسم الباحث، ولا نحفظ نص البحث أو ملف الفرصة افتراضيًا.</small>
+        <aside class="hero-preview" aria-label="مثال توضيحي لشكل تقرير رافد">
+          <div class="preview-top"><span>معاينة التقرير</span><b>قرار قابل للمراجعة</b></div>
+          <div class="preview-verdict"><span>الأهلية</span><b>تحتاج تحققًا</b><small>شرط واحد يحتاج دليلًا</small></div>
+          <ul><li><i class="ok">✓</i><span><b>نطاق الفرصة</b><small>يوجد دليل مباشر</small></span></li><li><i class="warn">!</i><span><b>خطاب الجهة</b><small>غير موضح في البحث</small></span></li><li><i class="partial">◐</i><span><b>خطة قياس الأثر</b><small>موجودة جزئيًا</small></span></li></ul>
+          <p><span>الخطوة التالية</span><b>استكمال الدليل الناقص قبل التقديم</b></p>
+        </aside>
         <div class="hero-orbs" aria-hidden="true"><i></i><i></i><i></i></div>
       </section>
+      <section class="trust-rail" aria-label="مبادئ رافد"><div><span aria-hidden="true">01</span><b>الأهلية قبل الدرجة</b><small>الشرط المانع لا تخفيه نتيجة مرتفعة</small></div><div><span aria-hidden="true">02</span><b>الدليل قبل الاستنتاج</b><small>نفصل النص المستخرج عن الحكم</small></div><div><span aria-hidden="true">03</span><b>خطة لا مجاملة</b><small>كل فجوة تتحول إلى إجراء واضح</small></div></section>
       <section id="how" class="rafid-steps" aria-label="كيف يعمل رافد">
-        <article><span>١</span><b>أدخل الفرصة</b><p>ألصق شروطها أو ارفع ملفها الرسمي.</p></article>
-        <article><span>٢</span><b>أضف البحث</b><p>ألصق النص أو ارفع PDF أو DOCX أو TXT.</p></article>
-        <article><span>٣</span><b>راجع القرار</b><p>شاهد الأهلية والملاءمة والأدلة وخطة الإغلاق.</p></article>
+        <article><span>١</span><b>أدخل الفرصة</b><p>ألصق الشروط أو ارفع دليل PDF أو DOCX أو TXT.</p></article>
+        <article><span>٢</span><b>أضف البحث</b><p>يربط رافد كل شرط بما ورد فعلًا في المحتوى.</p></article>
+        <article><span>٣</span><b>نفّذ خطة الإغلاق</b><p>راجع القرار والأدلة والوثائق المطلوبة قبل الموعد.</p></article>
       </section>
-      <section class="rafid-benefits"><div><span class="rafid-kicker">ما ستحصل عليه</span><h2>قرار أوضح قبل استهلاك وقت التقديم</h2></div><ul><li>بوابات الأهلية</li><li>درجة ملاءمة مفسّرة</li><li>الأدلة المفقودة</li><li>خطة تجهيز الطلب</li></ul></section>
+      <section id="who" class="rafid-audience"><div><span class="rafid-kicker">مصمم لمن يحوّل المعرفة إلى أثر</span><h2>قراءة واحدة، قرارات متعددة</h2><p>واجهة بسيطة للباحث، وبنية قابلة للمراجعة للمكاتب البحثية وفرق الابتكار.</p></div><div class="audience-grid"><article><span>ب</span><b>الباحثون</b><p>اعرف ما ينقصك قبل استهلاك وقت التقديم.</p></article><article><span>م</span><b>المكاتب البحثية</b><p>راجع الأهلية والأدلة بمنهج واحد واضح.</p></article><article><span>ا</span><b>فرق الابتكار</b><p>حوّل الفجوات إلى مخرجات ومسؤوليات عملية.</p></article></div></section>
+      <section class="rafid-benefits"><div><span class="rafid-kicker">مخرج عملي، لا درجة فقط</span><h2>تقرير يجيب: هل نتقدم؟ وما الذي نغلقه أولًا؟</h2></div><ul><li>بوابات أهلية موثقة</li><li>ملاءمة مفسّرة</li><li>أدلة مفقودة</li><li>خطة تجهيز مرتبة</li><li>حزمة تقديم</li><li>أسئلة للممول</li></ul></section>
       <section class="rafid-roadmap" aria-labelledby="roadmapTitle"><div><span class="rafid-kicker">طريق رافد</span><h2 id="roadmapTitle">نبني الطريق من البحث إلى التمويل خطوة بخطوة</h2><p>النسخة الحالية تثبت قرار الملاءمة لفرصة محددة. المراحل التالية تُبنى فوق نفس بيانات الشروط والأدلة، دون التضحية بالخصوصية.</p></div><ol><li class="is-live"><span>متاح الآن</span><b>ملاءمة البحث لفرصة محددة</b><small>أهلية، أدلة، فجوات، وخطة إغلاق.</small></li><li><span>المرحلة التالية</span><b>اقتراح الفرص المناسبة</b><small>ترشيح موثق يبدأ بالشروط المانعة.</small></li><li><span>لاحقًا</span><b>محفظة المؤسسات البحثية</b><small>مقارنة الجاهزية دون كشف النصوص الخام.</small></li><li><span>لاحقًا</span><b>بوابة الجهات الممولة</b><small>مطابقة المعايير مع المشاريع بمراجعة بشرية.</small></li></ol></section>
-      <footer><p id="privacy">النتائج استرشادية، ولا تضمن القبول أو التمويل. راجع المصدر الرسمي قبل التقديم.</p><a id="terms" href="#terms">شروط الاستخدام</a></footer>`;
+      <section id="learn" class="learn-strip"><div><span class="rafid-kicker">مركز التعلم</span><h2>ارفع جاهزيتك قبل الفرصة التالية</h2></div><nav aria-label="مواد تعليمية"><a href="#faq">الأسئلة الشائعة</a><a href="#learn">دروس التمويل</a><a href="#about">عن رافد والأثر</a></nav></section>
+      <footer><div><b>رافد</b><p id="privacy">النتائج استرشادية ولا تضمن القبول أو التمويل. المصدر الرسمي هو المرجع النهائي.</p></div><nav><a href="#privacy">الخصوصية</a><a id="terms" href="#terms">الشروط</a></nav></footer>`;
     if (!existing) document.body.prepend(main);
     main.querySelector("#startMatch").addEventListener("click", matchView);
     main.querySelector("#startGeneral").addEventListener("click", generalView);
@@ -106,8 +117,22 @@
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || payload.ok === false) {
-      const error = new Error(payload.error || "تعذر إكمال التحليل الآن.");
+      const messages = {
+        RAFID_GLOBAL_DAILY_LIMIT: "اكتملت الحصة التجريبية لليوم. احتفظ بمدخلاتك وحاول في اليوم التالي.",
+        RAFID_USER_RATE_LIMIT: "وصلت طلبات كثيرة خلال وقت قصير. انتظر قليلًا ثم حاول مجددًا.",
+        RAFID_PROVIDER_TIMEOUT: "استغرق التحليل أطول من المهلة. بقيت مدخلاتك كما هي؛ حاول مجددًا بعد لحظات.",
+        RAFID_PROVIDER_UNAVAILABLE: "خدمة التحليل مزدحمة أو تبدأ من السكون. بقيت مدخلاتك؛ حاول مجددًا بعد دقيقة.",
+        RAFID_INVALID_PROVIDER_RESPONSE: "تعذر التحقق من نتيجة المزود. لم نعرض نتيجة غير موثوقة؛ حاول مجددًا.",
+        RAFID_GROQ_UNAVAILABLE: "خدمة التحليل غير متاحة مؤقتًا. بقيت مدخلاتك؛ حاول مجددًا بعد دقيقة.",
+        RAFID_GROQ_RATE_LIMITED: "بلغت خدمة التحليل حدها المؤقت. انتظر قليلًا ثم حاول مجددًا.",
+        RAFID_PROVIDER_NOT_CONFIGURED: "خدمة التحليل لم تكتمل تهيئتها بعد. الصفحات العامة متاحة، لكن التحليل يحتاج تدخل المشغّل.",
+        RAFID_ZDR_REQUIRED: "أوقف رافد الإرسال لأن ضمان عدم الاحتفاظ غير مؤكد. لم يُرسل المحتوى.",
+        RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED: "لم تجتز النتيجة التحقق البنيوي، لذلك لم نعرضها. حاول مجددًا.",
+        PROVIDER_UNAVAILABLE: "خدمة التحليل مزدحمة أو تبدأ من السكون. بقيت مدخلاتك؛ حاول مجددًا بعد دقيقة.",
+      };
+      const error = new Error(messages[payload.code] || payload.error || "تعذر إكمال التحليل الآن. بقيت المدخلات لتستطيع المحاولة مجددًا.");
       error.code = payload.code || "RAFID_REQUEST_FAILED";
+      error.retryable = response.status === 429 || response.status >= 500;
       throw error;
     }
     return payload;
@@ -130,6 +155,7 @@
         <button id="loadTrainingExample" class="rafid-secondary demo-fill-button" type="button">تعبئة مثال تدريبي كامل</button>
         <small class="demo-disclaimer">المثال افتراضي وموسوم بوضوح، ومخصص لاختبار رحلة المنصة فقط.</small>
       </section>
+      <aside class="match-assurance" aria-label="ضمانات التحليل"><span><b>لا حفظ افتراضي</b><small>يعالج الطلب الحالي فقط</small></span><span><b>دون بيانات شخصية</b><small>لا نطلب اسم الباحث</small></span><span><b>نتيجة قابلة للمراجعة</b><small>الشروط والأدلة منفصلة</small></span></aside>
       <section class="match-form" aria-labelledby="matchFormTitle">
         <h2 id="matchFormTitle" class="sr-only">بيانات فرصة التمويل والبحث</h2>
         <article class="match-input-card opportunity-input">
@@ -152,7 +178,7 @@
           <label class="file-picker">رفع ملف البحث<input id="researchFile" type="file" accept=".pdf,.docx,.txt" /><span id="researchFileStatus">PDF · DOCX · TXT حتى ${maxSize}MB</span></label>
         </article>
         <article class="match-consent-card">
-          <h2>قبل التحليل</h2>
+          <div class="consent-heading"><div><span class="rafid-kicker">جاهز للمطابقة</span><h2>قبل التحليل</h2></div><span class="secure-processing"><i aria-hidden="true">◆</i> معالجة مؤقتة</span></div>
           <ul><li>التحليل استرشادي ولا يضمن التمويل.</li><li>قد تختلف الشروط عن النسخة المدخلة؛ راجع المصدر الرسمي.</li><li>لا ترفع معلومات شديدة الحساسية أو بيانات مشاركين.</li></ul>
           <label class="match-confirm"><input id="privacyConfirmMatch" type="checkbox" /><span>أوافق على معالجة نص الفرصة والبحث لهذا الطلب فقط، دون حفظهما افتراضيًا.</span></label>
           <div id="matchProgress" class="match-progress" hidden aria-live="polite">
@@ -289,6 +315,7 @@
       stopElapsedTimer();
       errorNode.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. بقيت المدخلات لتستطيع المحاولة مجددًا." : errorValue.message;
       errorNode.classList.add("is-error");
+      errorNode.dataset.retryable = errorValue.retryable ? "true" : "false";
       requestInFlight = false;
       go.disabled = false;
       cancel.hidden = true;
@@ -341,6 +368,8 @@
     const packageItems = items(assessment.application_package);
     const dimensions = items(assessment.fit_dimensions);
     const review = assessment.institutional_review || {};
+    const topGap = gaps[0] || {};
+    const topAction = actions[0] || {};
     const truncated = Boolean(meta?.opportunity?.input_truncated || meta?.project?.input_truncated || meta?.assessment?.input_truncated);
     const fixedDisclaimer = "هذا التقييم عام واستـرشادي ولا يضمن القبول أو التمويل. قد تتطلب الفرصة شروطًا إضافية تتعلق بالتخصص أو الشريك أو الجاهزية التقنية أو الملكية الفكرية أو التراخيص. المصدر الرسمي وقرار الجهة الممولة هما المرجع النهائي.";
 
@@ -349,16 +378,18 @@
         <div class="match-report-heading"><div><span class="rafid-kicker">نتيجة المطابقة لفرصة محددة</span><h1>${esc(identity.title || "فرصة غير مسماة")}</h1><p>${esc(identity.funder || "الجهة غير موضحة")}${identity.deadline ? ` · الإغلاق ${esc(identity.deadline)}` : ""}</p></div><span class="eligibility-badge ${tone}">${esc(eligibility.status || "غير محسوم")}</span></div>
         <article class="decision-card ${tone}"><div><span>قرار الأهلية الاسترشادي</span><h2>${esc(eligibility.status || "غير محسوم")}</h2><p>${esc(eligibility.reason || readiness.summary || "تحتاج النتيجة إلى مراجعة بشرية.")}</p></div><div class="decision-recommendation"><span>توصية المراجعة</span><b>${esc(review.recommendation || "تحتاج مراجعة بشرية")}</b><p>${esc(review.rationale || "راجع الأدلة والشروط قبل القرار.")}</p></div></article>
         ${truncated ? '<p class="rafid-notice">تم اختصار جزء من أحد المدخلات بسبب حد المعالجة. خفّض رافد الثقة، ويُنصح بإعادة التحليل بنص مركز أو تقسيم المستند.</p>' : ""}
+        <section class="report-command" aria-label="الخلاصة التنفيذية"><article><span>أهم فجوة الآن</span><b>${esc(topGap.title || "مراجعة شروط الأهلية")}</b><p>${esc(topGap.required_action || "تحقق من المصدر الرسمي قبل اتخاذ القرار.")}</p></article><article><span>الإجراء التالي</span><b>${esc(topAction.action || "استكمال الأدلة الناقصة")}</b><p>${esc(topAction.output || "ملف موثق وقابل للمراجعة")}</p></article><article><span>المراجعة البشرية</span><b>${review.institutional_review_required === false ? "موصى بها" : "مطلوبة"}</b><p>${esc(review.recommendation || "راجع الحكم مع مسؤول البرنامج.")}</p></article></section>
+        <nav class="report-nav" aria-label="أقسام التقرير"><a href="#gates">الأهلية</a><a href="#fit">الملاءمة</a><a href="#gaps">الفجوات</a><a href="#actions">خطة العمل</a><a href="#package">حزمة التقديم</a></nav>
         <div class="match-scores">
-          <article><span>الملاءمة والجاهزية</span><meter min="0" max="100" value="${clamp(readiness.opportunity_readiness_score)}"></meter><b>${clamp(readiness.opportunity_readiness_score)}<small>/100</small></b></article>
-          <article><span>قوة الأدلة</span><meter min="0" max="100" value="${clamp(readiness.evidence_strength_score)}"></meter><b>${clamp(readiness.evidence_strength_score)}<small>/100</small></b></article>
-          <article><span>ثقة التحليل</span><meter min="0" max="100" value="${clamp(readiness.assessment_confidence)}"></meter><b>${clamp(readiness.assessment_confidence)}<small>/100</small></b></article>
+          <article><div class="score-ring" style="--score:${clamp(readiness.opportunity_readiness_score)}" role="img" aria-label="الملاءمة والجاهزية ${clamp(readiness.opportunity_readiness_score)} من 100"><b>${clamp(readiness.opportunity_readiness_score)}<small>/100</small></b></div><span>الملاءمة والجاهزية</span><small>بعد احتساب الأهلية والأدلة</small></article>
+          <article><div class="score-ring" style="--score:${clamp(readiness.evidence_strength_score)}" role="img" aria-label="قوة الأدلة ${clamp(readiness.evidence_strength_score)} من 100"><b>${clamp(readiness.evidence_strength_score)}<small>/100</small></b></div><span>قوة الأدلة</span><small>مدى دعم البحث لشروط الفرصة</small></article>
+          <article><div class="score-ring" style="--score:${clamp(readiness.assessment_confidence)}" role="img" aria-label="ثقة التحليل ${clamp(readiness.assessment_confidence)} من 100"><b>${clamp(readiness.assessment_confidence)}<small>/100</small></b></div><span>ثقة التحليل</span><small>تتأثر باكتمال ووضوح النص</small></article>
         </div>
-        <section class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">الأهلية قبل الدرجة</span><h2>الشروط الصارمة</h2></div><p>${gateSummary.total} شروط · ${gateSummary.met} مستوفاة · ${gateSummary.partial} جزئية · ${gateSummary.missing} غير مستوفاة · ${gateSummary.unknown} غير محسومة</p></div><div class="match-gates">${gates.length ? gates.map(renderGate).join("") : '<p class="empty-value">لم تُستخرج شروط أهلية صارمة؛ يلزم فحص المصدر يدويًا.</p>'}</div></section>
-        <section class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بعد الأهلية</span><h2>أبعاد الملاءمة</h2></div></div><div class="fit-grid">${dimensions.length ? dimensions.map((dimension) => `<article><div><b>${esc(dimension.dimension)}</b><span>${clamp(dimension.score)}/100</span></div><p>${esc(dimension.rationale || "غير موضح")}</p><small><b>التحسين:</b> ${esc(dimension.improvement || "لا يوجد اقتراح محدد")}</small></article>`).join("") : '<p class="empty-value">لم تتوفر أبعاد ملاءمة كافية.</p>'}</div></section>
-        <section class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">ما يمنع أو يؤخر التقديم</span><h2>الفجوات</h2></div></div><div class="match-gap-grid">${gaps.length ? gaps.map((gap) => `<article class="severity-${esc(gap.severity)}"><span>${esc(gap.severity)}</span><h3>${esc(gap.title)}</h3><p>${esc(gap.current_state || "غير موضح")}</p><dl><dt>المطلوب</dt><dd>${esc(gap.required_action || "غير موضح")}</dd><dt>معيار الإغلاق</dt><dd>${esc(gap.completion_criterion || "غير موضح")}</dd></dl></article>`).join("") : '<p class="empty-value">لم تُسجل فجوات، لكن تبقى المراجعة البشرية مطلوبة.</p>'}</div></section>
-        <section class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بالترتيب</span><h2>خطة إغلاق الفجوات</h2></div></div><ol class="match-actions">${actions.length ? actions.map(renderAction).join("") : '<li><span>١</span><div><b>راجع المصدر الرسمي</b><p>لم تتوفر إجراءات منظمة كافية.</p></div></li>'}</ol></section>
-        <section class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">قبل الإرسال</span><h2>حزمة التقديم</h2></div></div><div class="package-grid match-package">${packageItems.length ? packageItems.map((entry) => `<article><span class="package-status ${statusClass(entry.status === "جاهز" ? "مستوفى" : entry.status === "ناقص" ? "غير مستوفى" : "غير معروف")}">${esc(entry.status)}</span><b>${esc(entry.document_name)}</b><p>${esc(entry.available_evidence || "لا يتوفر دليل واضح")}</p><small>${esc(entry.next_action || "راجع متطلبات الوثيقة")}</small></article>`).join("") : '<p class="empty-value">لم تُستخرج قائمة وثائق واضحة.</p>'}</div></section>
+        <section id="gates" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">الأهلية قبل الدرجة</span><h2>الشروط الصارمة</h2></div><p>${gateSummary.total} شروط · ${gateSummary.met} مستوفاة · ${gateSummary.partial} جزئية · ${gateSummary.missing} غير مستوفاة · ${gateSummary.unknown} غير محسومة</p></div><div class="match-gates">${gates.length ? gates.map(renderGate).join("") : '<p class="empty-value">لم تُستخرج شروط أهلية صارمة؛ يلزم فحص المصدر يدويًا.</p>'}</div></section>
+        <section id="fit" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بعد الأهلية</span><h2>أبعاد الملاءمة</h2></div></div><div class="fit-grid">${dimensions.length ? dimensions.map((dimension) => `<article><div><b>${esc(dimension.dimension)}</b><span>${clamp(dimension.score)}/100</span></div><p>${esc(dimension.rationale || "غير موضح")}</p><small><b>التحسين:</b> ${esc(dimension.improvement || "لا يوجد اقتراح محدد")}</small></article>`).join("") : '<p class="empty-value">لم تتوفر أبعاد ملاءمة كافية.</p>'}</div></section>
+        <section id="gaps" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">ما يمنع أو يؤخر التقديم</span><h2>الفجوات</h2></div></div><div class="match-gap-grid">${gaps.length ? gaps.map((gap) => `<article class="severity-${esc(gap.severity)}"><span>${esc(gap.severity)}</span><h3>${esc(gap.title)}</h3><p>${esc(gap.current_state || "غير موضح")}</p><dl><dt>المطلوب</dt><dd>${esc(gap.required_action || "غير موضح")}</dd><dt>معيار الإغلاق</dt><dd>${esc(gap.completion_criterion || "غير موضح")}</dd></dl></article>`).join("") : '<p class="empty-value">لم تُسجل فجوات، لكن تبقى المراجعة البشرية مطلوبة.</p>'}</div></section>
+        <section id="actions" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بالترتيب</span><h2>خطة إغلاق الفجوات</h2></div></div><ol class="match-actions">${actions.length ? actions.map(renderAction).join("") : '<li><span>١</span><div><b>راجع المصدر الرسمي</b><p>لم تتوفر إجراءات منظمة كافية.</p></div></li>'}</ol></section>
+        <section id="package" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">قبل الإرسال</span><h2>حزمة التقديم</h2></div></div><div class="package-grid match-package">${packageItems.length ? packageItems.map((entry) => `<article><span class="package-status ${statusClass(entry.status === "جاهز" ? "مستوفى" : entry.status === "ناقص" ? "غير مستوفى" : "غير معروف")}">${esc(entry.status)}</span><b>${esc(entry.document_name)}</b><p>${esc(entry.available_evidence || "لا يتوفر دليل واضح")}</p><small>${esc(entry.next_action || "راجع متطلبات الوثيقة")}</small></article>`).join("") : '<p class="empty-value">لم تُستخرج قائمة وثائق واضحة.</p>'}</div></section>
         <section class="match-section questions-grid"><div><h2>أسئلة للفريق</h2>${safeList(review.questions_for_project_team)}</div><div><h2>أسئلة للجهة الممولة</h2>${safeList(review.questions_for_funder)}</div></section>
         <p class="rafid-notice match-disclaimer">${fixedDisclaimer}</p>
         <div class="form-actions report-actions"><button id="copy" class="rafid-secondary" type="button">نسخ الخلاصة</button><button id="download" class="rafid-secondary" type="button">تنزيل تقرير مقروء</button><button id="print" class="rafid-primary" type="button">طباعة التقرير</button><button id="newBottom" class="rafid-text-button" type="button">بدء تحليل جديد</button></div>

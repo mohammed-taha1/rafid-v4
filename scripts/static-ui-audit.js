@@ -37,6 +37,11 @@ assert.match(config, /productName:\s*"رافد"/, "Product name must remain cent
 assert.match(ui, /void loadRuntime\(\)/, "Public runtime configuration must not block first paint.");
 assert.match(ui, /RafidDemoData/, "The labeled training fixture must be available from the analysis form.");
 assert.match(ui, /تنزيل تقرير مقروء/, "The result must offer a readable report download.");
+assert.match(ui, /hero-preview/, "The landing page must preview the decision format without a fake score.");
+assert.match(ui, /report-command/, "The report must lead with an executive next-action summary.");
+for (const code of ["RAFID_GLOBAL_DAILY_LIMIT", "RAFID_USER_RATE_LIMIT", "RAFID_PROVIDER_TIMEOUT", "RAFID_PROVIDER_UNAVAILABLE", "RAFID_INVALID_PROVIDER_RESPONSE", "RAFID_GROQ_UNAVAILABLE", "RAFID_GROQ_RATE_LIMITED", "RAFID_PROVIDER_NOT_CONFIGURED", "RAFID_ZDR_REQUIRED", "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED"]) {
+  assert.match(ui, new RegExp(code), `A safe Arabic UI message is required for ${code}.`);
+}
 assert.match(demo, /مثال تدريبي غير مرتبط بجهة حقيقية/, "Training data must not be presented as real funding data.");
 assert.doesNotMatch(html + ui + demo, /gsk_[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,}/, "Potential API secret embedded in frontend.");
 assert.doesNotMatch(html + ui, /service[_-]?role/i, "A service-role secret must never enter the frontend.");
