@@ -29,7 +29,7 @@ for (const reference of ["vendor/pdf.min.mjs", "vendor/pdf.worker.min.mjs"]) {
 
 assert.match(html, /lang="ar"\s+dir="rtl"/, "Arabic RTL metadata is required.");
 assert.match(html, /id="rafidApp"[^>]+class="rafid rafid-boot"/, "The first paint must use the current Rafid shell.");
-assert.match(html, /اعرف مدى ملاءمة بحثك لفرصة التمويل/, "The first paint must match the current product message.");
+assert.match(html, /قرار أوضح لبحثك قبل التقديم/, "The first paint must match the current product message.");
 assert.doesNotMatch(html, /class="topbar"|class="app-shell"|id="authGate"/, "Legacy UI must not exist in the entry document.");
 assert.doesNotMatch(html, /rafid-v4\.js|results-report\.js|optional-feedback\.js|supabase\.min\.js/, "Unused legacy bundles must not load.");
 assert.match(html, /rafid-config\.js[^]*research-ui\.js/, "Central product configuration must load before the UI.");
@@ -37,7 +37,12 @@ assert.match(config, /productName:\s*"رافد"/, "Product name must remain cent
 assert.match(ui, /void loadRuntime\(\)/, "Public runtime configuration must not block first paint.");
 assert.match(ui, /RafidDemoData/, "The labeled training fixture must be available from the analysis form.");
 assert.match(ui, /تنزيل تقرير مقروء/, "The result must offer a readable report download.");
-assert.match(ui, /hero-preview/, "The landing page must preview the decision format without a fake score.");
+assert.match(ui, /service-console/, "The landing page must present clear service entry points.");
+assert.match(ui, /حلّل جاهزية بحثك/, "General readiness analysis must be a first-class service.");
+assert.match(ui, /قارن بحثك بفرصة تمويل/, "Opportunity matching must be a first-class service.");
+assert.match(ui, /researchFile[^]*multiple/, "Research intake must support multiple files.");
+assert.match(ui, /workflow-stepper/, "Opportunity matching must use a short guided workflow.");
+assert.match(ingest, /PDF وDOCX وTXT وMD/, "Document ingestion must clearly expose supported types.");
 assert.match(ui, /report-command/, "The report must lead with an executive next-action summary.");
 for (const code of ["RAFID_GLOBAL_DAILY_LIMIT", "RAFID_USER_RATE_LIMIT", "RAFID_PROVIDER_TIMEOUT", "RAFID_PROVIDER_UNAVAILABLE", "RAFID_INVALID_PROVIDER_RESPONSE", "RAFID_GROQ_UNAVAILABLE", "RAFID_GROQ_RATE_LIMITED", "RAFID_PROVIDER_NOT_CONFIGURED", "RAFID_ZDR_REQUIRED", "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED"]) {
   assert.match(ui, new RegExp(code), `A safe Arabic UI message is required for ${code}.`);

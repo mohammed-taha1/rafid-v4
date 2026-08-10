@@ -5,6 +5,7 @@
     pdf: ["application/pdf"],
     docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
     txt: ["text/plain"],
+    md: ["text/markdown", "text/plain", ""],
   };
   const normalize = (value) => String(value || "").replace(/\r\n?/g, "\n").replaceAll("\u0000", "").trim();
   const count = (value) => normalize(value).split(/\s+/u).filter(Boolean).length;
@@ -14,7 +15,7 @@
   async function read(file, { maxFileSizeMb = 20, progress } = {}) {
     const name = safeName(file?.name);
     const extension = (name.match(/\.([^.]+)$/)?.[1] || "").toLowerCase();
-    if (!Object.hasOwn(accepted, extension)) throw fail("INGEST_UNSUPPORTED_TYPE", "يدعم رافد PDF وDOCX وTXT فقط.");
+    if (!Object.hasOwn(accepted, extension)) throw fail("INGEST_UNSUPPORTED_TYPE", "يدعم رافد PDF وDOCX وTXT وMD.");
     if (!file?.size) throw fail("INGEST_EMPTY_FILE", "الملف فارغ.");
     if (file.size > Math.max(1, Number(maxFileSizeMb) || 20) * 1024 * 1024) throw fail("INGEST_FILE_TOO_LARGE", `حجم الملف يتجاوز الحد المسموح (${maxFileSizeMb} ميغابايت).`);
     if (file.type && !accepted[extension].includes(file.type.toLowerCase())) throw fail("INGEST_MIME_MISMATCH", "نوع الملف المعلن لا يطابق الصيغة المدعومة.");

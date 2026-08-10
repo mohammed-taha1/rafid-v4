@@ -42,7 +42,7 @@ async function main() {
     assert.equal(index.status, 200);
     assert.match(index.headers.get("content-type") || "", /text\/html/);
     const indexHtml = await index.text();
-    assert.match(indexHtml, /اعرف مدى ملاءمة بحثك لفرصة التمويل/);
+    assert.match(indexHtml, /قرار أوضح لبحثك قبل التقديم/);
     assert.doesNotMatch(indexHtml, /class="topbar"|class="app-shell"|id="authGate"/);
     assert.match(index.headers.get("content-security-policy") || "", /default-src 'self'/);
 

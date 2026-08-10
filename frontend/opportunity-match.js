@@ -52,7 +52,7 @@
         owner: null,
         type: "بحث أو مشروع ابتكاري",
       },
-      files: list(input.projectFiles).slice(0, 1).map((file) => ({
+      files: list(input.projectFiles).slice(0, 5).map((file) => ({
         name: text(file.name) || "ملف البحث",
         type: text(file.type) || "application/octet-stream",
         size: Math.max(0, Number(file.size) || 0),

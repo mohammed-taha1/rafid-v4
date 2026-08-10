@@ -11,6 +11,11 @@
   const items = (value) => Array.isArray(value) ? value : [];
   const clamp = (value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
 
+  function resetView(focusSelector = "h1") {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    requestAnimationFrame(() => root()?.querySelector(focusSelector)?.focus({ preventScroll: true }));
+  }
+
   async function loadRuntime() {
     try {
       const response = await fetch("/api/rafid/public/config", { headers: { Accept: "application/json" } });
@@ -56,55 +61,46 @@
     main.id = "rafidApp";
     main.className = "rafid";
     main.removeAttribute("aria-busy");
-    main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#how">كيف يعمل؟</a><a href="#who">لمن؟</a><a href="#learn">التعلم</a><a href="#privacy">الخصوصية</a></nav>')}
-      <section class="hero">
-        <div class="hero-copy">
-          <span class="rafid-kicker"><i aria-hidden="true"></i> تحليل عربي · خصوصية أولًا</span>
-          <h1>من بحثٍ جيد إلى <em>فرصة تمويل أوضح</em></h1>
-          <p>يقارن رافد بحثك بالشروط الفعلية للفرصة، يفصل الأهلية عن الانطباع، ثم يحول النواقص إلى خطة تجهيز قابلة للتنفيذ.</p>
-          <div class="hero-actions">
-            <button id="startMatch" class="rafid-primary" type="button">ابدأ مطابقة البحث <span aria-hidden="true">←</span></button>
-            <button id="startGeneral" class="rafid-hero-secondary" type="button">قيّم الجاهزية العامة</button>
-          </div>
-          <small class="hero-privacy"><span aria-hidden="true">◆</span> لا نطلب اسم الباحث، ولا نخزن النص أو الملف افتراضيًا.</small>
+    main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#services">الخدمات</a><a href="#how">كيف يعمل؟</a><a href="#privacy">الخصوصية</a><span class="pilot-badge">نسخة تجريبية</span></nav>')}
+      <section class="portal-hero">
+        <div><span class="rafid-kicker"><i aria-hidden="true"></i> منصة الجاهزية البحثية والتمويلية</span><h1 tabindex="-1">قرار أوضح لبحثك، <em>قبل أن تبدأ التقديم</em></h1><p>حلّل جاهزية بحثك أو قارنه مباشرة بفرصة تمويل. خطوات قصيرة، ملفات متعددة، ونتيجة عربية قابلة للمراجعة.</p></div>
+        <aside><b>مصمم للعمل المؤسسي</b><ul><li>لا يحتاج تسجيل دخول</li><li>لا نخزن البحث افتراضيًا</li><li>لا نعرض نتيجة بلا تفسير</li></ul></aside>
+      </section>
+      <section id="services" class="service-console" aria-labelledby="servicesTitle">
+        <div class="section-heading"><span class="rafid-kicker">ابدأ من احتياجك</span><h2 id="servicesTitle">ماذا تريد أن تنجز الآن؟</h2><p>اختر خدمة واحدة. لن ننقلك إلى نموذج طويل قبل أن تعرف المطلوب.</p></div>
+        <div class="service-grid">
+          <button id="startGeneral" class="service-card is-primary" type="button"><span class="service-number">01</span><span class="service-status">متاح الآن</span><strong>حلّل جاهزية بحثك</strong><small>ارفع البحث أو الصق النص واحصل على تقييم الجاهزية والفجوات وخطة العمل.</small><i>ابدأ التحليل <b aria-hidden="true">←</b></i></button>
+          <button id="startMatch" class="service-card" type="button"><span class="service-number">02</span><span class="service-status">متاح الآن</span><strong>قارن بحثك بفرصة تمويل</strong><small>أضف دليل الفرصة والبحث، ثم راجع الأهلية والملاءمة والأدلة الناقصة.</small><i>ابدأ المقارنة <b aria-hidden="true">←</b></i></button>
+          <article class="service-card is-upcoming" aria-label="اقتراح فرص التمويل، قريبًا"><span class="service-number">03</span><span class="service-status">قريبًا</span><strong>اكتشف الفرص المناسبة</strong><small>ترشيح فرص بحسب مجال البحث وجاهزيته وشروط الأهلية.</small><i>ضمن المرحلة التالية</i></article>
         </div>
-        <aside class="hero-preview" aria-label="مثال توضيحي لشكل تقرير رافد">
-          <div class="preview-top"><span>معاينة التقرير</span><b>قرار قابل للمراجعة</b></div>
-          <div class="preview-verdict"><span>الأهلية</span><b>تحتاج تحققًا</b><small>شرط واحد يحتاج دليلًا</small></div>
-          <ul><li><i class="ok">✓</i><span><b>نطاق الفرصة</b><small>يوجد دليل مباشر</small></span></li><li><i class="warn">!</i><span><b>خطاب الجهة</b><small>غير موضح في البحث</small></span></li><li><i class="partial">◐</i><span><b>خطة قياس الأثر</b><small>موجودة جزئيًا</small></span></li></ul>
-          <p><span>الخطوة التالية</span><b>استكمال الدليل الناقص قبل التقديم</b></p>
-        </aside>
-        <div class="hero-orbs" aria-hidden="true"><i></i><i></i><i></i></div>
       </section>
-      <section class="trust-rail" aria-label="مبادئ رافد"><div><span aria-hidden="true">01</span><b>الأهلية قبل الدرجة</b><small>الشرط المانع لا تخفيه نتيجة مرتفعة</small></div><div><span aria-hidden="true">02</span><b>الدليل قبل الاستنتاج</b><small>نفصل النص المستخرج عن الحكم</small></div><div><span aria-hidden="true">03</span><b>خطة لا مجاملة</b><small>كل فجوة تتحول إلى إجراء واضح</small></div></section>
-      <section id="how" class="rafid-steps" aria-label="كيف يعمل رافد">
-        <article><span>١</span><b>أدخل الفرصة</b><p>ألصق الشروط أو ارفع دليل PDF أو DOCX أو TXT.</p></article>
-        <article><span>٢</span><b>أضف البحث</b><p>يربط رافد كل شرط بما ورد فعلًا في المحتوى.</p></article>
-        <article><span>٣</span><b>نفّذ خطة الإغلاق</b><p>راجع القرار والأدلة والوثائق المطلوبة قبل الموعد.</p></article>
-      </section>
-      <section id="who" class="rafid-audience"><div><span class="rafid-kicker">مصمم لمن يحوّل المعرفة إلى أثر</span><h2>قراءة واحدة، قرارات متعددة</h2><p>واجهة بسيطة للباحث، وبنية قابلة للمراجعة للمكاتب البحثية وفرق الابتكار.</p></div><div class="audience-grid"><article><span>ب</span><b>الباحثون</b><p>اعرف ما ينقصك قبل استهلاك وقت التقديم.</p></article><article><span>م</span><b>المكاتب البحثية</b><p>راجع الأهلية والأدلة بمنهج واحد واضح.</p></article><article><span>ا</span><b>فرق الابتكار</b><p>حوّل الفجوات إلى مخرجات ومسؤوليات عملية.</p></article></div></section>
-      <section class="rafid-benefits"><div><span class="rafid-kicker">مخرج عملي، لا درجة فقط</span><h2>تقرير يجيب: هل نتقدم؟ وما الذي نغلقه أولًا؟</h2></div><ul><li>بوابات أهلية موثقة</li><li>ملاءمة مفسّرة</li><li>أدلة مفقودة</li><li>خطة تجهيز مرتبة</li><li>حزمة تقديم</li><li>أسئلة للممول</li></ul></section>
-      <section class="rafid-roadmap" aria-labelledby="roadmapTitle"><div><span class="rafid-kicker">طريق رافد</span><h2 id="roadmapTitle">نبني الطريق من البحث إلى التمويل خطوة بخطوة</h2><p>النسخة الحالية تثبت قرار الملاءمة لفرصة محددة. المراحل التالية تُبنى فوق نفس بيانات الشروط والأدلة، دون التضحية بالخصوصية.</p></div><ol><li class="is-live"><span>متاح الآن</span><b>ملاءمة البحث لفرصة محددة</b><small>أهلية، أدلة، فجوات، وخطة إغلاق.</small></li><li><span>المرحلة التالية</span><b>اقتراح الفرص المناسبة</b><small>ترشيح موثق يبدأ بالشروط المانعة.</small></li><li><span>لاحقًا</span><b>محفظة المؤسسات البحثية</b><small>مقارنة الجاهزية دون كشف النصوص الخام.</small></li><li><span>لاحقًا</span><b>بوابة الجهات الممولة</b><small>مطابقة المعايير مع المشاريع بمراجعة بشرية.</small></li></ol></section>
-      <section id="learn" class="learn-strip"><div><span class="rafid-kicker">مركز التعلم</span><h2>ارفع جاهزيتك قبل الفرصة التالية</h2></div><nav aria-label="مواد تعليمية"><a href="#faq">الأسئلة الشائعة</a><a href="#learn">دروس التمويل</a><a href="#about">عن رافد والأثر</a></nav></section>
+      <section id="how" class="institutional-flow"><div><span class="rafid-kicker">رحلة مختصرة</span><h2>من الملف إلى قرار قابل للتنفيذ</h2></div><ol><li><span>١</span><b>أضف المحتوى</b><small>PDF أو DOCX أو TXT أو MD، ويمكن جمع عدة ملفات بحثية.</small></li><li><span>٢</span><b>نحلل الأدلة</b><small>نفصل المعلومات الموجودة عن الاستنتاجات والفجوات.</small></li><li><span>٣</span><b>راجع القرار</b><small>درجات مفسرة وخطة عمل مرتبة قبل التقديم.</small></li></ol></section>
+      <section class="trust-rail" aria-label="مبادئ رافد"><div><span aria-hidden="true">01</span><b>الخصوصية أصل</b><small>المعالجة للطلب الحالي دون حفظ افتراضي</small></div><div><span aria-hidden="true">02</span><b>الدليل قبل الحكم</b><small>كل نتيجة مرتبطة بما ورد في المحتوى</small></div><div><span aria-hidden="true">03</span><b>خطة قابلة للتنفيذ</b><small>الفجوات تتحول إلى إجراءات ومخرجات واضحة</small></div></section>
       <footer><div><b>رافد</b><p id="privacy">النتائج استرشادية ولا تضمن القبول أو التمويل. المصدر الرسمي هو المرجع النهائي.</p></div><nav><a href="#privacy">الخصوصية</a><a id="terms" href="#terms">الشروط</a></nav></footer>`;
     if (!existing) document.body.prepend(main);
     main.querySelector("#startMatch").addEventListener("click", matchView);
     main.querySelector("#startGeneral").addEventListener("click", generalView);
+    resetView();
   }
 
-  async function readSource(textInput, fileInput, label) {
+  async function readSource(textInput, fileInput, label, { maxFiles = 1 } = {}) {
     const typed = textInput.value.trim();
-    const file = fileInput.files[0];
-    if (typed && file) throw new Error(`اختر لصق نص ${label} أو رفع ملفه، وليس الاثنين معًا.`);
-    if (!typed && !file) throw new Error(`أدخل نص ${label} أو اختر ملفًا.`);
-    if (!file) return { text: typed, file: null, sourceName: "نص أدخله المستخدم" };
-    const documentData = await window.RafidIngest.read(file, {
-      maxFileSizeMb: runtime.limits?.max_file_size_mb || 20,
-    });
+    const files = Array.from(fileInput.files || []);
+    if (typed && files.length) throw new Error(`اختر لصق نص ${label} أو رفع ملفاته، وليس الاثنين معًا.`);
+    if (!typed && !files.length) throw new Error(`أدخل نص ${label} أو ارفع ملفًا.`);
+    if (files.length > maxFiles) throw new Error(`يمكن رفع ${maxFiles} ${maxFiles === 1 ? "ملف فقط" : "ملفات كحد أقصى"} لـ${label}.`);
+    if (!files.length) return { text: typed, files: [], sourceName: "نص أدخله المستخدم" };
+    const documents = [];
+    for (const file of files) {
+      const documentData = await window.RafidIngest.read(file, {
+        maxFileSizeMb: runtime.limits?.max_file_size_mb || 20,
+      });
+      documents.push({ file, documentData });
+    }
     return {
-      text: documentData.fullText,
-      file,
-      sourceName: documentData.displayName || file.name,
+      text: documents.map(({ file, documentData }) => `### ${documentData.safeDisplayName || file.name}\n${documentData.fullText}`).join("\n\n"),
+      files: documents.map(({ file }) => file),
+      sourceName: documents.map(({ file, documentData }) => documentData.safeDisplayName || file.name).join("، "),
     };
   }
 
@@ -140,58 +136,96 @@
 
   function setFileStatus(main, input, target, defaultText) {
     input.addEventListener("change", () => {
-      target.textContent = input.files[0] ? `تم اختيار: ${input.files[0].name}` : defaultText;
+      const selected = Array.from(input.files || []);
+      target.textContent = selected.length ? (selected.length === 1 ? `تم اختيار: ${selected[0].name}` : `تم اختيار ${selected.length} ملفات`) : defaultText;
     });
+  }
+
+  function bindDropZone(input, zone) {
+    if (!input || !zone) return;
+    for (const eventName of ["dragenter", "dragover"]) zone.addEventListener(eventName, (event) => { event.preventDefault(); zone.classList.add("is-dragging"); });
+    for (const eventName of ["dragleave", "drop"]) zone.addEventListener(eventName, (event) => { event.preventDefault(); zone.classList.remove("is-dragging"); });
+    zone.addEventListener("drop", (event) => {
+      const transfer = new DataTransfer();
+      const limit = input.multiple ? 5 : 1;
+      Array.from(event.dataTransfer?.files || []).slice(0, limit).forEach((file) => transfer.items.add(file));
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+
+  function showWizardStep(main, step) {
+    main.querySelectorAll("[data-wizard-panel]").forEach((panel) => { panel.hidden = Number(panel.dataset.wizardPanel) !== step; });
+    main.querySelectorAll("[data-wizard-step]").forEach((item) => {
+      const number = Number(item.dataset.wizardStep);
+      item.classList.toggle("is-current", number === step);
+      item.classList.toggle("is-complete", number < step);
+      item.setAttribute("aria-current", number === step ? "step" : "false");
+    });
+    const active = main.querySelector(`[data-wizard-panel="${step}"] h2`);
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    active?.focus({ preventScroll: true });
+  }
+
+  function institutionalizeMatchForm(main, maxSize) {
+    main.querySelector(".match-intro").innerHTML = `<div><span class="rafid-kicker">مقارنة بفرصة محددة</span><h1 tabindex="-1">قارن بحثك بفرصة تمويل</h1><p>ثلاث خطوات قصيرة. أضف الفرصة أولًا، ثم البحث، وراجع المدخلات قبل التحليل.</p></div><button id="loadTrainingExample" class="rafid-secondary demo-fill-button" type="button">جرّب مثالًا تدريبيًا</button>`;
+    main.querySelector(".match-assurance")?.remove();
+    const form = main.querySelector(".match-form");
+    form.className = "analysis-workspace match-form";
+    form.innerHTML = `
+      <ol class="workflow-stepper" aria-label="خطوات مقارنة البحث بالفرصة"><li data-wizard-step="1" class="is-current" aria-current="step"><span>١</span><b>الفرصة</b><small>الشروط الرسمية</small></li><li data-wizard-step="2"><span>٢</span><b>البحث</b><small>الملفات والأدلة</small></li><li data-wizard-step="3"><span>٣</span><b>المراجعة</b><small>ثم التحليل</small></li></ol>
+      <section class="wizard-panel" data-wizard-panel="1"><div class="wizard-heading"><span>الخطوة ١ من ٣</span><h2 tabindex="-1">أضف فرصة التمويل</h2><p>ارفع دليل الفرصة، أو الصق شروط الأهلية والتقييم. لا يلزم تعبئة الحقول الاختيارية.</p></div>
+        <div class="source-choice-grid"><label id="oppDrop" class="file-picker drop-zone"><input id="oppFile" type="file" accept=".pdf,.docx,.txt,.md" /><span class="drop-icon" aria-hidden="true">⇧</span><b>اسحب ملف الفرصة هنا</b><small id="oppFileStatus">أو اختر PDF · DOCX · TXT · MD حتى ${maxSize}MB</small></label><div class="choice-divider"><span>أو</span></div><label class="paste-source"><b>الصق نص الفرصة</b><textarea id="oppText" rows="9" aria-describedby="oppCount" placeholder="الصق شروط الأهلية، معايير التقييم، الوثائق المطلوبة والموعد…"></textarea><span id="oppCount">0 حرف</span></label></div>
+        <details class="advanced-fields"><summary>بيانات الفرصة الاختيارية</summary><div class="match-meta-grid"><label>اسم الفرصة<input id="oppTitle" autocomplete="off" placeholder="مثال: برنامج دعم الابتكار" /></label><label>الجهة الممولة<input id="oppFunder" autocomplete="off" placeholder="اسم الجهة كما ورد" /></label><label>رابط المصدر الرسمي<input id="oppUrl" type="url" dir="ltr" inputmode="url" placeholder="https://…" /></label><label>موعد الإغلاق<input id="oppDeadline" type="date" /></label></div></details>
+        <p id="stepOneError" class="rafid-error" role="alert"></p><div class="wizard-actions"><button id="backHome" class="rafid-text-button" type="button">العودة للخدمات</button><button id="nextToResearch" class="rafid-primary" type="button">التالي: إضافة البحث</button></div>
+      </section>
+      <section class="wizard-panel" data-wizard-panel="2" hidden><div class="wizard-heading"><span>الخطوة ٢ من ٣</span><h2 tabindex="-1">أضف البحث أو المشروع</h2><p>يمكن رفع حتى 5 ملفات وجمعها في تحليل واحد، أو لصق نص البحث مباشرة.</p></div>
+        <div class="source-choice-grid"><label id="researchDrop" class="file-picker drop-zone"><input id="researchFile" type="file" accept=".pdf,.docx,.txt,.md" multiple /><span class="drop-icon" aria-hidden="true">⇧</span><b>اسحب ملفات البحث هنا</b><small id="researchFileStatus">حتى 5 ملفات: PDF · DOCX · TXT · MD، كل ملف حتى ${maxSize}MB</small></label><div class="choice-divider"><span>أو</span></div><label class="paste-source"><b>الصق نص البحث</b><textarea id="researchText" rows="11" aria-describedby="researchCount" placeholder="الصق الملخص أو المسودة أو محتوى المشروع…"></textarea><span id="researchCount">0 حرف</span></label></div>
+        <label class="compact-field">عنوان مختصر <span>(اختياري)</span><input id="projectTitle" autocomplete="off" placeholder="اسم البحث أو المشروع" /></label>
+        <p id="stepTwoError" class="rafid-error" role="alert"></p><div class="wizard-actions"><button id="backToOpportunity" class="rafid-secondary" type="button">السابق</button><button id="nextToReview" class="rafid-primary" type="button">التالي: مراجعة المدخلات</button></div>
+      </section>
+      <section class="wizard-panel review-panel" data-wizard-panel="3" hidden><div class="wizard-heading"><span>الخطوة ٣ من ٣</span><h2 tabindex="-1">راجع ثم ابدأ التحليل</h2><p>لن نطلب تسجيل الدخول، ولن نحفظ البحث أو ملفاته افتراضيًا.</p></div>
+        <div class="review-source-grid"><article><span>فرصة التمويل</span><b id="opportunityReview">جاهزة للمراجعة</b><button id="editOpportunity" type="button">تعديل</button></article><article><span>البحث أو المشروع</span><b id="researchReview">جاهز للمراجعة</b><button id="editResearch" type="button">تعديل</button></article></div>
+        <div class="analysis-contract"><b>قبل البدء</b><ul><li>النتيجة استرشادية ولا تضمن التمويل.</li><li>راجع دائمًا المصدر الرسمي للفرصة.</li><li>لا ترفع بيانات مشاركين أو معلومات شديدة الحساسية.</li></ul><input id="privacyConfirmMatch" type="checkbox" checked hidden /></div>
+        <div id="matchProgress" class="match-progress" hidden aria-live="polite"><span data-stage="opportunity">قراءة شروط الفرصة</span><span data-stage="research">تحليل البحث والأدلة</span><span data-stage="assessment">مطابقة الأهلية والملاءمة</span><span data-stage="report">إعداد التقرير وخطة العمل</span></div><p id="analysisElapsed" class="analysis-elapsed" role="status" hidden></p><p id="error" class="rafid-error" role="alert"></p>
+        <div class="wizard-actions final-actions"><button id="backToResearch" class="rafid-secondary" type="button">السابق</button><button id="go" class="rafid-primary" type="button">ابدأ التحليل المؤسسي</button><button id="cancel" class="rafid-secondary" type="button" hidden>إلغاء التحليل</button></div><small class="submit-privacy">بالبدء توافق على معالجة المحتوى لهذا الطلب فقط وفق سياسة الخصوصية.</small>
+      </section>`;
+
+    const hasContent = (textId, fileId, minimum) => main.querySelector(textId).value.trim().length >= minimum || main.querySelector(fileId).files.length > 0;
+    const sourceLabel = (textId, fileId) => {
+      const files = Array.from(main.querySelector(fileId).files || []);
+      if (files.length) return files.length === 1 ? files[0].name : `${files.length} ملفات مختارة`;
+      const length = main.querySelector(textId).value.trim().length;
+      return length ? `نص مباشر · ${length} حرف` : "لم يضف محتوى بعد";
+    };
+    main.querySelector("#nextToResearch").addEventListener("click", () => {
+      const error = main.querySelector("#stepOneError");
+      if (!hasContent("#oppText", "#oppFile", 100)) { error.textContent = "أضف ملف الفرصة أو الصق 100 حرف على الأقل من شروطها."; error.classList.add("is-error"); return; }
+      error.textContent = ""; showWizardStep(main, 2);
+    });
+    main.querySelector("#nextToReview").addEventListener("click", () => {
+      const error = main.querySelector("#stepTwoError");
+      if (!hasContent("#researchText", "#researchFile", 30)) { error.textContent = "أضف ملف البحث أو الصق 30 حرفًا على الأقل."; error.classList.add("is-error"); return; }
+      error.textContent = "";
+      main.querySelector("#opportunityReview").textContent = sourceLabel("#oppText", "#oppFile");
+      main.querySelector("#researchReview").textContent = sourceLabel("#researchText", "#researchFile");
+      showWizardStep(main, 3);
+    });
+    main.querySelector("#backHome").addEventListener("click", app);
+    main.querySelector("#backToOpportunity").addEventListener("click", () => showWizardStep(main, 1));
+    main.querySelector("#backToResearch").addEventListener("click", () => showWizardStep(main, 2));
+    main.querySelector("#editOpportunity").addEventListener("click", () => showWizardStep(main, 1));
+    main.querySelector("#editResearch").addEventListener("click", () => showWizardStep(main, 2));
+    bindDropZone(main.querySelector("#oppFile"), main.querySelector("#oppDrop"));
+    bindDropZone(main.querySelector("#researchFile"), main.querySelector("#researchDrop"));
   }
 
   function matchView() {
     const main = root();
     const maxSize = Number(runtime.limits?.max_file_size_mb || 20);
-    main.innerHTML = `${header('<button id="back" class="rafid-text-button" type="button">الرئيسية</button>')}
-      <section class="match-intro">
-        <span class="rafid-kicker">تحليل الملاءمة لفرصة محددة</span>
-        <h1>الفرصة أولًا، ثم البحث</h1>
-        <p>يفصل رافد بين شروط الأهلية الصارمة ومعايير المفاضلة. الدرجة المرتفعة لا تتجاوز شرطًا مانعًا.</p>
-        <button id="loadTrainingExample" class="rafid-secondary demo-fill-button" type="button">تعبئة مثال تدريبي كامل</button>
-        <small class="demo-disclaimer">المثال افتراضي وموسوم بوضوح، ومخصص لاختبار رحلة المنصة فقط.</small>
-      </section>
-      <aside class="match-assurance" aria-label="ضمانات التحليل"><span><b>لا حفظ افتراضي</b><small>يعالج الطلب الحالي فقط</small></span><span><b>دون بيانات شخصية</b><small>لا نطلب اسم الباحث</small></span><span><b>نتيجة قابلة للمراجعة</b><small>الشروط والأدلة منفصلة</small></span></aside>
-      <section class="match-form" aria-labelledby="matchFormTitle">
-        <h2 id="matchFormTitle" class="sr-only">بيانات فرصة التمويل والبحث</h2>
-        <article class="match-input-card opportunity-input">
-          <div class="match-card-heading"><span>١</span><div><b>فرصة التمويل</b><small>المصدر الرسمي أو دليل التقديم</small></div></div>
-          <div class="match-meta-grid">
-            <label>اسم الفرصة <input id="oppTitle" autocomplete="off" placeholder="مثال: برنامج دعم الابتكار" /></label>
-            <label>الجهة الممولة (اختياري) <input id="oppFunder" autocomplete="off" placeholder="اسم الجهة كما ورد" /></label>
-            <label>رابط المصدر الرسمي (اختياري) <input id="oppUrl" type="url" dir="ltr" inputmode="url" placeholder="https://…" /></label>
-            <label>موعد الإغلاق (اختياري) <input id="oppDeadline" type="date" /></label>
-          </div>
-          <label>نص الفرصة<textarea id="oppText" rows="8" aria-describedby="oppCount oppHint" placeholder="ألصق شروط الأهلية ومعايير التقييم والوثائق المطلوبة…"></textarea></label>
-          <div class="form-meta"><span id="oppCount">0 حرف</span><span id="oppHint">أو ارفع ملفًا واحدًا</span></div>
-          <label class="file-picker">رفع ملف الفرصة<input id="oppFile" type="file" accept=".pdf,.docx,.txt" /><span id="oppFileStatus">PDF · DOCX · TXT حتى ${maxSize}MB</span></label>
-        </article>
-        <article class="match-input-card research-input">
-          <div class="match-card-heading"><span>٢</span><div><b>البحث أو المشروع</b><small>لا نطلب اسم الباحث أو معلومات شخصية</small></div></div>
-          <label>عنوان مختصر (اختياري)<input id="projectTitle" autocomplete="off" placeholder="اسم البحث أو المشروع" /></label>
-          <label>نص البحث<textarea id="researchText" rows="10" aria-describedby="researchCount researchHint" placeholder="ألصق الملخص أو المسودة أو محتوى المشروع…"></textarea></label>
-          <div class="form-meta"><span id="researchCount">0 حرف</span><span id="researchHint">أو ارفع ملفًا واحدًا</span></div>
-          <label class="file-picker">رفع ملف البحث<input id="researchFile" type="file" accept=".pdf,.docx,.txt" /><span id="researchFileStatus">PDF · DOCX · TXT حتى ${maxSize}MB</span></label>
-        </article>
-        <article class="match-consent-card">
-          <div class="consent-heading"><div><span class="rafid-kicker">جاهز للمطابقة</span><h2>قبل التحليل</h2></div><span class="secure-processing"><i aria-hidden="true">◆</i> معالجة مؤقتة</span></div>
-          <ul><li>التحليل استرشادي ولا يضمن التمويل.</li><li>قد تختلف الشروط عن النسخة المدخلة؛ راجع المصدر الرسمي.</li><li>لا ترفع معلومات شديدة الحساسية أو بيانات مشاركين.</li></ul>
-          <label class="match-confirm"><input id="privacyConfirmMatch" type="checkbox" /><span>أوافق على معالجة نص الفرصة والبحث لهذا الطلب فقط، دون حفظهما افتراضيًا.</span></label>
-          <div id="matchProgress" class="match-progress" hidden aria-live="polite">
-            <span data-stage="opportunity">استخراج شروط الفرصة</span>
-            <span data-stage="research">تحليل البحث والأدلة</span>
-            <span data-stage="assessment">مطابقة الأهلية والملاءمة</span>
-            <span data-stage="report">إعداد خطة الإغلاق</span>
-          </div>
-          <p id="analysisElapsed" class="analysis-elapsed" role="status" hidden></p>
-          <p id="error" class="rafid-error" role="alert"></p>
-          <div class="form-actions"><button id="go" class="rafid-primary" type="button">حلّل الملاءمة للفرصة</button><button id="cancel" class="rafid-secondary" type="button" hidden>إلغاء التحليل</button></div>
-        </article>
-      </section>`;
+    main.innerHTML = `${header('<button id="back" class="rafid-text-button" type="button">الرئيسية</button>')}<section class="match-intro"></section><section class="match-form"></section>`;
+
+    institutionalizeMatchForm(main, maxSize);
 
     main.querySelector("#back").addEventListener("click", app);
     const oppText = main.querySelector("#oppText");
@@ -200,8 +234,8 @@
     const researchFile = main.querySelector("#researchFile");
     oppText.addEventListener("input", () => { main.querySelector("#oppCount").textContent = `${oppText.value.length} حرف`; });
     researchText.addEventListener("input", () => { main.querySelector("#researchCount").textContent = `${researchText.value.length} حرف`; });
-    setFileStatus(main, oppFile, main.querySelector("#oppFileStatus"), `PDF · DOCX · TXT حتى ${maxSize}MB`);
-    setFileStatus(main, researchFile, main.querySelector("#researchFileStatus"), `PDF · DOCX · TXT حتى ${maxSize}MB`);
+    setFileStatus(main, oppFile, main.querySelector("#oppFileStatus"), `PDF · DOCX · TXT · MD حتى ${maxSize}MB`);
+    setFileStatus(main, researchFile, main.querySelector("#researchFileStatus"), `حتى 5 ملفات: PDF · DOCX · TXT · MD، كل ملف حتى ${maxSize}MB`);
     main.querySelector("#go").addEventListener("click", runMatch);
     main.querySelector("#cancel").addEventListener("click", () => controller?.abort());
     main.querySelector("#loadTrainingExample").addEventListener("click", () => {
@@ -215,8 +249,12 @@
       main.querySelector("#oppCount").textContent = `${oppText.value.length} حرف`;
       main.querySelector("#researchCount").textContent = `${researchText.value.length} حرف`;
       main.querySelector("#privacyConfirmMatch").checked = true;
+      main.querySelector("#opportunityReview").textContent = `نص مباشر · ${oppText.value.length} حرف`;
+      main.querySelector("#researchReview").textContent = `نص مباشر · ${researchText.value.length} حرف`;
+      showWizardStep(main, 3);
       main.querySelector("#go").focus();
     });
+    resetView();
   }
 
   function setStage(name) {
@@ -257,7 +295,7 @@
       setStage("opportunity");
       const [opportunitySource, researchSource] = await Promise.all([
         readSource(main.querySelector("#oppText"), main.querySelector("#oppFile"), "الفرصة"),
-        readSource(main.querySelector("#researchText"), main.querySelector("#researchFile"), "البحث"),
+        readSource(main.querySelector("#researchText"), main.querySelector("#researchFile"), "البحث", { maxFiles: 5 }),
       ]);
       const inputValidation = match().validateInputs({
         opportunityText: opportunitySource.text,
@@ -286,7 +324,7 @@
       const projectRequest = match().buildProjectRequest({
         researchText: researchSource.text,
         projectTitle: main.querySelector("#projectTitle").value,
-        projectFiles: researchSource.file ? [researchSource.file] : [],
+        projectFiles: researchSource.files,
         privacy,
       });
       const projectResponse = await callApi("extract", projectRequest, controller.signal);
@@ -418,26 +456,33 @@
         status.textContent = "تعذر النسخ تلقائيًا؛ استخدم تحديد النص ونسخه.";
       }
     });
+    resetView();
   }
 
   function generalView() {
     const main = root();
-    main.innerHTML = `${header('<button id="back" class="rafid-text-button" type="button">الرئيسية</button>')}
-      <section class="rafid-form-shell"><div class="form-intro"><span class="rafid-kicker">تقييم عام</span><h1>حلّل جاهزية البحث</h1><p>هذا المسار لا يقارن البحث بفرصة بعينها. استخدمه لاكتشاف النواقص العامة قبل اختيار فرصة التمويل.</p></div><div class="form-card">
-      <label for="text">لصق النص<textarea id="text" rows="10" aria-describedby="count textHint" placeholder="ألصق ملخص البحث أو مسودته هنا…"></textarea></label><div class="form-meta"><span id="count">0 حرف</span><span id="textHint">أو اختر ملفًا واحدًا بدل النص</span></div>
-      <label class="file-picker">رفع ملف<input id="file" type="file" accept=".pdf,.docx,.txt" /><span>PDF · DOCX · TXT</span></label><p class="rafid-notice">التقييم استرشادي، والشروط تختلف بين فرص التمويل، والنتيجة لا تضمن التمويل.</p><p id="error" class="rafid-error" role="alert"></p><div class="form-actions"><button id="go" class="rafid-primary" type="button">حلّل الجاهزية العامة</button><button id="cancel" class="rafid-secondary" type="button" hidden>إلغاء التحليل</button></div></div></section>`;
+    const maxSize = Number(runtime.limits?.max_file_size_mb || 20);
+    main.innerHTML = `${header('<button id="back" class="rafid-text-button" type="button">العودة للخدمات</button>')}
+      <section class="single-analysis-shell"><div class="single-analysis-intro"><span class="rafid-kicker">تحليل الجاهزية العامة</span><h1 tabindex="-1">أضف بحثك، واترك الباقي لرافد</h1><p>ارفع ملفًا واحدًا أو عدة ملفات، أو الصق النص. ستحصل على تقييم تقني وتمويلي مفسر وخطة تحسين واضحة.</p><div class="analysis-facts"><span>دون تسجيل دخول</span><span>حتى 5 ملفات</span><span>لا حفظ افتراضي</span></div><button id="goIntro" class="rafid-primary intro-submit" type="button" disabled>أضف محتوى للبدء</button></div>
+      <div class="form-card institutional-upload-card"><div class="source-choice-grid"><label id="generalDrop" class="file-picker drop-zone"><input id="file" type="file" accept=".pdf,.docx,.txt,.md" multiple /><span class="drop-icon" aria-hidden="true">⇧</span><b>اسحب ملفات البحث هنا</b><small id="textHint">حتى 5 ملفات: PDF · DOCX · TXT · MD، كل ملف حتى ${maxSize}MB</small></label><div class="choice-divider"><span>أو</span></div><label class="paste-source" for="text"><b>الصق نص البحث</b><textarea id="text" rows="12" aria-describedby="count textHint" placeholder="ألصق ملخص البحث أو المسودة أو محتوى المشروع هنا…"></textarea><span id="count">0 حرف</span></label></div>
+      <div class="analysis-output-preview"><b>سيشمل التقرير</b><span>الجاهزية التقنية</span><span>الجاهزية التمويلية</span><span>الفجوات الحرجة</span><span>خطة العمل</span></div>
+      <p class="rafid-notice">التقييم استرشادي، وقد تختلف الشروط بين فرص التمويل. راجع الجهة الممولة قبل التقديم.</p><p id="error" class="rafid-error" role="alert"></p><div class="form-actions sticky-submit"><button id="go" class="rafid-primary" type="button">ابدأ تحليل الجاهزية</button><button id="cancel" class="rafid-secondary" type="button" hidden>إلغاء التحليل</button></div><small class="submit-privacy">بالبدء توافق على معالجة المحتوى لهذا الطلب فقط وفق سياسة الخصوصية.</small></div></section>`;
     main.querySelector("#back").addEventListener("click", app);
     const text = main.querySelector("#text");
     const file = main.querySelector("#file");
     const error = main.querySelector("#error");
     const go = main.querySelector("#go");
+    const goIntro = main.querySelector("#goIntro");
     const cancel = main.querySelector("#cancel");
-    text.addEventListener("input", () => { main.querySelector("#count").textContent = `${text.value.length} حرف`; });
-    file.addEventListener("change", () => { if (file.files[0]) main.querySelector("#textHint").textContent = `تم اختيار: ${file.files[0].name}`; });
+    const updateGeneralAction = () => { const ready = text.value.trim().length >= 30 || file.files.length > 0; goIntro.disabled = !ready; goIntro.textContent = ready ? "ابدأ تحليل الجاهزية" : "أضف محتوى للبدء"; };
+    text.addEventListener("input", () => { main.querySelector("#count").textContent = `${text.value.length} حرف`; updateGeneralAction(); });
+    file.addEventListener("change", () => { const selected = Array.from(file.files || []); if (selected.length) main.querySelector("#textHint").textContent = selected.length === 1 ? `تم اختيار: ${selected[0].name}` : `تم اختيار ${selected.length} ملفات`; updateGeneralAction(); });
+    bindDropZone(file, main.querySelector("#generalDrop"));
+    goIntro.addEventListener("click", () => go.click());
     go.addEventListener("click", async () => {
       if (requestInFlight) return;
       try {
-        const source = await readSource(text, file, "البحث");
+        const source = await readSource(text, file, "البحث", { maxFiles: 5 });
         if (source.text.length < 30) throw new Error("أدخل 30 حرفًا على الأقل من البحث.");
         requestInFlight = true;
         go.disabled = true;
@@ -456,6 +501,7 @@
       }
     });
     cancel.addEventListener("click", () => controller?.abort());
+    resetView();
   }
 
   function generalResults(result, meta = {}) {
@@ -466,6 +512,7 @@
     root().querySelector("#new").addEventListener("click", generalView);
     root().querySelector("#copy").addEventListener("click", () => navigator.clipboard?.writeText(result.researchSummary || ""));
     root().querySelector("#print").addEventListener("click", () => window.print());
+    resetView();
   }
 
   window.addEventListener("DOMContentLoaded", () => {
