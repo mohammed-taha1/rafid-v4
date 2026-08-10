@@ -71,7 +71,8 @@
         <div class="service-grid">
           <button id="startGeneral" class="service-card is-primary" type="button"><span class="service-number">01</span><span class="service-status">لدي بحث فقط</span><strong>قيّم جاهزية البحث</strong><small>اختر هذا المسار إذا لم تحدد فرصة تمويل بعد. ستحصل على تقييم عام للفجوات وخطة التحسين.</small><i>تحليل بحث واحد دون فرصة <b aria-hidden="true">←</b></i></button>
           <button id="startMatch" class="service-card" type="button"><span class="service-number">02</span><span class="service-status">لدي بحث وفرصة</span><strong>طابق البحث مع فرصة محددة</strong><small>اختر هذا المسار إذا لديك شروط فرصة بعينها. سنفحص الأهلية والأدلة والملاءمة لهذه الفرصة فقط.</small><i>مطابقة بحث + فرصة <b aria-hidden="true">←</b></i></button>
-          <article class="service-card is-upcoming" aria-label="اقتراح فرص التمويل، قريبًا"><span class="service-number">03</span><span class="service-status">قريبًا</span><strong>اكتشف الفرص المناسبة</strong><small>ترشيح فرص بحسب مجال البحث وجاهزيته وشروط الأهلية.</small><i>ضمن المرحلة التالية</i></article>
+          <button id="startDiscovery" class="service-card" type="button"><span class="service-number">03</span><span class="service-status">لدي بحث وأبحث عن فرصة</span><strong>اكتشف الفرص المناسبة</strong><small>رتّب مسارات التمويل الأقرب لبحثك، وافهم سبب الترشيح وما يحتاج تحققًا.</small><i>حلّل البحث واقترح الفرص <b aria-hidden="true">←</b></i></button>
+          <button id="startPortfolio" class="service-card" type="button"><span class="service-number">04</span><span class="service-status">لدي فرصة وعدة مشاريع</span><strong>رتّب محفظة المشاريع</strong><small>قارن من مشروعين إلى خمسة بالأهلية أولًا ثم الجاهزية والأدلة.</small><i>قارن المشاريع مؤسسيًا <b aria-hidden="true">←</b></i></button>
         </div>
       </section>
       <section id="how" class="institutional-flow"><div><span class="rafid-kicker">رحلة مختصرة</span><h2>من الملف إلى قرار قابل للتنفيذ</h2></div><ol><li><span>١</span><b>أضف المحتوى</b><small>PDF أو DOCX أو TXT أو MD، ويمكن جمع عدة ملفات بحثية.</small></li><li><span>٢</span><b>نحلل الأدلة</b><small>نفصل المعلومات الموجودة عن الاستنتاجات والفجوات.</small></li><li><span>٣</span><b>راجع القرار</b><small>درجات مفسرة وخطة عمل مرتبة قبل التقديم.</small></li></ol></section>
@@ -80,6 +81,8 @@
     if (!existing) document.body.prepend(main);
     main.querySelector("#startMatch").addEventListener("click", matchView);
     main.querySelector("#startGeneral").addEventListener("click", generalView);
+    main.querySelector("#startDiscovery").addEventListener("click", () => window.RafidAdvancedServices.discovery());
+    main.querySelector("#startPortfolio").addEventListener("click", () => window.RafidAdvancedServices.portfolio());
     resetView();
   }
 
@@ -530,5 +533,5 @@
     if (location.hash !== "#home") history.pushState(null, "", "#home");
     app();
   });
-  window.RafidApp = Object.freeze({ home: app, general: generalView, match: matchView });
+  window.RafidApp = Object.freeze({ home: app, general: generalView, match: matchView, discovery: () => window.RafidAdvancedServices.discovery(), portfolio: () => window.RafidAdvancedServices.portfolio() });
 })();

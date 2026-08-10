@@ -57,6 +57,13 @@ async function main() {
     assert.equal(runtime.auth.required, false);
     assert.equal(runtime.provider_configuration_mode, "local_session");
 
+    const catalogResponse = await fetch(`http://127.0.0.1:${port}/api/rafid/opportunities/catalog`);
+    assert.equal(catalogResponse.status, 200);
+    const catalog = await catalogResponse.json();
+    assert.equal(catalog.ok, true);
+    assert.ok(catalog.opportunities.length >= 8);
+    assert.ok(catalog.opportunities.every((item) => item.application_status === "تحقق من المصدر الرسمي"));
+
     const health = await fetch(`http://127.0.0.1:${port}/api/rafid/health`);
     assert.equal(health.status, 503);
     const initialStatus = await health.json();

@@ -2,7 +2,7 @@
 
 ## بداية سريعة للنسخة الأولية
 
-رافد يحلل نصًا أو PDF/DOCX/TXT بطريقتين: تقييم جاهزية عام، أو مقارنة البحث بشروط فرصة تمويل محددة. يعرض الأهلية والملاءمة والأدلة والفجوات وخطة الإغلاق دون تخزين افتراضي للنص أو الملف. يتطلب Node.js 22: شغّل `npm ci` ثم `npm run development`. الفحوص: `npm test` و`npm run lint` و`npm run typecheck`، والبناء: `npm run build`.
+رافد يحلل نصًا أو PDF/DOCX/TXT بأربع خدمات: تقييم جاهزية عام، مقارنة البحث بفرصة محددة، اقتراح مسارات التمويل المناسبة، وترتيب محفظة مشاريع لفرصة واحدة. يعرض الأهلية والملاءمة والأدلة والفجوات وخطة الإغلاق دون تخزين افتراضي للنص أو الملف. يتطلب Node.js 22: شغّل `npm ci` ثم `npm run development`. الفحوص: `npm test` و`npm run lint` و`npm run typecheck`، والبناء: `npm run build`.
 
 المسار الرئيسي الحالي:
 
@@ -12,7 +12,7 @@
 4. راجع أدلة البحث مقابل اقتباسات الفرصة.
 5. نفذ خطة إغلاق الفجوات وحزمة التقديم.
 
-تفاصيل العقد ومعايير القبول في [docs/OPPORTUNITY_MATCHING_SPEC.md](docs/OPPORTUNITY_MATCHING_SPEC.md).
+تفاصيل المطابقة في [docs/OPPORTUNITY_MATCHING_SPEC.md](docs/OPPORTUNITY_MATCHING_SPEC.md)، واكتشاف الفرص والمحفظة في [docs/FUNDING_DISCOVERY_AND_PORTFOLIO.md](docs/FUNDING_DISCOVERY_AND_PORTFOLIO.md).
 
 متغيرات الخادم: `GROQ_API_KEY` و`GROQ_MODEL` و`MAX_FILE_SIZE_MB` و`ANALYSIS_TIMEOUT_SECONDS`، ومتغيرات Supabase فقط عند تفعيل المصادقة. لا تضع أسرارًا في الواجهة. النشر في `docs/DEPLOYMENT.md`، الخصوصية والأمان في `docs/SECRET_ROTATION.md` و`docs/SECURITY_REVIEW.md`، والتسليم والقيود في `docs/FINAL_HANDOFF.md`.
 
@@ -26,6 +26,8 @@
 
 - صفحة عربية واحدة تبدأ مباشرة بواجهة رافد الحالية، دون تحميل واجهة قديمة قبلها.
 - تحليل عام للجاهزية أو مقارنة بحث بفرصة تمويل محددة.
+- ترتيب مسارات تمويل موثقة المصدر دون الادعاء بأن التقديم مفتوح.
+- مقارنة مؤسسية لعدة مشاريع، بالأهلية أولًا ثم الجاهزية والأدلة، مع تصدير CSV.
 - بوابات أهلية وأدلة وفجوات وخطة إغلاق وحزمة تقديم قابلة للطباعة والتنزيل.
 - مثال تدريبي افتراضي واضح الوسم لاختبار الرحلة دون بيانات شخصية أو ادعاء فرصة حقيقية.
 - مفتاح Groq خادمي فقط، وحدود استخدام عامة لحماية الحصة المجانية.
@@ -106,6 +108,7 @@ Ollama يوفّر API محليًا ويدعم Structured Outputs. هذا الم�
 ```text
 frontend/index.html
   ├─ research-ui.js: رحلة الإدخال والنتيجة
+  ├─ advanced-services.js: اكتشاف الفرص والمحفظة المؤسسية
   ├─ rafid-ingest.js: قراءة PDF/DOCX/TXT محليًا
   ├─ opportunity-match.js: عقد الطلب والتحقق من النتيجة
   └─ demo-data.js: مثال تدريبي غير حقيقي
@@ -116,7 +119,10 @@ frontend/index.html
   ├─ POST /api/rafid/source/fetch
   ├─ POST /api/rafid/opportunity/extract
   ├─ POST /api/rafid/extract
-  └─ POST /api/rafid/opportunity/assess
+  ├─ POST /api/rafid/opportunity/assess
+  ├─ GET  /api/rafid/opportunities/catalog
+  ├─ POST /api/rafid/opportunities/discover
+  └─ POST /api/rafid/portfolio/compare
             ↓
         Groq أو OpenAI أو Azure OpenAI أو Ollama محلي
 ```
