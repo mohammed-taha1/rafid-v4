@@ -14,7 +14,11 @@ const {
   normalizeProjectData,
   validateProjectData,
 } = require("../src/lib/normalize");
-const { normalizeOpportunityData } = require("../src/lib/opportunity-normalize");
+const {
+  fallbackOpportunityData,
+  normalizeOpportunityData,
+  validateOpportunityData,
+} = require("../src/lib/opportunity-normalize");
 
 assert.equal(match.MATCH_VERSION, "rafid.opportunity-match.v1");
 assert.equal(match.validateInputs({ opportunityText: "قصير", researchText: "قصير" }).valid, false);
@@ -206,6 +210,17 @@ assert.equal(sanitizedOpportunity.requirements[0].requirement_type, "معلوم�
 assert.equal(sanitizedOpportunity.requirements[0].gate_type, "ليس بوابة");
 assert.equal(sanitizedOpportunity.missing_information[0].impact, "تحسين فقط");
 assert.equal(sanitizedOpportunity.source_summary.information_completeness, "منخفضة");
+
+const fallbackOpportunity = normalizeOpportunityData(
+  fallbackOpportunityData(
+    "يشترط أن تكون الجهة المتقدمة جامعة معتمدة. يجب إرفاق خطاب التزام رسمي. تعطى الأولوية للمشروعات ذات الأثر القابل للقياس.",
+    { metadata: { title: "فرصة احتياطية", source_name: "guide.txt" } },
+  ),
+  { metadata: { title: "فرصة احتياطية", source_name: "guide.txt" } },
+);
+assert.equal(validateOpportunityData(fallbackOpportunity).valid, true);
+assert.ok(fallbackOpportunity.requirements.some((item) => item.gate_type === "بوابة صارمة"));
+assert.equal(fallbackOpportunity.source_summary.extraction_confidence, 25);
 
 const invalid = structuredClone(assessment);
 invalid.readiness.assessment_confidence = 120;
