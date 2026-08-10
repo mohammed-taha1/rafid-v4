@@ -51,12 +51,11 @@
   }
 
   function app() {
-    document.querySelector(".topbar")?.setAttribute("hidden", "");
-    document.querySelector(".app-shell")?.setAttribute("hidden", "");
     const existing = root();
-    if (existing) existing.remove();
-    const main = document.createElement("main");
+    const main = existing || document.createElement("main");
+    main.id = "rafidApp";
     main.className = "rafid";
+    main.removeAttribute("aria-busy");
     main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#how">طريقة الاستخدام</a><a href="#privacy">الخصوصية</a><a href="#terms">الشروط</a></nav>')}
       <section class="hero">
         <span class="rafid-kicker">تحليل بحثي عربي · خاص افتراضيًا</span>
@@ -77,7 +76,7 @@
       <section class="rafid-benefits"><div><span class="rafid-kicker">ما ستحصل عليه</span><h2>قرار أوضح قبل استهلاك وقت التقديم</h2></div><ul><li>بوابات الأهلية</li><li>درجة ملاءمة مفسّرة</li><li>الأدلة المفقودة</li><li>خطة تجهيز الطلب</li></ul></section>
       <section class="rafid-roadmap" aria-labelledby="roadmapTitle"><div><span class="rafid-kicker">طريق رافد</span><h2 id="roadmapTitle">نبني الطريق من البحث إلى التمويل خطوة بخطوة</h2><p>النسخة الحالية تثبت قرار الملاءمة لفرصة محددة. المراحل التالية تُبنى فوق نفس بيانات الشروط والأدلة، دون التضحية بالخصوصية.</p></div><ol><li class="is-live"><span>متاح الآن</span><b>ملاءمة البحث لفرصة محددة</b><small>أهلية، أدلة، فجوات، وخطة إغلاق.</small></li><li><span>المرحلة التالية</span><b>اقتراح الفرص المناسبة</b><small>ترشيح موثق يبدأ بالشروط المانعة.</small></li><li><span>لاحقًا</span><b>محفظة المؤسسات البحثية</b><small>مقارنة الجاهزية دون كشف النصوص الخام.</small></li><li><span>لاحقًا</span><b>بوابة الجهات الممولة</b><small>مطابقة المعايير مع المشاريع بمراجعة بشرية.</small></li></ol></section>
       <footer><p id="privacy">النتائج استرشادية، ولا تضمن القبول أو التمويل. راجع المصدر الرسمي قبل التقديم.</p><a id="terms" href="#terms">شروط الاستخدام</a></footer>`;
-    document.body.prepend(main);
+    if (!existing) document.body.prepend(main);
     main.querySelector("#startMatch").addEventListener("click", matchView);
     main.querySelector("#startGeneral").addEventListener("click", generalView);
   }
@@ -128,6 +127,8 @@
         <span class="rafid-kicker">تحليل الملاءمة لفرصة محددة</span>
         <h1>الفرصة أولًا، ثم البحث</h1>
         <p>يفصل رافد بين شروط الأهلية الصارمة ومعايير المفاضلة. الدرجة المرتفعة لا تتجاوز شرطًا مانعًا.</p>
+        <button id="loadTrainingExample" class="rafid-secondary demo-fill-button" type="button">تعبئة مثال تدريبي كامل</button>
+        <small class="demo-disclaimer">المثال افتراضي وموسوم بوضوح، ومخصص لاختبار رحلة المنصة فقط.</small>
       </section>
       <section class="match-form" aria-labelledby="matchFormTitle">
         <h2 id="matchFormTitle" class="sr-only">بيانات فرصة التمويل والبحث</h2>
@@ -177,6 +178,19 @@
     setFileStatus(main, researchFile, main.querySelector("#researchFileStatus"), `PDF · DOCX · TXT حتى ${maxSize}MB`);
     main.querySelector("#go").addEventListener("click", runMatch);
     main.querySelector("#cancel").addEventListener("click", () => controller?.abort());
+    main.querySelector("#loadTrainingExample").addEventListener("click", () => {
+      const demo = window.RafidDemoData;
+      if (!demo) return;
+      main.querySelector("#oppTitle").value = demo.opportunityTitle;
+      main.querySelector("#oppFunder").value = demo.funder;
+      main.querySelector("#projectTitle").value = demo.projectTitle;
+      oppText.value = demo.opportunity;
+      researchText.value = demo.research;
+      main.querySelector("#oppCount").textContent = `${oppText.value.length} حرف`;
+      main.querySelector("#researchCount").textContent = `${researchText.value.length} حرف`;
+      main.querySelector("#privacyConfirmMatch").checked = true;
+      main.querySelector("#go").focus();
+    });
   }
 
   function setStage(name) {
@@ -347,13 +361,23 @@
         <section class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">قبل الإرسال</span><h2>حزمة التقديم</h2></div></div><div class="package-grid match-package">${packageItems.length ? packageItems.map((entry) => `<article><span class="package-status ${statusClass(entry.status === "جاهز" ? "مستوفى" : entry.status === "ناقص" ? "غير مستوفى" : "غير معروف")}">${esc(entry.status)}</span><b>${esc(entry.document_name)}</b><p>${esc(entry.available_evidence || "لا يتوفر دليل واضح")}</p><small>${esc(entry.next_action || "راجع متطلبات الوثيقة")}</small></article>`).join("") : '<p class="empty-value">لم تُستخرج قائمة وثائق واضحة.</p>'}</div></section>
         <section class="match-section questions-grid"><div><h2>أسئلة للفريق</h2>${safeList(review.questions_for_project_team)}</div><div><h2>أسئلة للجهة الممولة</h2>${safeList(review.questions_for_funder)}</div></section>
         <p class="rafid-notice match-disclaimer">${fixedDisclaimer}</p>
-        <div class="form-actions report-actions"><button id="copy" class="rafid-secondary" type="button">نسخ الخلاصة</button><button id="print" class="rafid-primary" type="button">طباعة التقرير</button><button id="newBottom" class="rafid-text-button" type="button">بدء تحليل جديد</button></div>
+        <div class="form-actions report-actions"><button id="copy" class="rafid-secondary" type="button">نسخ الخلاصة</button><button id="download" class="rafid-secondary" type="button">تنزيل تقرير مقروء</button><button id="print" class="rafid-primary" type="button">طباعة التقرير</button><button id="newBottom" class="rafid-text-button" type="button">بدء تحليل جديد</button></div>
         <p id="copyStatus" role="status" class="copy-status"></p>
       </section>`;
     const restart = () => matchView();
     root().querySelector("#new").addEventListener("click", restart);
     root().querySelector("#newBottom").addEventListener("click", restart);
     root().querySelector("#print").addEventListener("click", () => window.print());
+    root().querySelector("#download").addEventListener("click", () => {
+      const report = root().querySelector(".match-report");
+      const blob = new Blob([report?.innerText || match().summaryText(assessment)], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `rafid-opportunity-report-${new Date().toISOString().slice(0, 10)}.txt`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
     root().querySelector("#copy").addEventListener("click", async () => {
       const status = root().querySelector("#copyStatus");
       try {
@@ -413,5 +437,8 @@
     root().querySelector("#print").addEventListener("click", () => window.print());
   }
 
-  window.addEventListener("DOMContentLoaded", async () => { await loadRuntime(); app(); });
+  window.addEventListener("DOMContentLoaded", () => {
+    app();
+    void loadRuntime();
+  });
 })();

@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --ink: #102630;
   --ink-soft: #52656c;
   --navy: #0b2430;
@@ -403,3 +403,4 @@ tbody tr:hover { background: #fbfcfa; }
 .rafid-roadmap h2{margin:5px 0 8px}.rafid-roadmap>div>p{margin:0;color:#607778}.rafid-roadmap ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}.rafid-roadmap li{display:grid;gap:4px;padding:15px;border:1px solid #dce9e5;border-radius:14px;background:#fff}.rafid-roadmap li>span{width:max-content;padding:3px 8px;border-radius:999px;color:#6b6046;background:#fff1ca;font-size:.68rem;font-weight:900}.rafid-roadmap li.is-live{border-color:#86cdbd;background:#effaf6}.rafid-roadmap li.is-live>span{color:#17633f;background:#d9f3e7}.rafid-roadmap small{color:#6b807e}.analysis-elapsed{margin:10px 0 0;color:#4f716d;font-size:.78rem;font-weight:800}
 @media(max-width:720px){.rafid-logo .brand-logo-crop{height:64px}}
 @media(max-width:720px){.rafid-roadmap{grid-template-columns:1fr;padding:21px}.rafid-roadmap ol{grid-template-columns:1fr}}
+.rafid-boot{min-height:100vh}.boot-card{display:grid;place-items:start;max-width:760px;margin:48px auto;padding:clamp(32px,7vw,72px);border:1px solid #cfe5df;border-radius:28px;background:linear-gradient(135deg,#f2fbf8,#fffaf0);box-shadow:0 24px 60px rgba(5,72,71,.12)}.boot-card h1{margin:10px 0 8px}.boot-card p{margin:0;color:#607778}.boot-card i{display:block;width:100%;height:5px;margin-top:28px;overflow:hidden;border-radius:999px;background:#dcece8}.boot-card i::after{content:"";display:block;width:42%;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--rafid-teal),var(--rafid-gold));animation:rafid-boot 1.1s ease-in-out infinite alternate}@keyframes rafid-boot{from{transform:translateX(0)}to{transform:translateX(-138%)}}.demo-fill-button{margin-top:18px}.demo-disclaimer{display:block;margin-top:8px;color:#6d8180}.report-actions .rafid-secondary{box-shadow:none}@media(prefers-reduced-motion:reduce){.boot-card i::after{animation:none;width:100%}}

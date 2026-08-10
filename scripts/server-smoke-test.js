@@ -41,7 +41,9 @@ async function main() {
     const index = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(index.status, 200);
     assert.match(index.headers.get("content-type") || "", /text\/html/);
-    assert.match(await index.text(), /تحليل الجاهزية/);
+    const indexHtml = await index.text();
+    assert.match(indexHtml, /اعرف مدى ملاءمة بحثك لفرصة التمويل/);
+    assert.doesNotMatch(indexHtml, /class="topbar"|class="app-shell"|id="authGate"/);
     assert.match(index.headers.get("content-security-policy") || "", /default-src 'self'/);
 
     const logo = await fetch(`http://127.0.0.1:${port}/assets/rafid-logo.png`);
@@ -89,6 +91,12 @@ async function main() {
     assert.equal(pdf.status, 200);
     assert.match(pdf.headers.get("content-type") || "", /javascript/);
     assert.equal(pdf.headers.get("x-content-type-options"), "nosniff");
+
+    const removedLegacyApp = await fetch(`http://127.0.0.1:${port}/rafid-v4.js`);
+    assert.equal(removedLegacyApp.status, 404);
+
+    const removedLegacyPage = await fetch(`http://127.0.0.1:${port}/rafid_v3_1_ai_connected.html`);
+    assert.equal(removedLegacyPage.status, 404);
 
     const missing = await fetch(`http://127.0.0.1:${port}/does-not-exist`);
     assert.equal(missing.status, 404);

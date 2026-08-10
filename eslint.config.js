@@ -5,7 +5,6 @@ module.exports = [
   {
     ignores: [
       "frontend/vendor/**",
-      "frontend/rafid_v3_1_ai_connected.html",
       "node_modules/**",
     ],
   },

@@ -18,5 +18,5 @@ window.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-product-name]").forEach((element) => {
     element.textContent = config.productName;
   });
-  document.title = `${config.productName} | تحليل الجاهزية`;
+  document.title = `${config.productName} | ملاءمة البحث للتمويل`;
 });
