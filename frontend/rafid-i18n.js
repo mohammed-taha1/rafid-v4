@@ -4,6 +4,7 @@
   const stored = localStorage.getItem("rafid-language");
   let language = stored === "en" ? "en" : "ar";
   const dictionary = new Map([
+    ["انتقل إلى المحتوى", "Skip to content"], ["رافد، الصفحة الرئيسية", "Rafid, home"], ["مبادئ رافد", "Rafid principles"],
     ["الخدمات", "Services"], ["كيف يعمل؟", "How it works"], ["الخصوصية", "Privacy"],
     ["للمؤسسات", "Institutions"], ["طريقة الاستخدام", "How to use"],
     ["الرئيسية", "Home"], ["الأسئلة الشائعة", "FAQ"], ["مركز التعلم", "Learning center"],
@@ -19,8 +20,13 @@
     ["ارفع ملفًا واحدًا أو عدة ملفات، أو الصق النص. ستحصل على تقييم تقني وتمويلي مفسر وخطة تحسين واضحة.", "Upload one or more files, or paste text. You will receive explained technical and funding scores with a clear improvement plan."],
     ["اسحب ملفات البحث هنا", "Drop research files here"], ["حتى 5 ملفات: PDF · DOCX · TXT · MD، كل ملف حتى 20MB", "Up to 5 files: PDF · DOCX · TXT · MD, each up to 20 MB"],
     ["أو", "or"], ["الصق نص البحث", "Paste research text"], ["0 حرف", "0 characters"],
+    ["ألصق ملخص البحث أو المسودة أو محتوى المشروع هنا…", "Paste the research abstract, draft, or project content here…"],
     ["التقييم استرشادي، وقد تختلف الشروط بين فرص التمويل. راجع الجهة الممولة قبل التقديم.", "The assessment is advisory, and criteria vary across funding opportunities. Verify with the funder before applying."],
     ["ابدأ تحليل الجاهزية", "Start readiness analysis"], ["بالبدء توافق على معالجة المحتوى لهذا الطلب فقط وفق سياسة الخصوصية.", "By starting, you agree to process the content only for this request under the privacy policy."],
+    ["إلغاء التحليل", "Cancel analysis"], ["تحليل جديد", "New analysis"],
+    ["نتيجة التقييم العام", "General assessment result"], ["جاهزية البحث", "Research readiness"],
+    ["مستوى الثقة:", "Confidence level:"], ["تفسير الدرجات", "Score explanations"], ["النواقص الحرجة", "Critical gaps"],
+    ["مرتفع", "High"], ["متوسط", "Medium"], ["منخفض", "Low"],
     ["لصق النص", "Paste text"], ["رفع ملف", "Upload file"], ["حلّل جاهزية البحث", "Assess research readiness"],
     ["مقارنة بفرصة محددة", "Specific opportunity match"], ["قارن بحثك بفرصة تمويل", "Compare your research with a funding opportunity"],
     ["ثلاث خطوات قصيرة. أضف الفرصة أولًا، ثم البحث، وراجع المدخلات قبل التحليل.", "Three short steps: add the opportunity, add the research, then review the inputs before analysis."],
@@ -90,6 +96,10 @@
     root.querySelectorAll?.("[aria-label]").forEach((node) => {
       const label = node.getAttribute("aria-label");
       if (dictionary.has(label)) node.setAttribute("aria-label", dictionary.get(label));
+    });
+    root.querySelectorAll?.("[placeholder]").forEach((node) => {
+      const placeholder = node.getAttribute("placeholder");
+      if (dictionary.has(placeholder)) node.setAttribute("placeholder", dictionary.get(placeholder));
     });
   }
 
