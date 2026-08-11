@@ -34,6 +34,8 @@ assert.match(html, /قرار أوضح لبحثك قبل التقديم/, "The fi
 assert.match(css, /brand-logo-(?:crop|frame)[^}]+border-radius:50%/, "The header logo must render in a circular brand frame.");
 assert.match(css, /service-card-top\{[^}]+justify-content:space-between/, "Service metadata must use a collision-safe header row.");
 assert.match(css, /@media\(max-width:620px\)\{[^}]*\.service-grid\{grid-template-columns:1fr\}/, "Services must use one readable column on small phones.");
+assert.match(css, /\.match-progress span\{display:grid;grid-template-columns:18px minmax\(0,1fr\)/, "Analysis progress markers need a dedicated column that cannot overlap their labels.");
+assert.match(css, /\.match-progress span::before\{position:static[^}]+transform:none/, "Analysis progress markers must participate in layout instead of using absolute positioning.");
 assert.doesNotMatch(html, /class="topbar"|class="app-shell"|id="authGate"/, "Legacy UI must not exist in the entry document.");
 assert.doesNotMatch(html, /rafid-v4\.js|results-report\.js|optional-feedback\.js|supabase\.min\.js/, "Unused legacy bundles must not load.");
 assert.match(html, /rafid-config\.js[^]*research-ui\.js/, "Central product configuration must load before the UI.");
