@@ -206,7 +206,7 @@
       button.id = "startInstitution";
       button.className = "service-card institution-service";
       button.type = "button";
-      button.innerHTML = `<span class="service-number">05</span><span class="service-status">${t("لدي مؤسسة ومحفظة مشاريع", "I manage an institution portfolio")}</span><strong>${t("رافد للمؤسسات البحثية", "Rafid for research institutions")}</strong><small>${t("أنشئ مساحة معزولة، أضف الأقسام والمشاريع، رتّب الأولويات، واكشف الفجوات واحتياجات التدريب.", "Create an isolated workspace, manage departments and projects, rank priorities, and identify shared gaps and training needs.")}</small><i>${t("فتح لوحة المؤسسة", "Open institution dashboard")} <b aria-hidden="true">←</b></i>`;
+      button.innerHTML = `<span class="service-card-top"><span class="service-number">05</span><span class="service-status">${t("لدي مؤسسة ومحفظة مشاريع", "I manage an institution portfolio")}</span></span><strong>${t("رافد للمؤسسات البحثية", "Rafid for research institutions")}</strong><small>${t("أنشئ مساحة معزولة، أضف الأقسام والمشاريع، رتّب الأولويات، واكشف الفجوات واحتياجات التدريب.", "Create an isolated workspace, manage departments and projects, rank priorities, and identify shared gaps and training needs.")}</small><i>${t("فتح لوحة المؤسسة", "Open institution dashboard")} <b aria-hidden="true">←</b></i>`;
       button.addEventListener("click", () => { location.hash = "institution"; institutionView(); });
       grid.append(button);
     }

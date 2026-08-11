@@ -11,6 +11,7 @@ const ui = fs.readFileSync(path.join(frontend, "research-ui.js"), "utf8");
 const config = fs.readFileSync(path.join(frontend, "rafid-config.js"), "utf8");
 const ingest = fs.readFileSync(path.join(frontend, "rafid-ingest.js"), "utf8");
 const demo = fs.readFileSync(path.join(frontend, "demo-data.js"), "utf8");
+const css = fs.readFileSync(path.join(frontend, "rafid-v4.css"), "utf8");
 
 const htmlIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
 const duplicates = htmlIds.filter((id, index) => htmlIds.indexOf(id) !== index);
@@ -30,6 +31,9 @@ for (const reference of ["vendor/pdf.min.mjs", "vendor/pdf.worker.min.mjs"]) {
 assert.match(html, /lang="ar"\s+dir="rtl"/, "Arabic RTL metadata is required.");
 assert.match(html, /id="rafidApp"[^>]+class="rafid rafid-boot"/, "The first paint must use the current Rafid shell.");
 assert.match(html, /قرار أوضح لبحثك قبل التقديم/, "The first paint must match the current product message.");
+assert.match(css, /brand-logo-(?:crop|frame)[^}]+border-radius:50%/, "The header logo must render in a circular brand frame.");
+assert.match(css, /service-card-top\{[^}]+justify-content:space-between/, "Service metadata must use a collision-safe header row.");
+assert.match(css, /@media\(max-width:620px\)\{[^}]*\.service-grid\{grid-template-columns:1fr\}/, "Services must use one readable column on small phones.");
 assert.doesNotMatch(html, /class="topbar"|class="app-shell"|id="authGate"/, "Legacy UI must not exist in the entry document.");
 assert.doesNotMatch(html, /rafid-v4\.js|results-report\.js|optional-feedback\.js|supabase\.min\.js/, "Unused legacy bundles must not load.");
 assert.match(html, /rafid-config\.js[^]*research-ui\.js/, "Central product configuration must load before the UI.");
