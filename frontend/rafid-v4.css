@@ -512,3 +512,8 @@ html[data-language="en"] .boot-en{display:inline}
   .service-grid{grid-template-columns:1fr}
   .service-card,.institution-service{grid-column:auto!important;min-height:245px!important}
 }
+
+/* Keep analysis-stage markers in their own column in both RTL and LTR. */
+.match-progress span{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:8px;padding:10px 12px;text-align:start}
+.match-progress span::before{position:static;justify-self:center;transform:none}
+.match-progress span.done::before{width:18px;height:18px}
