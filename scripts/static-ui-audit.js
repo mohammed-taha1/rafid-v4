@@ -31,6 +31,9 @@ for (const reference of ["vendor/pdf.min.mjs", "vendor/pdf.worker.min.mjs"]) {
 assert.match(html, /lang="ar"\s+dir="rtl"/, "Arabic RTL metadata is required.");
 assert.match(html, /id="rafidApp"[^>]+class="rafid rafid-boot"/, "The first paint must use the current Rafid shell.");
 assert.match(html, /قرار أوضح لبحثك قبل التقديم/, "The first paint must match the current product message.");
+assert.match(html, /rel="icon"[^>]+rafid-favicon\.png/, "Rafid needs a branded browser-tab icon.");
+assert.match(html, /rel="shortcut icon"[^>]+favicon\.ico/, "Rafid needs a legacy favicon fallback.");
+assert.match(html, /rel="apple-touch-icon"[^>]+apple-touch-icon\.png/, "Rafid needs a home-screen icon for Apple devices.");
 assert.match(css, /brand-logo-(?:crop|frame)[^}]+border-radius:50%/, "The header logo must render in a circular brand frame.");
 assert.match(css, /service-card-top\{[^}]+justify-content:space-between/, "Service metadata must use a collision-safe header row.");
 assert.match(css, /@media\(max-width:620px\)\{[^}]*\.service-grid\{grid-template-columns:1fr\}/, "Services must use one readable column on small phones.");
