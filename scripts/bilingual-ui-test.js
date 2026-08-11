@@ -10,8 +10,11 @@ const i18n = read("frontend/rafid-i18n.js");
 const institution = read("frontend/institution-workspace.js");
 const education = read("frontend/education-content-en.js");
 const research = read("frontend/research-ui.js");
+const advanced = read("frontend/advanced-services.js");
 
 assert.match(html, /lang="ar" dir="rtl"/, "Arabic must remain the safe default.");
+assert.match(html, /localStorage\.getItem\("rafid-language"\)[^]*document\.documentElement\.dataset\.language/, "The saved language must be applied before CSS and deferred scripts load.");
+assert.match(html, /class="boot-ar"[^]*class="boot-en"[^]*A clearer decision for your research before you apply/, "The loading state must have matching Arabic and English copy.");
 assert.match(i18n, /document\.documentElement\.dir = language === "ar" \? "rtl" : "ltr"/, "Direction must follow the selected language.");
 assert.match(i18n, /data-rafid-language="en"/, "An English control is required.");
 assert.match(institution, /Rafid for research institutions/, "Institution experience requires English copy.");
@@ -20,5 +23,10 @@ assert.match(research, /output_language: window\.RafidI18n/, "Research analysis 
 assert.match(research, /General assessment result/, "Dynamic general-analysis results require English labels.");
 assert.match(research, /Reading content… Analyzing elements… Scoring readiness… Preparing recommendations…/, "Dynamic progress must follow the selected language.");
 assert.match(i18n, /\[placeholder\]/, "English mode must translate input placeholders.");
-assert.doesNotMatch(i18n + institution + education, /gsk_[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,}/, "No provider secret may enter bilingual assets.");
+assert.match(research, /service-card-top[^]*startPortfolio/, "Service cards need a stable header row in both languages.");
+assert.match(institution, /service-card-top[^]*service-number">05/, "The institution service needs the same non-overlapping header structure.");
+assert.match(advanced, /Find the funding paths closest to your research/, "Opportunity discovery must render a complete English workflow.");
+assert.match(advanced, /Which projects are the best fit for this opportunity/, "Portfolio comparison must render a complete English workflow.");
+assert.match(advanced, /\(\?:مشروع\|project\)/, "Pasted project separators must work in Arabic and English.");
+assert.doesNotMatch(i18n + institution + education + advanced, /gsk_[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,}/, "No provider secret may enter bilingual assets.");
 console.log("Rafid Arabic/English navigation, content, direction, and output-language checks passed.");

@@ -6,6 +6,14 @@
     <meta name="theme-color" content="#0b5f5a" />
     <meta name="description" content="رافد — قارن بحثك بشروط فرصة تمويل محددة واحصل على قراءة منظمة للأهلية والأدلة والفجوات." />
     <title>رافد | ملاءمة البحث للتمويل</title>
+    <script>
+      (() => {
+        const language = localStorage.getItem("rafid-language") === "en" ? "en" : "ar";
+        document.documentElement.lang = language;
+        document.documentElement.dir = language === "en" ? "ltr" : "rtl";
+        document.documentElement.dataset.language = language;
+      })();
+    </script>
     <link rel="preload" as="image" href="assets/rafid-logo.png" fetchpriority="high" />
     <link rel="stylesheet" href="rafid-v4.css" />
     <script defer src="vendor/mammoth.browser.min.js"></script>
@@ -32,9 +40,9 @@
         </span>
       </header>
       <section class="boot-card" aria-live="polite">
-        <span class="rafid-kicker">منصة رافد</span>
-        <h1>قرار أوضح لبحثك قبل التقديم</h1>
-        <p>نجهز مساحة العمل الآمنة…</p>
+        <span class="rafid-kicker"><span class="boot-ar">منصة رافد</span><span class="boot-en" lang="en">Rafid platform</span></span>
+        <h1><span class="boot-ar">قرار أوضح لبحثك قبل التقديم</span><span class="boot-en" lang="en">A clearer decision for your research before you apply</span></h1>
+        <p><span class="boot-ar">نجهز مساحة العمل الآمنة…</span><span class="boot-en" lang="en">Preparing your secure workspace…</span></p>
         <i aria-hidden="true"></i>
       </section>
       <noscript><p class="rafid-notice">يحتاج رافد إلى JavaScript لتشغيل تحليل المستندات.</p></noscript>
