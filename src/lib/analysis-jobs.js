@@ -64,16 +64,22 @@ async function mapConcurrent(items, concurrency, worker) {
 function normalizeJobInput(body) {
   const opportunityRequest = body?.opportunity_request;
   const projectRequest = body?.project_request;
+  const suppliedOpportunity = body?.opportunity && typeof body.opportunity === "object"
+    ? normalizeOpportunityData(body.opportunity)
+    : null;
+  const opportunityValidation = suppliedOpportunity ? validateOpportunityData(suppliedOpportunity) : null;
+  if (suppliedOpportunity && !opportunityValidation.valid) throw Object.assign(new Error("بنية الفرصة المحفوظة غير صالحة."), { statusCode: 422, code: "RAFID_INVALID_OPPORTUNITY" });
   const opportunityText = String(opportunityRequest?.source_text || "").trim();
   const projectText = String(projectRequest?.raw_text || "").trim();
-  if (opportunityText.length < 100) throw Object.assign(new Error("نص الفرصة قصير جدًا."), { statusCode: 400 });
+  if (!suppliedOpportunity && opportunityText.length < 100) throw Object.assign(new Error("نص الفرصة قصير جدًا."), { statusCode: 400 });
   if (projectText.length < 30) throw Object.assign(new Error("نص البحث قصير جدًا."), { statusCode: 400 });
-  const opportunityFields = { ...opportunityRequest };
+  const opportunityFields = { ...(opportunityRequest || {}) };
   const projectFields = { ...projectRequest };
   delete opportunityFields.source_text;
   delete projectFields.raw_text;
   return {
     opportunityRequest: { ...opportunityFields, sourceText: opportunityText },
+    suppliedOpportunity,
     projectRequest: { ...projectFields, rawText: projectText },
     previousAssessment: body.previous_assessment || null,
     outputLanguage: body.output_language === "en" ? "en" : "ar",
@@ -182,7 +188,9 @@ async function executeJob(job, input) {
   try {
     updateStage(job, "extracting", 15);
     const [opportunityResult, project] = await Promise.all([
-      timed(job, "opportunity_extraction", () => extractOpportunity(job, { ...input.opportunityRequest, outputLanguage: input.outputLanguage })),
+      input.suppliedOpportunity
+        ? Promise.resolve({ opportunity: input.suppliedOpportunity, cacheHit: false, structuredInput: true })
+        : timed(job, "opportunity_extraction", () => extractOpportunity(job, { ...input.opportunityRequest, outputLanguage: input.outputLanguage })),
       timed(job, "research_extraction", () => extractProject(job, { ...input.projectRequest, outputLanguage: input.outputLanguage })),
     ]);
     if (job.cancelled) throw Object.assign(new Error("أُلغي التحليل."), { code: "RAFID_JOB_CANCELLED" });
@@ -207,7 +215,7 @@ async function executeJob(job, input) {
     const validation = validateAssessmentData(assessment);
     if (!validation.valid) throw Object.assign(new Error("لم تجتز النتيجة التحقق البنيوي."), { statusCode: 422, code: "RAFID_INVALID_ASSESSMENT" });
     updateStage(job, "reporting", 94);
-    job.result = { opportunity: opportunityResult.opportunity, project_data: project, assessment, meta: { opportunity_cache_hit: opportunityResult.cacheHit, completed_at: new Date().toISOString() } };
+    job.result = { opportunity: opportunityResult.opportunity, project_data: project, assessment, meta: { opportunity_cache_hit: opportunityResult.cacheHit, structured_opportunity_reused: Boolean(opportunityResult.structuredInput), completed_at: new Date().toISOString() } };
     job.status = "completed";
     updateStage(job, "completed", 100);
     metrics.completed += 1;

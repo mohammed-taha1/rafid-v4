@@ -532,13 +532,14 @@
         <section id="package" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">قبل الإرسال</span><h2>حزمة التقديم</h2></div></div><div class="package-grid match-package">${packageItems.length ? packageItems.map((entry) => `<article><span class="package-status ${statusClass(entry.status === "جاهز" ? "مستوفى" : entry.status === "ناقص" ? "غير مستوفى" : "غير معروف")}">${esc(entry.status)}</span><b>${esc(entry.document_name)}</b><p>${esc(entry.available_evidence || "لا يتوفر دليل واضح")}</p><small>${esc(entry.next_action || "راجع متطلبات الوثيقة")}</small></article>`).join("") : '<p class="empty-value">لم تُستخرج قائمة وثائق واضحة.</p>'}</div></section>
         <section class="match-section questions-grid"><div><h2>أسئلة للفريق</h2>${safeList(review.questions_for_project_team)}</div><div><h2>أسئلة للجهة الممولة</h2>${safeList(review.questions_for_funder)}</div></section>
         <p class="rafid-notice match-disclaimer">${fixedDisclaimer}</p>
-        <div class="form-actions report-actions"><button id="copy" class="rafid-secondary" type="button">نسخ الخلاصة</button><button id="download" class="rafid-secondary" type="button">تنزيل تقرير مقروء</button><button id="print" class="rafid-primary" type="button">طباعة التقرير</button><button id="newBottom" class="rafid-text-button" type="button">بدء تحليل جديد</button></div>
+        <div class="form-actions report-actions"><button id="improve" class="rafid-primary" type="button">حسّن بحثك خطوة بخطوة</button><button id="copy" class="rafid-secondary" type="button">نسخ الخلاصة</button><button id="download" class="rafid-secondary" type="button">تنزيل تقرير مقروء</button><button id="print" class="rafid-secondary" type="button">طباعة التقرير</button><button id="newBottom" class="rafid-text-button" type="button">بدء تحليل جديد</button></div>
         <p id="copyStatus" role="status" class="copy-status"></p>
       </section>`;
     const restart = () => matchView();
     root().querySelector("#new").addEventListener("click", restart);
     root().querySelector("#newBottom").addEventListener("click", restart);
     root().querySelector("#print").addEventListener("click", () => window.print());
+    root().querySelector("#improve").addEventListener("click", () => window.RafidImprove?.open({ opportunity, assessment }));
     root().querySelector("#download").addEventListener("click", () => {
       const report = root().querySelector(".match-report");
       const blob = new Blob([report?.innerText || match().summaryText(assessment)], { type: "text/plain;charset=utf-8" });
@@ -631,5 +632,5 @@
     if (location.hash !== "#home") history.pushState(null, "", "#home");
     app();
   });
-  window.RafidApp = Object.freeze({ home: app, general: generalView, match: matchView, discovery: () => window.RafidAdvancedServices.discovery(), portfolio: () => window.RafidAdvancedServices.portfolio() });
+  window.RafidApp = Object.freeze({ home: app, general: generalView, match: matchView, showMatchResult: renderMatchResults, discovery: () => window.RafidAdvancedServices.discovery(), portfolio: () => window.RafidAdvancedServices.portfolio() });
 })();
