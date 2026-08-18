@@ -62,6 +62,18 @@ function telemetryReady() {
     && Boolean(String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim());
 }
 
+function supabaseRequestHeaders(key) {
+  const headers = {
+    apikey: key,
+    "Content-Type": "application/json",
+    Prefer: "return=minimal",
+  };
+  // Supabase's modern sb_secret_* keys are opaque API keys, not JWTs. Legacy
+  // service_role JWTs still need the Authorization header for PostgREST.
+  if (!key.startsWith("sb_secret_")) headers.Authorization = `Bearer ${key}`;
+  return headers;
+}
+
 async function recordProductEvent(input, { fetchImpl = fetch } = {}) {
   const event = normalizedEvent(input);
   if (!telemetryReady()) return { recorded: false, reason: "not_configured" };
@@ -70,7 +82,7 @@ async function recordProductEvent(input, { fetchImpl = fetch } = {}) {
   try {
     const response = await fetchImpl(`${environment.url}/rest/v1/rafid_product_events`, {
       method: "POST",
-      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      headers: supabaseRequestHeaders(key),
       body: JSON.stringify(event),
       signal: AbortSignal.timeout(5_000),
     });
@@ -80,4 +92,4 @@ async function recordProductEvent(input, { fetchImpl = fetch } = {}) {
   }
 }
 
-module.exports = { EVENT_NAMES, SERVICE_KEYS, gapTaxonomy, normalizedEvent, recordProductEvent, telemetryReady };
+module.exports = { EVENT_NAMES, SERVICE_KEYS, gapTaxonomy, normalizedEvent, recordProductEvent, supabaseRequestHeaders, telemetryReady };
