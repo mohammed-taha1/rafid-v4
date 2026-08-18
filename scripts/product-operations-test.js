@@ -47,6 +47,12 @@ recordProductEvent({ ...safe, flow_id: flow }, { fetchImpl: async (url, options)
   assert.match(migration, /revoke all on public\.rafid_product_events from authenticated/i);
   assert.match(migration, /rafid_product_operations_dashboard/);
   assert.match(migration, /rafid_platform_admin_invites/);
+  const writerGrant = read("supabase/migrations/20260818163839_grant_product_telemetry_writer.sql");
+  const validatorGrant = read("supabase/migrations/20260818164116_grant_product_telemetry_validator.sql");
+  assert.match(writerGrant, /grant insert on table public\.rafid_product_events to service_role/i);
+  assert.match(writerGrant, /grant usage, select on sequence public\.rafid_product_events_id_seq to service_role/i);
+  assert.match(validatorGrant, /grant usage on schema private to service_role/i);
+  assert.match(validatorGrant, /grant execute on function private\.rafid_valid_stage_timings\(jsonb\) to service_role/i);
 
   const frontend = read("frontend/product-operations-dashboard.js");
   for (const label of ["تحليلات ناجحة", "نسبة الإلغاء", "زمن مراحل التحليل", "الخدمات الأكثر استخدامًا", "الفجوات الشائعة", "الزملاء والصلاحيات"]) assert.ok(frontend.includes(label), `dashboard missing ${label}`);
