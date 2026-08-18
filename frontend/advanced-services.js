@@ -2,6 +2,7 @@
 
 (() => {
   let activeController;
+  let activeFlowId;
   let runtimeLimits;
   const t = (ar, en) => window.RafidI18n?.t(ar, en) ?? ar;
   const applicationStatus = (value) => ({
@@ -106,12 +107,13 @@
         cancel.hidden = false;
         error.textContent = "";
         activeController = new AbortController();
+        activeFlowId = window.RafidTelemetry?.start("funding_discovery");
         const source = await sourceFrom(main.querySelector("#discoveryText"), main.querySelector("#discoveryFile"), t("البحث", "research"));
         if (source.text.length < 30) throw new Error(t("أدخل 30 حرفًا على الأقل من البحث.", "Enter at least 30 characters of research content."));
         progress.textContent = t("١/٢ استخراج عناصر البحث والأدلة…", "1/2 Extracting research elements and evidence…");
         const project = await extractProject(source, main.querySelector("#discoveryTitle").value.trim(), activeController.signal);
         progress.textContent = t("٢/٢ مقارنة المشروع بالفرص وترتيبها…", "2/2 Comparing and ranking opportunities…");
-        const response = await callApi("opportunities/discover", { project_data: project, filters: { limit: 8 }, output_language: window.RafidI18n?.language || "ar", privacy: privacy() }, activeController.signal);
+        const response = await callApi("opportunities/discover", { project_data: project, filters: { limit: 8 }, output_language: window.RafidI18n?.language || "ar", privacy: privacy(), telemetry_flow_id: activeFlowId }, activeController.signal);
         renderDiscovery(response.result);
       } catch (value) {
         error.textContent = value.name === "AbortError" ? t("أُلغي الطلب، ويمكنك البدء مجددًا.", "The request was canceled. You can start again.") : value.message;
@@ -132,6 +134,7 @@
       <p class="rafid-notice">${esc(result.disclaimer)}</p></section>`;
     root().querySelector("#advancedBack").addEventListener("click", () => window.RafidApp.home());
     root().querySelector("#newDiscovery").addEventListener("click", discoveryView);
+    if (activeFlowId) window.RafidTelemetry?.record("report_viewed", "funding_discovery", activeFlowId);
     resetView();
   }
 
@@ -156,6 +159,7 @@
         cancel.hidden = false;
         error.textContent = "";
         activeController = new AbortController();
+        activeFlowId = window.RafidTelemetry?.start("portfolio_compare");
         const url = main.querySelector("#portfolioUrl").value.trim();
         if (url && new URL(url).protocol !== "https:") throw new Error(t("الرابط الرسمي يجب أن يستخدم HTTPS.", "The official URL must use HTTPS."));
         const opportunitySource = await sourceFrom(main.querySelector("#portfolioOppText"), main.querySelector("#portfolioOppFile"), t("الفرصة", "opportunity"));
@@ -174,7 +178,7 @@
           projects.push(await extractProject(sources[index], sources[index].name, activeController.signal));
         }
         progress.textContent = t("٣/٣ تطبيق قواعد الأهلية وترتيب المحفظة…", "3/3 Applying eligibility rules and ranking the portfolio…");
-        const response = await callApi("portfolio/compare", { opportunity, projects, output_language: window.RafidI18n?.language || "ar", privacy: privacy() }, activeController.signal);
+        const response = await callApi("portfolio/compare", { opportunity, projects, output_language: window.RafidI18n?.language || "ar", privacy: privacy(), telemetry_flow_id: activeFlowId }, activeController.signal);
         renderPortfolio(response.result);
       } catch (value) {
         error.textContent = value.name === "AbortError" ? t("أُلغيت المقارنة، ويمكنك البدء مجددًا.", "The comparison was canceled. You can start again.") : value.message;
@@ -200,6 +204,7 @@
       <div class="portfolio-ranking">${rows.map((row) => `<article class="portfolio-row"><div class="portfolio-position"><span>${row.rank}</span><small>${t("الترتيب", "Rank")}</small></div><div class="portfolio-project"><span class="eligibility-badge ${row.decision.eligibility === "غير مؤهل" ? "failed" : "unknown"}">${esc(row.decision.eligibility)}</span><h2>${esc(row.title)}</h2><p>${esc(row.decision.priority_band)}</p></div><div class="portfolio-metrics"><span><b>${row.decision.readiness_score === null ? t("غير كافٍ", "Insufficient") : row.decision.readiness_score}</b> ${t("الجاهزية", "Readiness")}</span><span><b>${row.decision.evidence_score}</b> ${t("الأدلة", "Evidence")}</span><span><b>${row.decision.confidence_score}</b> ${t("الثقة", "Confidence")}</span></div><details><summary>${t("قرار المراجع والإجراء التالي", "Reviewer decision and next action")}</summary><p><b>${t("الإجراء:", "Action:")}</b> ${esc(row.decision.next_action)}</p><p><b>${t("بوابات فاشلة:", "Failed gates:")}</b> ${row.decision.failed_gates} · <b>${t("غير محسومة:", "Unresolved:")}</b> ${row.decision.unknown_gates} · <b>${t("فجوات حرجة:", "Critical gaps:")}</b> ${row.decision.critical_gaps}</p>${row.decision.top_blockers.length ? `<ul>${row.decision.top_blockers.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>` : ""}</details></article>`).join("")}</div><p class="rafid-notice">${esc(result.disclaimer)}</p></section>`;
     root().querySelector("#advancedBack").addEventListener("click", () => window.RafidApp.home());
     root().querySelector("#newPortfolio").addEventListener("click", portfolioView);
+    if (activeFlowId) window.RafidTelemetry?.record("report_viewed", "portfolio_compare", activeFlowId);
     root().querySelector("#downloadPortfolio").addEventListener("click", () => {
       const blob = new Blob([portfolioCsv(result)], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -208,6 +213,7 @@
       link.download = `rafid-portfolio-${new Date().toISOString().slice(0, 10)}.csv`;
       link.click();
       URL.revokeObjectURL(url);
+      if (activeFlowId) window.RafidTelemetry?.record("report_downloaded", "portfolio_compare", activeFlowId);
     });
     resetView();
   }

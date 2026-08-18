@@ -14,7 +14,7 @@
 
 تفاصيل المطابقة في [docs/OPPORTUNITY_MATCHING_SPEC.md](docs/OPPORTUNITY_MATCHING_SPEC.md)، واكتشاف الفرص والمحفظة في [docs/FUNDING_DISCOVERY_AND_PORTFOLIO.md](docs/FUNDING_DISCOVERY_AND_PORTFOLIO.md).
 
-متغيرات الخادم: `GROQ_API_KEY` و`GROQ_MODEL` و`MAX_FILE_SIZE_MB` و`ANALYSIS_TIMEOUT_SECONDS`، ومتغيرات Supabase فقط عند تفعيل المصادقة. لا تضع أسرارًا في الواجهة. النشر في `docs/DEPLOYMENT.md`، الخصوصية والأمان في `docs/SECRET_ROTATION.md` و`docs/SECURITY_REVIEW.md`، والتسليم والقيود في `docs/FINAL_HANDOFF.md`.
+متغيرات الخادم: `GROQ_API_KEY` و`GROQ_MODEL` و`MAX_FILE_SIZE_MB` و`ANALYSIS_TIMEOUT_SECONDS`، ومتغيرات Supabase فقط عند تفعيل المصادقة. لوحة التشغيل الاختيارية تحتاج `RAFID_PRODUCT_TELEMETRY_ENABLED=true` و`SUPABASE_SERVICE_ROLE_KEY` على الخادم وحده. لا تضع أسرارًا في الواجهة. النشر في `docs/DEPLOYMENT.md`، التشغيل والقياس في `docs/PRODUCT_OPERATIONS.md`، والخصوصية والأمان في `docs/SECRET_ROTATION.md` و`docs/SECURITY_REVIEW.md`.
 
 هذه النسخة تطبق قرار البداية الجديد لرافد:
 
@@ -32,6 +32,7 @@
 - مثال تدريبي افتراضي واضح الوسم لاختبار الرحلة دون بيانات شخصية أو ادعاء فرصة حقيقية.
 - مفتاح Groq خادمي فقط، وحدود استخدام عامة لحماية الحصة المجانية.
 - عدم تخزين نص البحث أو الملف افتراضيًا، وعدم اعتماد الصفحات العامة على Supabase.
+- لوحة تشغيل خاصة بالمالك تعرض مقاييس مجمعة خالية من محتوى الأبحاث، مع دعوة زملاء بصلاحيتي مدير أو محلل.
 
 ابدأ من [START_HERE_AR.md](START_HERE_AR.md)، وراجع النشر في [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 

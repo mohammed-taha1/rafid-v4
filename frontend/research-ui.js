@@ -346,7 +346,7 @@
       main.querySelector("#analysisElapsed").hidden = false;
       controller = new AbortController();
       followJob(pending, controller.signal).then((job) => {
-        renderMatchResults({ opportunity: job.result.opportunity, assessment: job.result.assessment, meta: { job: job.timings_ms, chunks: job.chunk_metrics, cache_hit: job.result.meta?.opportunity_cache_hit } });
+        renderMatchResults({ opportunity: job.result.opportunity, assessment: job.result.assessment, meta: { job: job.timings_ms, chunks: job.chunk_metrics, cache_hit: job.result.meta?.opportunity_cache_hit, flow_id: job.job_id, service_key: "opportunity_match" } });
         previousMatchAssessment = job.result.assessment;
       }).catch((error) => {
         const errorNode = root()?.querySelector("#error");
@@ -424,7 +424,7 @@
         privacy,
       });
       const language = window.RafidI18n?.language || "ar";
-      const created = await jobApi("", "", { method: "POST", body: { opportunity_request: opportunityRequest, project_request: projectRequest, previous_assessment: previousMatchAssessment, output_language: language }, signal: controller.signal });
+      const created = await jobApi("", "", { method: "POST", body: { opportunity_request: opportunityRequest, project_request: projectRequest, previous_assessment: previousMatchAssessment, output_language: language, service_key: "opportunity_match" }, signal: controller.signal });
       persistJob(created.job.job_id, created.resume_token);
       const completed = await followJob(activeJob, controller.signal);
       const assessmentValidation = match().validateAssessment(completed.result.assessment);
@@ -438,6 +438,8 @@
           job: completed.timings_ms,
           chunks: completed.chunk_metrics,
           cache_hit: completed.result.meta?.opportunity_cache_hit,
+          flow_id: completed.job_id,
+          service_key: "opportunity_match",
         },
       });
       previousMatchAssessment = completed.result.assessment;
@@ -502,6 +504,8 @@
     const evidenceLedger = items(quality.evidence_ledger);
     const contradictions = items(quality.contradictions);
     const roundComparison = assessment.round_comparison;
+    const telemetryService = meta?.service_key || "opportunity_match";
+    const telemetryFlow = meta?.flow_id;
     const topGap = gaps[0] || {};
     const topAction = actions[0] || {};
     const truncated = Boolean(meta?.opportunity?.input_truncated || meta?.project?.input_truncated || meta?.assessment?.input_truncated);
@@ -533,8 +537,10 @@
         <section class="match-section questions-grid"><div><h2>أسئلة للفريق</h2>${safeList(review.questions_for_project_team)}</div><div><h2>أسئلة للجهة الممولة</h2>${safeList(review.questions_for_funder)}</div></section>
         <p class="rafid-notice match-disclaimer">${fixedDisclaimer}</p>
         <div class="form-actions report-actions"><button id="improve" class="rafid-primary" type="button">حسّن بحثك خطوة بخطوة</button><button id="copy" class="rafid-secondary" type="button">نسخ الخلاصة</button><button id="download" class="rafid-secondary" type="button">تنزيل تقرير مقروء</button><button id="print" class="rafid-secondary" type="button">طباعة التقرير</button><button id="newBottom" class="rafid-text-button" type="button">بدء تحليل جديد</button></div>
+        <fieldset class="result-feedback"><legend>هل كانت النتيجة مفيدة؟</legend><button type="button" data-rating="3">مفيدة جدًا</button><button type="button" data-rating="2">مفيدة جزئيًا</button><button type="button" data-rating="1">غير مفيدة</button><p role="status"></p></fieldset>
         <p id="copyStatus" role="status" class="copy-status"></p>
       </section>`;
+    if (telemetryFlow) window.RafidTelemetry?.record("report_viewed", telemetryService, telemetryFlow);
     const restart = () => matchView();
     root().querySelector("#new").addEventListener("click", restart);
     root().querySelector("#newBottom").addEventListener("click", restart);
@@ -549,7 +555,13 @@
       link.download = `rafid-opportunity-report-${new Date().toISOString().slice(0, 10)}.txt`;
       link.click();
       URL.revokeObjectURL(url);
+      if (telemetryFlow) window.RafidTelemetry?.record("report_downloaded", telemetryService, telemetryFlow);
     });
+    root().querySelectorAll(".result-feedback [data-rating]").forEach((button) => button.addEventListener("click", () => {
+      if (telemetryFlow) window.RafidTelemetry?.record("feedback_submitted", telemetryService, telemetryFlow, { rating: Number(button.dataset.rating) });
+      root().querySelectorAll(".result-feedback button").forEach((item) => { item.disabled = true; });
+      root().querySelector(".result-feedback p").textContent = "شكرًا، سُجل التقييم دون محتوى البحث أو بيانات شخصية.";
+    }, { once: true }));
     root().querySelector("#copy").addEventListener("click", async () => {
       const status = root().querySelector("#copyStatus");
       try {
@@ -593,8 +605,9 @@
         error.classList.remove("is-error");
         error.textContent = t("قراءة المحتوى… تحليل العناصر… تقييم الجاهزية… إعداد التوصيات…", "Reading content… Analyzing elements… Scoring readiness… Preparing recommendations…");
         controller = new AbortController();
-        const data = await callApi("research/analyze", { text: source.text, output_language: window.RafidI18n?.language || "ar" }, controller.signal);
-        generalResults(data.result, data.meta);
+        const flowId = window.RafidTelemetry?.start("general_readiness");
+        const data = await callApi("research/analyze", { text: source.text, output_language: window.RafidI18n?.language || "ar", telemetry_flow_id: flowId }, controller.signal);
+        generalResults(data.result, { ...data.meta, flow_id: flowId || data.requestId, service_key: "general_readiness" });
       } catch (errorValue) {
         error.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. يمكنك المحاولة مجددًا." : errorValue.message;
         error.classList.add("is-error");
@@ -613,10 +626,14 @@
     const truncationNotice = meta.truncated ? '<p class="rafid-notice">تم تحليل الجزء المقبول من المستند الطويل فقط؛ أعد التحليل على ملخص مركز للحصول على تغطية أوسع.</p>' : "";
     const confidence = t(result.confidence || "منخفض", ({ مرتفع: "High", متوسط: "Medium", منخفض: "Low" })[result.confidence] || result.confidence || "Low");
     const disclaimer = t(result.fundingDisclaimer || "هذا التحليل إرشادي ولا يضمن الحصول على تمويل.", "This assessment is advisory and does not guarantee funding or acceptance. Verify the official opportunity criteria before applying.");
-    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${esc(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores"><article><span>${t("الجاهزية التقنية", "Technical readiness")}</span><meter min="0" max="100" value="${clamp(result.technicalReadiness?.score)}"></meter><b>${clamp(result.technicalReadiness?.score)}<small>/100</small></b></article><article><span>${t("الجاهزية التمويلية", "Funding readiness")}</span><meter min="0" max="100" value="${clamp(result.fundingReadiness?.score)}"></meter><b>${clamp(result.fundingReadiness?.score)}<small>/100</small></b></article></div><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الدرجات", "Score explanations")}</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${safeList(result.criticalGaps)}</details><details><summary>${t("خطة العمل", "Action plan")}</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير", "Print report")}</button></div></section>`;
+    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${esc(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores"><article><span>${t("الجاهزية التقنية", "Technical readiness")}</span><meter min="0" max="100" value="${clamp(result.technicalReadiness?.score)}"></meter><b>${clamp(result.technicalReadiness?.score)}<small>/100</small></b></article><article><span>${t("الجاهزية التمويلية", "Funding readiness")}</span><meter min="0" max="100" value="${clamp(result.fundingReadiness?.score)}"></meter><b>${clamp(result.fundingReadiness?.score)}<small>/100</small></b></article></div><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الدرجات", "Score explanations")}</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${safeList(result.criticalGaps)}</details><details><summary>${t("خطة العمل", "Action plan")}</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="download" class="rafid-secondary" type="button">${t("تنزيل تقرير", "Download report")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير", "Print report")}</button></div><fieldset class="result-feedback"><legend>${t("هل كانت النتيجة مفيدة؟", "Was this result useful?")}</legend><button type="button" data-rating="3">${t("مفيدة جدًا", "Very useful")}</button><button type="button" data-rating="2">${t("مفيدة جزئيًا", "Partly useful")}</button><button type="button" data-rating="1">${t("غير مفيدة", "Not useful")}</button><p role="status"></p></fieldset></section>`;
+    const flowId = meta.flow_id;
+    if (flowId) window.RafidTelemetry?.record("report_viewed", "general_readiness", flowId);
     root().querySelector("#new").addEventListener("click", generalView);
     root().querySelector("#copy").addEventListener("click", () => navigator.clipboard?.writeText(result.researchSummary || ""));
     root().querySelector("#print").addEventListener("click", () => window.print());
+    root().querySelector("#download").addEventListener("click", () => { const blob = new Blob([root().querySelector(".rafid-report")?.innerText || result.researchSummary || ""], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `rafid-readiness-${new Date().toISOString().slice(0, 10)}.txt`; link.click(); URL.revokeObjectURL(url); if (flowId) window.RafidTelemetry?.record("report_downloaded", "general_readiness", flowId); });
+    root().querySelectorAll(".result-feedback [data-rating]").forEach((button) => button.addEventListener("click", () => { if (flowId) window.RafidTelemetry?.record("feedback_submitted", "general_readiness", flowId, { rating: Number(button.dataset.rating) }); root().querySelectorAll(".result-feedback button").forEach((item) => { item.disabled = true; }); root().querySelector(".result-feedback p").textContent = t("شكرًا، سُجل التقييم دون محتوى البحث.", "Thank you. The rating was recorded without research content."); }, { once: true }));
     resetView();
   }
 

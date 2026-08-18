@@ -6,6 +6,7 @@ const { extractWithAI, extractOpportunityWithAI, assessWithAI } = require("./ai"
 const { normalizeProjectData, augmentProjectDataFromText, fallbackProjectData, validateProjectData } = require("./normalize");
 const { normalizeOpportunityData, fallbackOpportunityData, validateOpportunityData } = require("./opportunity-normalize");
 const { normalizeAssessmentData, fallbackAssessmentData, validateAssessmentData } = require("./assessment-normalize");
+const { SERVICE_KEYS, gapTaxonomy, recordProductEvent } = require("./product-telemetry");
 
 const JOB_VERSION = "rafid.analysis-job.v1";
 const jobs = new Map();
@@ -83,6 +84,7 @@ function normalizeJobInput(body) {
     projectRequest: { ...projectFields, rawText: projectText },
     previousAssessment: body.previous_assessment || null,
     outputLanguage: body.output_language === "en" ? "en" : "ar",
+    serviceKey: SERVICE_KEYS.has(String(body.service_key || "")) ? String(body.service_key) : "opportunity_match",
   };
 }
 
@@ -229,6 +231,17 @@ async function executeJob(job, input) {
     clearTimeout(timeout);
     input.opportunityRequest.sourceText = "";
     input.projectRequest.rawText = "";
+    const total = Math.max(0, Date.parse(job.updatedAt) - Date.parse(job.createdAt));
+    await recordProductEvent({
+      flow_id: job.id,
+      event_name: "analysis_finished",
+      service_key: job.serviceKey,
+      outcome: job.status === "completed" ? "succeeded" : job.status,
+      duration_ms: total,
+      stage_timings: { ...job.timings, total },
+      error_code: job.error?.code || null,
+      gap_keys: gapTaxonomy(job.result?.assessment?.gaps),
+    });
   }
 }
 
@@ -238,9 +251,10 @@ function createAnalysisJob(body) {
   const token = crypto.randomBytes(32).toString("base64url");
   const now = Date.now();
   const ttlMs = positiveInteger(process.env.RAFID_JOB_RESULT_TTL_MINUTES, 20, 120) * 60_000;
-  const job = { id, tokenHash: hash(token), status: "queued", stage: "queued", progress: 0, createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString(), expiresAt: new Date(now + ttlMs).toISOString(), timings: {}, chunkMetrics: {}, result: null, error: null, cancelled: false, timedOut: false };
+  const job = { id, tokenHash: hash(token), status: "queued", stage: "queued", progress: 0, createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString(), expiresAt: new Date(now + ttlMs).toISOString(), timings: {}, chunkMetrics: {}, result: null, error: null, cancelled: false, timedOut: false, serviceKey: input.serviceKey };
   jobs.set(id, job);
   metrics.created += 1;
+  void recordProductEvent({ flow_id: id, event_name: "service_started", service_key: input.serviceKey });
   setImmediate(() => executeJob(job, input));
   return { job: publicJob(job), resume_token: token };
 }

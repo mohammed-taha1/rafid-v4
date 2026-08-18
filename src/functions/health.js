@@ -41,6 +41,7 @@ async function healthHandler(request) {
       "/api/rafid/opportunity/extract",
       "/api/rafid/opportunity/assess",
       "/api/rafid/analysis/jobs",
+      "/api/rafid/telemetry",
       "/api/rafid/opportunities/catalog",
     ],
   });

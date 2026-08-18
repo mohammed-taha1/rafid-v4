@@ -85,6 +85,7 @@
         }
         saveSession({ access_token: result.access_token, refresh_token: result.refresh_token, user: result.user, expires_at: Date.now() + Number(result.expires_in || 3600) * 1000, project: new URL(cfg.auth.supabase_url).host });
         await rpc("rafid_accept_my_institution_invites").catch(() => 0);
+        await rpc("rafid_accept_platform_admin_invites").catch(() => 0);
         await workspaceView();
       } catch (error) { target.textContent = error.message; target.classList.add("is-error"); }
       finally { button.disabled = false; }
@@ -95,18 +96,24 @@
     return rest("rafid_organizations", "?select=id,name,slug,created_at&order=created_at.desc");
   }
 
-  function organizationPicker(organizations) {
-    return `<section class="institution-welcome"><div><span class="rafid-kicker">${t("مساحات العمل", "Workspaces")}</span><h1 tabindex="-1">${t("اختر المؤسسة التي ستعمل عليها", "Choose an institution workspace")}</h1><p>${t("لن ترى إلا المؤسسات التي تملك عضوية نشطة فيها.", "You can only see institutions where you have an active membership.")}</p></div><button id="institutionSignout" class="rafid-text-button" type="button">${t("تسجيل الخروج", "Sign out")}</button></section><div class="organization-grid">${organizations.map((organization) => `<button class="organization-card" type="button" data-organization="${esc(organization.id)}"><b>${esc(organization.name)}</b><small>${esc(organization.slug)}</small><span>${t("فتح لوحة المؤسسة", "Open dashboard")} ←</span></button>`).join("")}<form id="createOrganization" class="organization-card create-card"><b>${t("إنشاء مساحة عمل", "Create workspace")}</b><label>${t("اسم المؤسسة", "Institution name")}<input name="name" minlength="2" maxlength="160" required /></label><label>${t("المعرّف المختصر", "Short identifier")}<input name="slug" pattern="[a-z0-9-]{2,80}" placeholder="research-center" required /></label><button class="rafid-primary" type="submit">${t("إنشاء آمن", "Create securely")}</button><p role="alert"></p></form></div>`;
+  function organizationPicker(organizations, platformStatus) {
+    const operations = platformStatus?.is_admin ? `<button id="openOperationsDashboard" class="organization-card operations-entry" type="button"><b>${t("لوحة تشغيل رافد", "Rafid operations")}</b><small>${t("النجاح، الزمن، الأخطاء، الاستخدام والفائدة", "Success, latency, errors, usage, and usefulness")}</small><span>${t("فتح لوحة الإدارة", "Open admin dashboard")} ←</span></button>` : "";
+    return `<section class="institution-welcome"><div><span class="rafid-kicker">${t("مساحات العمل", "Workspaces")}</span><h1 tabindex="-1">${t("اختر المؤسسة التي ستعمل عليها", "Choose an institution workspace")}</h1><p>${t("لن ترى إلا المؤسسات التي تملك عضوية نشطة فيها.", "You can only see institutions where you have an active membership.")}</p></div><button id="institutionSignout" class="rafid-text-button" type="button">${t("تسجيل الخروج", "Sign out")}</button></section><div class="organization-grid">${operations}${organizations.map((organization) => `<button class="organization-card" type="button" data-organization="${esc(organization.id)}"><b>${esc(organization.name)}</b><small>${esc(organization.slug)}</small><span>${t("فتح لوحة المؤسسة", "Open dashboard")} ←</span></button>`).join("")}<form id="createOrganization" class="organization-card create-card"><b>${t("إنشاء مساحة عمل", "Create workspace")}</b><label>${t("اسم المؤسسة", "Institution name")}<input name="name" minlength="2" maxlength="160" required /></label><label>${t("المعرّف المختصر", "Short identifier")}<input name="slug" pattern="[a-z0-9-]{2,80}" placeholder="research-center" required /></label><button class="rafid-primary" type="submit">${t("إنشاء آمن", "Create securely")}</button><p role="alert"></p></form></div>`;
   }
 
   async function workspaceView() {
     if (!session?.access_token) return authView();
     try {
-      const organizations = await listOrganizations();
+      await rpc("rafid_accept_platform_admin_invites").catch(() => 0);
+      const [organizations, platformStatus] = await Promise.all([listOrganizations(), rpc("rafid_platform_admin_status").catch(() => ({ is_admin: false, role: null }))]);
       if (selectedOrganization && organizations.some((item) => item.id === selectedOrganization.id)) return dashboardView(selectedOrganization);
-      const root = shell(organizationPicker(organizations));
+      const root = shell(organizationPicker(organizations, platformStatus));
       root.querySelector("h1")?.focus();
       root.querySelector("#institutionSignout").addEventListener("click", () => { saveSession(null); selectedOrganization = null; authView(); });
+      root.querySelector("#openOperationsDashboard")?.addEventListener("click", async () => {
+        const cfg = await runtime();
+        window.RafidOperations?.open({ config: cfg, session, status: platformStatus, back: workspaceView });
+      });
       root.querySelectorAll("[data-organization]").forEach((button) => button.addEventListener("click", () => {
         selectedOrganization = organizations.find((item) => item.id === button.dataset.organization);
         dashboardView(selectedOrganization);
