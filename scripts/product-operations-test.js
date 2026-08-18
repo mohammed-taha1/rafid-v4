@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { gapTaxonomy, normalizedEvent, recordProductEvent } = require("../src/lib/product-telemetry");
+const { gapTaxonomy, normalizedEvent, recordProductEvent, supabaseRequestHeaders } = require("../src/lib/product-telemetry");
 
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -29,12 +29,15 @@ assert.deepEqual(gapTaxonomy([{ title: "الميزانية غير واضحة" },
 const old = { ...process.env };
 process.env.RAFID_PRODUCT_TELEMETRY_ENABLED = "true";
 process.env.SUPABASE_URL = "https://example.supabase.co";
-process.env.SUPABASE_SERVICE_ROLE_KEY = "server-secret-for-test";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "sb_secret_server_test_value";
 let captured;
 recordProductEvent({ ...safe, flow_id: flow }, { fetchImpl: async (url, options) => { captured = { url, options }; return { ok: true, status: 201 }; } }).then((result) => {
   assert.equal(result.recorded, true);
   const sent = JSON.parse(captured.options.body);
   assert.equal(captured.url, "https://example.supabase.co/rest/v1/rafid_product_events");
+  assert.equal(captured.options.headers.apikey, "sb_secret_server_test_value");
+  assert.equal(Object.hasOwn(captured.options.headers, "Authorization"), false);
+  assert.equal(supabaseRequestHeaders("legacy-service-role-jwt").Authorization, "Bearer legacy-service-role-jwt");
   assert.equal(Object.values(sent).some((value) => String(value).includes("must never survive")), false);
   process.env = old;
 
