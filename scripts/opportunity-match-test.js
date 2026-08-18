@@ -99,10 +99,11 @@ assert.equal(validateAssessmentData(assessment).valid, true);
 assert.equal(match.validateAssessment(assessment).valid, true);
 assert.deepEqual(match.gateSummary(assessment.hard_gates), { total: 1, met: 0, partial: 0, missing: 0, unknown: 1 });
 assert.match(match.summaryText(assessment), /غير محسوم/);
-assert.match(match.summaryText(assessment), /\d+ من 100/);
-assert.equal(assessment.quality_review.rubric_version, "rafid.deterministic-rubric.v2");
+assert.match(match.summaryText(assessment), /غير متاحة لعدم كفاية البيانات|\d+ من 100/);
+assert.equal(assessment.quality_review.rubric_version, "rafid.deterministic-rubric.v3");
 assert.equal(assessment.quality_review.second_review_passed, true);
-assert.equal(assessment.fit_dimensions.every((item) => item.score_basis === "rubric_deterministic"), true);
+assert.equal(assessment.fit_dimensions.every((item) => Number.isInteger(item.confidence)), true);
+assert.equal(assessment.fit_dimensions.every((item) => item.evidence.length > 0), true);
 assert.equal(match.decisionTone("غير مؤهل"), "ineligible");
 
 const compactAssessment = normalizeAssessmentData(
@@ -158,6 +159,7 @@ assert.equal(guardedAssessment.institutional_review.recommendation, "تحتاج 
 assert.ok(guardedAssessment.quality_review.corrections_count >= 2);
 assert.ok(guardedAssessment.quality_review.contradiction_count >= 1);
 assert.ok(guardedAssessment.readiness.assessment_confidence < 90);
+assert.equal(guardedAssessment.hard_gates[0].confidence <= 20, true);
 
 const incompleteResearch = normalizeProjectData({
   project_identity: { project_title: "بحث ناقص", project_owner: { name: null }, project_type: [] },

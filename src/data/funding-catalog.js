@@ -2,7 +2,7 @@
 
 // هذا الكتالوج دليل أولي قابل للمراجعة، وليس إعلانًا بأن باب التقديم مفتوح.
 // لا تُضاف فرصة بلا مصدر رسمي وتاريخ تحقق واضح.
-const CATALOG_VERSION = "rafid.funding-catalog.v1";
+const CATALOG_VERSION = "rafid.funding-catalog.v2.2026-08-18";
 const VERIFIED_AT = "2026-08-10";
 const RDIA_FUNDING_URL = "https://www.rdia.gov.sa/programs/funding/";
 const RDIA_FAQ_URL = "https://npst.ksu.edu.sa/sites/npst.ksu.edu.sa/files/attach/RDIA%20Research%20Grants%20FAQ%202nd%20Call.pdf";
@@ -18,9 +18,16 @@ function rdiaProgram(id, title, summary, options = {}) {
     supporting_source_url: RDIA_FAQ_URL,
     source_kind: "مصدر حكومي رسمي ودليل أسئلة شائعة للبرامج",
     last_verified_at: VERIFIED_AT,
-    application_status: "تحقق من المصدر الرسمي",
+    application_status: "verify_official_source",
     deadline: null,
     country_or_region: "المملكة العربية السعودية",
+    eligible_countries: ["المملكة العربية السعودية"],
+    eligible_disciplines: options.priority_areas || [
+      "الصحة والعافية",
+      "استدامة البيئة والاحتياجات الأساسية",
+      "الطاقة والصناعة",
+      "اقتصاديات المستقبل",
+    ],
     priority_areas: options.priority_areas || [
       "الصحة والعافية",
       "استدامة البيئة والاحتياجات الأساسية",
@@ -34,14 +41,45 @@ function rdiaProgram(id, title, summary, options = {}) {
     applicant_types: options.applicant_types || ["باحث", "جامعة", "مركز بحثي"],
     funding_amount: null,
     currency: "ريال سعودي",
+    funding_ceiling: {
+      amount: null,
+      currency: "SAR",
+      status: "not_verified_for_current_call",
+    },
+    partner_requirement: options.partner_requirement || {
+      required: null,
+      type: null,
+      status: "verify_current_call",
+    },
+    readiness_requirement: {
+      min_trl: options.min_trl ?? null,
+      max_trl: options.max_trl ?? null,
+      status: "guidance_only_until_current_call_is_verified",
+    },
+    ip_and_licensing: {
+      ownership_required: null,
+      licences_required: [],
+      status: "verify_current_call",
+    },
+    criteria_version: `${id}.2026-08-10`,
     strict_gates: [
       {
         gate_id: `${id}-official-call`,
         title: "وجود دعوة مفتوحة وشروط دورة حالية",
         verification: "راجع بوابة الهيئة والمصدر الرسمي قبل اتخاذ قرار التقديم.",
+        fact_path: "application_status",
+        operator: "equals",
+        expected: "open",
+        blocking: true,
       },
     ],
     evidence_required: ["رابط الدعوة الحالية", "دليل الأهلية", "موعد الإغلاق"],
+    review: {
+      status: "approved",
+      reviewed_at: VERIFIED_AT,
+      reviewer_role: "funding_catalog_editor",
+      note: "المصدر والبرنامج موثقان؛ تفاصيل الدورة الحالية تبقى غير محسومة حتى التحقق من الدعوة الرسمية.",
+    },
   };
 }
 
@@ -77,6 +115,7 @@ const FUNDING_CATALOG = Object.freeze([
     min_trl: 4,
     max_trl: 8,
     applicant_types: ["جامعة", "مركز بحثي", "شركة", "شراكة أكاديمية صناعية"],
+    partner_requirement: { required: true, type: "شريك صناعي", status: "verify_current_call" },
   }),
   rdiaProgram("rdia-seig", "منحة الباحث السعودي الناشئ", "مسار موجه للباحثين الناشئين لبناء استقلالهم وخبرتهم البحثية.", {
     keywords: ["باحث ناشئ", "باحث سعودي", "بداية المسار", "عضو هيئة تدريس"],

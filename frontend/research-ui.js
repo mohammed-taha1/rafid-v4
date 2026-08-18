@@ -4,6 +4,8 @@
   let controller;
   let elapsedTimer;
   let requestInFlight = false;
+  let activeJob = null;
+  let previousMatchAssessment = null;
   let runtime = { auth: { enabled: false, required: false }, limits: { max_file_size_mb: 20 } };
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   const root = () => document.querySelector(".rafid");
@@ -138,6 +140,77 @@
     return payload;
   }
 
+  const JOB_STORAGE_KEY = "rafid.active.analysis-job.v1";
+
+  async function jobApi(id, token, { method = "GET", body, signal } = {}) {
+    const response = await fetch(`/api/rafid/analysis/jobs${id ? `/${encodeURIComponent(id)}` : ""}`, {
+      method,
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { "x-rafid-job-token": token } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.ok === false) {
+      const error = new Error(payload.error || "تعذر استعادة مهمة التحليل.");
+      error.code = payload.code || "RAFID_JOB_FAILED";
+      throw error;
+    }
+    return payload;
+  }
+
+  function persistJob(jobId, token) {
+    const state = { job_id: jobId, resume_token: token };
+    sessionStorage.setItem(JOB_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(JOB_STORAGE_KEY, JSON.stringify(state));
+    activeJob = state;
+  }
+
+  function readPersistedJob() {
+    try { return JSON.parse(sessionStorage.getItem(JOB_STORAGE_KEY) || localStorage.getItem(JOB_STORAGE_KEY) || "null"); }
+    catch { return null; }
+  }
+
+  function clearPersistedJob() {
+    sessionStorage.removeItem(JOB_STORAGE_KEY);
+    localStorage.removeItem(JOB_STORAGE_KEY);
+    activeJob = null;
+  }
+
+  const wait = (milliseconds, signal) => new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, milliseconds);
+    signal?.addEventListener("abort", () => { clearTimeout(timer); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
+  });
+
+  function stageFromJob(stage) {
+    return ({ queued: "opportunity", extracting: "research", assessing: "assessment", reporting: "report", completed: "report" })[stage] || "research";
+  }
+
+  function jobStageLabel(stage) {
+    return ({ queued: "في قائمة الانتظار", extracting: "استخراج الفرصة والبحث", assessing: "مطابقة الأهلية والملاءمة", reporting: "إعداد التقرير", completed: "اكتمل", failed: "تعذر الإكمال", timed_out: "انتهت المهلة", cancelled: "أُلغي" })[stage] || "جارٍ التحليل";
+  }
+
+  async function followJob(state, signal) {
+    for (;;) {
+      const payload = await jobApi(state.job_id, state.resume_token, { signal });
+      const job = payload.job;
+      setStage(stageFromJob(job.stage));
+      const elapsed = root()?.querySelector("#analysisElapsed");
+      if (elapsed) elapsed.textContent = `تقدم حقيقي: ${job.progress}% · ${jobStageLabel(job.stage)} · يمكن إغلاق التبويب والعودة خلال مدة المهمة.`;
+      if (job.status === "completed") { clearPersistedJob(); return job; }
+      if (["failed", "timed_out", "cancelled"].includes(job.status)) {
+        clearPersistedJob();
+        const error = new Error(job.error?.message || "لم تكتمل مهمة التحليل.");
+        error.code = job.error?.code || "RAFID_JOB_FAILED";
+        throw error;
+      }
+      await wait(900, signal);
+    }
+  }
+
   function setFileStatus(main, input, target, defaultText) {
     input.addEventListener("change", () => {
       const selected = Array.from(input.files || []);
@@ -241,7 +314,11 @@
     setFileStatus(main, oppFile, main.querySelector("#oppFileStatus"), `PDF · DOCX · TXT · MD حتى ${maxSize}MB`);
     setFileStatus(main, researchFile, main.querySelector("#researchFileStatus"), `حتى 5 ملفات: PDF · DOCX · TXT · MD، كل ملف حتى ${maxSize}MB`);
     main.querySelector("#go").addEventListener("click", runMatch);
-    main.querySelector("#cancel").addEventListener("click", () => controller?.abort());
+    main.querySelector("#cancel").addEventListener("click", async () => {
+      if (activeJob) await jobApi(activeJob.job_id, activeJob.resume_token, { method: "DELETE" }).catch(() => {});
+      controller?.abort();
+      clearPersistedJob();
+    });
     main.querySelector("#loadTrainingExample").addEventListener("click", () => {
       const demo = window.RafidDemoData;
       if (!demo) return;
@@ -259,6 +336,24 @@
       main.querySelector("#go").focus();
     });
     resetView();
+    const pending = readPersistedJob();
+    if (pending?.job_id && pending?.resume_token) {
+      showWizardStep(main, 3);
+      requestInFlight = true;
+      activeJob = pending;
+      main.querySelector("#go").disabled = true;
+      main.querySelector("#cancel").hidden = false;
+      main.querySelector("#analysisElapsed").hidden = false;
+      controller = new AbortController();
+      followJob(pending, controller.signal).then((job) => {
+        renderMatchResults({ opportunity: job.result.opportunity, assessment: job.result.assessment, meta: { job: job.timings_ms, chunks: job.chunk_metrics, cache_hit: job.result.meta?.opportunity_cache_hit, flow_id: job.job_id, service_key: "opportunity_match" } });
+        previousMatchAssessment = job.result.assessment;
+      }).catch((error) => {
+        const errorNode = root()?.querySelector("#error");
+        if (errorNode) { errorNode.textContent = error.message; errorNode.classList.add("is-error"); }
+        requestInFlight = false;
+      });
+    }
   }
 
   function setStage(name) {
@@ -328,34 +423,26 @@
         projectFiles: researchSource.files,
         privacy,
       });
-      opportunityRequest.output_language = window.RafidI18n?.language || "ar";
-      const opportunityResponse = await callApi("opportunity/extract", opportunityRequest, controller.signal);
-
-      setStage("research");
-      projectRequest.output_language = window.RafidI18n?.language || "ar";
-      const projectResponse = await callApi("extract", projectRequest, controller.signal);
-
-      setStage("assessment");
-      const assessmentRequest = match().buildAssessmentRequest({
-        opportunity: opportunityResponse.opportunity,
-        project: projectResponse.project_data,
-        privacy,
-      });
-      assessmentRequest.output_language = window.RafidI18n?.language || "ar";
-      const assessmentResponse = await callApi("opportunity/assess", assessmentRequest, controller.signal);
-      const assessmentValidation = match().validateAssessment(assessmentResponse.assessment);
+      const language = window.RafidI18n?.language || "ar";
+      const created = await jobApi("", "", { method: "POST", body: { opportunity_request: opportunityRequest, project_request: projectRequest, previous_assessment: previousMatchAssessment, output_language: language, service_key: "opportunity_match" }, signal: controller.signal });
+      persistJob(created.job.job_id, created.resume_token);
+      const completed = await followJob(activeJob, controller.signal);
+      const assessmentValidation = match().validateAssessment(completed.result.assessment);
       if (!assessmentValidation.valid) throw new Error("أعاد الخادم نتيجة غير مكتملة. أعد المحاولة لاحقًا.");
 
       setStage("report");
       renderMatchResults({
-        opportunity: opportunityResponse.opportunity,
-        assessment: assessmentResponse.assessment,
+        opportunity: completed.result.opportunity,
+        assessment: completed.result.assessment,
         meta: {
-          opportunity: opportunityResponse.extraction_meta,
-          project: projectResponse.extraction_meta,
-          assessment: assessmentResponse.assessment_meta,
+          job: completed.timings_ms,
+          chunks: completed.chunk_metrics,
+          cache_hit: completed.result.meta?.opportunity_cache_hit,
+          flow_id: completed.job_id,
+          service_key: "opportunity_match",
         },
       });
+      previousMatchAssessment = completed.result.assessment;
     } catch (errorValue) {
       stopElapsedTimer();
       errorNode.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. بقيت المدخلات لتستطيع المحاولة مجددًا." : errorValue.message;
@@ -416,10 +503,17 @@
     const quality = assessment.quality_review || {};
     const evidenceLedger = items(quality.evidence_ledger);
     const contradictions = items(quality.contradictions);
+    const roundComparison = assessment.round_comparison;
+    const telemetryService = meta?.service_key || "opportunity_match";
+    const telemetryFlow = meta?.flow_id;
     const topGap = gaps[0] || {};
     const topAction = actions[0] || {};
     const truncated = Boolean(meta?.opportunity?.input_truncated || meta?.project?.input_truncated || meta?.assessment?.input_truncated);
     const fixedDisclaimer = "هذا التقييم عام واستـرشادي ولا يضمن القبول أو التمويل. قد تتطلب الفرصة شروطًا إضافية تتعلق بالتخصص أو الشريك أو الجاهزية التقنية أو الملكية الفكرية أو التراخيص. المصدر الرسمي وقرار الجهة الممولة هما المرجع النهائي.";
+    const readinessScore = readiness.score_available
+      ? `<div class="score-ring" style="--score:${clamp(readiness.opportunity_readiness_score)}" role="img" aria-label="الملاءمة والجاهزية ${clamp(readiness.opportunity_readiness_score)} من 100"><b>${clamp(readiness.opportunity_readiness_score)}<small>/100</small></b></div>`
+      : `<div class="score-ring score-unavailable" role="img" aria-label="لا توجد بيانات كافية لدرجة جاهزية دقيقة"><b>—</b></div>`;
+    const comparisonSection = roundComparison ? `<section class="match-section round-comparison"><div class="match-section-heading"><div><span class="rafid-kicker">بعد تحسين البحث</span><h2>التغير منذ الجولة السابقة</h2></div><p>${roundComparison.comparable_score ? `${roundComparison.score_change >= 0 ? "+" : ""}${roundComparison.score_change} نقطة` : "لا يمكن مقارنة درجة دقيقة"}</p></div><div class="quality-summary"><article><span>الأهلية</span><b>${esc(roundComparison.previous_eligibility)} ← ${esc(roundComparison.current_eligibility)}</b></article><article><span>فجوات أغلقت</span><b>${roundComparison.closed_gap_count}</b></article><article><span>تغير قوة الأدلة</span><b>${roundComparison.evidence_change >= 0 ? "+" : ""}${roundComparison.evidence_change}</b></article></div></section>` : "";
 
     root().innerHTML = `${header('<button id="new" class="rafid-text-button" type="button">تحليل جديد</button>')}
       <section class="match-report">
@@ -429,25 +523,29 @@
         <section class="report-command" aria-label="الخلاصة التنفيذية"><article><span>أهم فجوة الآن</span><b>${esc(topGap.title || "مراجعة شروط الأهلية")}</b><p>${esc(topGap.required_action || "تحقق من المصدر الرسمي قبل اتخاذ القرار.")}</p></article><article><span>الإجراء التالي</span><b>${esc(topAction.action || "استكمال الأدلة الناقصة")}</b><p>${esc(topAction.output || "ملف موثق وقابل للمراجعة")}</p></article><article><span>المراجعة البشرية</span><b>${review.institutional_review_required === false ? "موصى بها" : "مطلوبة"}</b><p>${esc(review.recommendation || "راجع الحكم مع مسؤول البرنامج.")}</p></article></section>
         <nav class="report-nav" aria-label="أقسام التقرير"><a href="#gates">الأهلية</a><a href="#fit">الملاءمة</a><a href="#quality">الأدلة والتدقيق</a><a href="#gaps">الفجوات</a><a href="#actions">خطة العمل</a><a href="#package">حزمة التقديم</a></nav>
         <div class="match-scores">
-          <article><div class="score-ring" style="--score:${clamp(readiness.opportunity_readiness_score)}" role="img" aria-label="الملاءمة والجاهزية ${clamp(readiness.opportunity_readiness_score)} من 100"><b>${clamp(readiness.opportunity_readiness_score)}<small>/100</small></b></div><span>الملاءمة والجاهزية</span><small>بعد احتساب الأهلية والأدلة</small></article>
+          <article>${readinessScore}<span>الملاءمة والجاهزية</span><small>${esc(readiness.score_status || "بعد احتساب الأهلية والأدلة")}</small></article>
           <article><div class="score-ring" style="--score:${clamp(readiness.evidence_strength_score)}" role="img" aria-label="قوة الأدلة ${clamp(readiness.evidence_strength_score)} من 100"><b>${clamp(readiness.evidence_strength_score)}<small>/100</small></b></div><span>قوة الأدلة</span><small>مدى دعم البحث لشروط الفرصة</small></article>
           <article><div class="score-ring" style="--score:${clamp(readiness.assessment_confidence)}" role="img" aria-label="ثقة التحليل ${clamp(readiness.assessment_confidence)} من 100"><b>${clamp(readiness.assessment_confidence)}<small>/100</small></b></div><span>ثقة التحليل</span><small>تتأثر باكتمال ووضوح النص</small></article>
         </div>
         <section id="gates" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">الأهلية قبل الدرجة</span><h2>الشروط الصارمة</h2></div><p>${gateSummary.total} شروط · ${gateSummary.met} مستوفاة · ${gateSummary.partial} جزئية · ${gateSummary.missing} غير مستوفاة · ${gateSummary.unknown} غير محسومة</p></div><div class="match-gates">${gates.length ? gates.map(renderGate).join("") : '<p class="empty-value">لم تُستخرج شروط أهلية صارمة؛ يلزم فحص المصدر يدويًا.</p>'}</div></section>
-        <section id="fit" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بعد الأهلية</span><h2>أبعاد الملاءمة</h2></div><p>الأوزان ثابتة ومجموعها 100</p></div><div class="fit-grid">${dimensions.length ? dimensions.map((dimension) => `<article><div><b>${esc(dimension.dimension)}</b><span>${clamp(dimension.score)}/100</span></div><p>${esc(dimension.rationale || "غير موضح")}</p><small><b>الوزن:</b> ${esc(dimension.weight_percent)}% · <b>التحسين:</b> ${esc(dimension.improvement || "لا يوجد اقتراح محدد")}</small></article>`).join("") : '<p class="empty-value">لم تتوفر أبعاد ملاءمة كافية.</p>'}</div></section>
-        <section id="quality" class="match-section quality-review"><div class="match-section-heading"><div><span class="rafid-kicker">مراجع ثانٍ مستقل عن صياغة النموذج</span><h2>الأدلة والتناقضات</h2></div><p>${quality.second_review_passed ? "اكتمل التحقق" : "يحتاج تحقق"} · ${Number(quality.corrections_count || 0)} تصحيحات · ${contradictions.length} تناقضات</p></div><div class="quality-summary"><article><span>طريقة الدرجة</span><b>${esc(quality.score_method || "غير موضح")}</b></article><article><span>تغطية الأدلة</span><b>${clamp(quality.evidence_coverage_score)}/100</b></article><article><span>إصدار الـRubric</span><b>${esc(quality.rubric_version || "غير موضح")}</b></article></div>${items(quality.corrections).length ? `<details open><summary>تصحيحات المراجع الثاني</summary>${safeList(quality.corrections)}</details>` : '<p class="quality-ok">✓ لم يعتمد المراجع الثاني حكم استيفاء بلا دليل.</p>'}<details ${contradictions.length ? "open" : ""}><summary>التناقضات التي تحتاج حسمًا (${contradictions.length})</summary>${contradictions.length ? `<div class="contradiction-list">${contradictions.map((item) => `<article><b>${esc(item.topic)}</b><p>${esc(item.first_statement)} ↔ ${esc(item.conflicting_statement)}</p><small>${esc(item.clarification_needed)}</small></article>`).join("")}</div>` : '<p class="empty-value">لم يكتشف الفحص الحتمي تناقضًا مباشرًا في البيانات المنظمة.</p>'}</details><details><summary>سجل الأدلة القابلة للمراجعة (${evidenceLedger.length})</summary>${evidenceLedger.length ? `<div class="evidence-ledger">${evidenceLedger.map((item) => `<article><span>${esc(item.category)}</span><b>${esc(item.statement)}</b><small>${esc(item.strength)} · ${esc(item.source)}</small></article>`).join("")}</div>` : '<p class="empty-value">لم تتوفر أدلة موثقة كافية؛ لذلك خُفضت قوة الأدلة والثقة.</p>'}</details></section>
+        <section id="fit" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بعد الأهلية</span><h2>أبعاد الملاءمة</h2></div><p>الأوزان ثابتة ومجموعها 100</p></div><div class="fit-grid">${dimensions.length ? dimensions.map((dimension) => `<article><div><b>${esc(dimension.dimension)}</b><span>${dimension.score_available ? `${clamp(dimension.score)}/100` : "لا توجد بيانات كافية"}</span></div><p>${esc(dimension.rationale || "غير موضح")}</p><small><b>الثقة:</b> ${clamp(dimension.confidence)}% · <b>الدليل:</b> ${items(dimension.evidence).map(esc).join("، ") || "لا يوجد دليل"}</small><small><b>الوزن:</b> ${esc(dimension.weight_percent)}% · <b>التحسين:</b> ${esc(dimension.improvement || "لا يوجد اقتراح محدد")}</small></article>`).join("") : '<p class="empty-value">لم تتوفر أبعاد ملاءمة كافية.</p>'}</div></section>
+        <section id="quality" class="match-section quality-review"><div class="match-section-heading"><div><span class="rafid-kicker">مراجع ثانٍ مستقل عن صياغة النموذج</span><h2>الأدلة والتناقضات</h2></div><p>${quality.second_review_passed ? "اكتمل التحقق" : "يحتاج تحقق"} · ${Number(quality.corrections_count || 0)} تصحيحات · ${contradictions.length} تناقضات</p></div><div class="quality-summary"><article><span>طريقة الدرجة</span><b>${esc(quality.score_method || "غير موضح")}</b></article><article><span>تغطية الأدلة</span><b>${clamp(quality.evidence_coverage_score)}/100</b></article><article><span>إصدار الـRubric</span><b>${esc(quality.rubric_version || "غير موضح")}</b></article></div>${items(quality.corrections).length ? `<details open><summary>تصحيحات المراجع الثاني</summary>${safeList(quality.corrections)}</details>` : '<p class="quality-ok">✓ لم يعتمد المراجع الثاني حكم استيفاء بلا دليل.</p>'}<details ${contradictions.length ? "open" : ""}><summary>التناقضات التي تحتاج حسمًا (${contradictions.length})</summary>${contradictions.length ? `<div class="contradiction-list">${contradictions.map((item) => `<article><b>${esc(item.topic)}</b><p>${esc(item.first_statement)} ↔ ${esc(item.conflicting_statement)}</p><small>${esc(item.clarification_needed)}</small></article>`).join("")}</div>` : '<p class="empty-value">لم يكتشف الفحص الحتمي تناقضًا مباشرًا في البيانات المنظمة.</p>'}</details><details><summary>سجل الأدلة القابلة للمراجعة (${evidenceLedger.length})</summary>${evidenceLedger.length ? `<div class="evidence-ledger">${evidenceLedger.map((item) => `<article><span>${esc(item.category)}</span><b>${esc(item.statement)}</b><small>${esc(item.evidence_id)} · ${esc(item.strength)} · ${esc(item.locator?.label || item.source)}</small></article>`).join("")}</div>` : '<p class="empty-value">لم تتوفر أدلة موثقة كافية؛ لذلك خُفضت قوة الأدلة والثقة.</p>'}</details></section>
+        ${comparisonSection}
         <section id="gaps" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">ما يمنع أو يؤخر التقديم</span><h2>الفجوات</h2></div></div><div class="match-gap-grid">${gaps.length ? gaps.map((gap) => `<article class="severity-${esc(gap.severity)}"><span>${esc(gap.severity)}</span><h3>${esc(gap.title)}</h3><p>${esc(gap.current_state || "غير موضح")}</p><dl><dt>المطلوب</dt><dd>${esc(gap.required_action || "غير موضح")}</dd><dt>معيار الإغلاق</dt><dd>${esc(gap.completion_criterion || "غير موضح")}</dd></dl></article>`).join("") : '<p class="empty-value">لم تُسجل فجوات، لكن تبقى المراجعة البشرية مطلوبة.</p>'}</div></section>
         <section id="actions" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">بالترتيب</span><h2>خطة إغلاق الفجوات</h2></div></div><ol class="match-actions">${actions.length ? actions.map(renderAction).join("") : '<li><span>١</span><div><b>راجع المصدر الرسمي</b><p>لم تتوفر إجراءات منظمة كافية.</p></div></li>'}</ol></section>
         <section id="package" class="match-section"><div class="match-section-heading"><div><span class="rafid-kicker">قبل الإرسال</span><h2>حزمة التقديم</h2></div></div><div class="package-grid match-package">${packageItems.length ? packageItems.map((entry) => `<article><span class="package-status ${statusClass(entry.status === "جاهز" ? "مستوفى" : entry.status === "ناقص" ? "غير مستوفى" : "غير معروف")}">${esc(entry.status)}</span><b>${esc(entry.document_name)}</b><p>${esc(entry.available_evidence || "لا يتوفر دليل واضح")}</p><small>${esc(entry.next_action || "راجع متطلبات الوثيقة")}</small></article>`).join("") : '<p class="empty-value">لم تُستخرج قائمة وثائق واضحة.</p>'}</div></section>
         <section class="match-section questions-grid"><div><h2>أسئلة للفريق</h2>${safeList(review.questions_for_project_team)}</div><div><h2>أسئلة للجهة الممولة</h2>${safeList(review.questions_for_funder)}</div></section>
         <p class="rafid-notice match-disclaimer">${fixedDisclaimer}</p>
-        <div class="form-actions report-actions"><button id="copy" class="rafid-secondary" type="button">نسخ الخلاصة</button><button id="download" class="rafid-secondary" type="button">تنزيل تقرير مقروء</button><button id="print" class="rafid-primary" type="button">طباعة التقرير</button><button id="newBottom" class="rafid-text-button" type="button">بدء تحليل جديد</button></div>
+        <div class="form-actions report-actions"><button id="improve" class="rafid-primary" type="button">حسّن بحثك خطوة بخطوة</button><button id="copy" class="rafid-secondary" type="button">نسخ الخلاصة</button><button id="download" class="rafid-secondary" type="button">تنزيل تقرير مقروء</button><button id="print" class="rafid-secondary" type="button">طباعة التقرير</button><button id="newBottom" class="rafid-text-button" type="button">بدء تحليل جديد</button></div>
+        <fieldset class="result-feedback"><legend>هل كانت النتيجة مفيدة؟</legend><button type="button" data-rating="3">مفيدة جدًا</button><button type="button" data-rating="2">مفيدة جزئيًا</button><button type="button" data-rating="1">غير مفيدة</button><p role="status"></p></fieldset>
         <p id="copyStatus" role="status" class="copy-status"></p>
       </section>`;
+    if (telemetryFlow) window.RafidTelemetry?.record("report_viewed", telemetryService, telemetryFlow);
     const restart = () => matchView();
     root().querySelector("#new").addEventListener("click", restart);
     root().querySelector("#newBottom").addEventListener("click", restart);
     root().querySelector("#print").addEventListener("click", () => window.print());
+    root().querySelector("#improve").addEventListener("click", () => window.RafidImprove?.open({ opportunity, assessment }));
     root().querySelector("#download").addEventListener("click", () => {
       const report = root().querySelector(".match-report");
       const blob = new Blob([report?.innerText || match().summaryText(assessment)], { type: "text/plain;charset=utf-8" });
@@ -457,7 +555,13 @@
       link.download = `rafid-opportunity-report-${new Date().toISOString().slice(0, 10)}.txt`;
       link.click();
       URL.revokeObjectURL(url);
+      if (telemetryFlow) window.RafidTelemetry?.record("report_downloaded", telemetryService, telemetryFlow);
     });
+    root().querySelectorAll(".result-feedback [data-rating]").forEach((button) => button.addEventListener("click", () => {
+      if (telemetryFlow) window.RafidTelemetry?.record("feedback_submitted", telemetryService, telemetryFlow, { rating: Number(button.dataset.rating) });
+      root().querySelectorAll(".result-feedback button").forEach((item) => { item.disabled = true; });
+      root().querySelector(".result-feedback p").textContent = "شكرًا، سُجل التقييم دون محتوى البحث أو بيانات شخصية.";
+    }, { once: true }));
     root().querySelector("#copy").addEventListener("click", async () => {
       const status = root().querySelector("#copyStatus");
       try {
@@ -501,8 +605,9 @@
         error.classList.remove("is-error");
         error.textContent = t("قراءة المحتوى… تحليل العناصر… تقييم الجاهزية… إعداد التوصيات…", "Reading content… Analyzing elements… Scoring readiness… Preparing recommendations…");
         controller = new AbortController();
-        const data = await callApi("research/analyze", { text: source.text, output_language: window.RafidI18n?.language || "ar" }, controller.signal);
-        generalResults(data.result, data.meta);
+        const flowId = window.RafidTelemetry?.start("general_readiness");
+        const data = await callApi("research/analyze", { text: source.text, output_language: window.RafidI18n?.language || "ar", telemetry_flow_id: flowId }, controller.signal);
+        generalResults(data.result, { ...data.meta, flow_id: flowId || data.requestId, service_key: "general_readiness" });
       } catch (errorValue) {
         error.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. يمكنك المحاولة مجددًا." : errorValue.message;
         error.classList.add("is-error");
@@ -521,15 +626,20 @@
     const truncationNotice = meta.truncated ? '<p class="rafid-notice">تم تحليل الجزء المقبول من المستند الطويل فقط؛ أعد التحليل على ملخص مركز للحصول على تغطية أوسع.</p>' : "";
     const confidence = t(result.confidence || "منخفض", ({ مرتفع: "High", متوسط: "Medium", منخفض: "Low" })[result.confidence] || result.confidence || "Low");
     const disclaimer = t(result.fundingDisclaimer || "هذا التحليل إرشادي ولا يضمن الحصول على تمويل.", "This assessment is advisory and does not guarantee funding or acceptance. Verify the official opportunity criteria before applying.");
-    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${esc(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores"><article><span>${t("الجاهزية التقنية", "Technical readiness")}</span><meter min="0" max="100" value="${clamp(result.technicalReadiness?.score)}"></meter><b>${clamp(result.technicalReadiness?.score)}<small>/100</small></b></article><article><span>${t("الجاهزية التمويلية", "Funding readiness")}</span><meter min="0" max="100" value="${clamp(result.fundingReadiness?.score)}"></meter><b>${clamp(result.fundingReadiness?.score)}<small>/100</small></b></article></div><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الدرجات", "Score explanations")}</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${safeList(result.criticalGaps)}</details><details><summary>${t("خطة العمل", "Action plan")}</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير", "Print report")}</button></div></section>`;
+    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${esc(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores"><article><span>${t("الجاهزية التقنية", "Technical readiness")}</span><meter min="0" max="100" value="${clamp(result.technicalReadiness?.score)}"></meter><b>${clamp(result.technicalReadiness?.score)}<small>/100</small></b></article><article><span>${t("الجاهزية التمويلية", "Funding readiness")}</span><meter min="0" max="100" value="${clamp(result.fundingReadiness?.score)}"></meter><b>${clamp(result.fundingReadiness?.score)}<small>/100</small></b></article></div><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الدرجات", "Score explanations")}</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${safeList(result.criticalGaps)}</details><details><summary>${t("خطة العمل", "Action plan")}</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="download" class="rafid-secondary" type="button">${t("تنزيل تقرير", "Download report")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير", "Print report")}</button></div><fieldset class="result-feedback"><legend>${t("هل كانت النتيجة مفيدة؟", "Was this result useful?")}</legend><button type="button" data-rating="3">${t("مفيدة جدًا", "Very useful")}</button><button type="button" data-rating="2">${t("مفيدة جزئيًا", "Partly useful")}</button><button type="button" data-rating="1">${t("غير مفيدة", "Not useful")}</button><p role="status"></p></fieldset></section>`;
+    const flowId = meta.flow_id;
+    if (flowId) window.RafidTelemetry?.record("report_viewed", "general_readiness", flowId);
     root().querySelector("#new").addEventListener("click", generalView);
     root().querySelector("#copy").addEventListener("click", () => navigator.clipboard?.writeText(result.researchSummary || ""));
     root().querySelector("#print").addEventListener("click", () => window.print());
+    root().querySelector("#download").addEventListener("click", () => { const blob = new Blob([root().querySelector(".rafid-report")?.innerText || result.researchSummary || ""], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `rafid-readiness-${new Date().toISOString().slice(0, 10)}.txt`; link.click(); URL.revokeObjectURL(url); if (flowId) window.RafidTelemetry?.record("report_downloaded", "general_readiness", flowId); });
+    root().querySelectorAll(".result-feedback [data-rating]").forEach((button) => button.addEventListener("click", () => { if (flowId) window.RafidTelemetry?.record("feedback_submitted", "general_readiness", flowId, { rating: Number(button.dataset.rating) }); root().querySelectorAll(".result-feedback button").forEach((item) => { item.disabled = true; }); root().querySelector(".result-feedback p").textContent = t("شكرًا، سُجل التقييم دون محتوى البحث.", "Thank you. The rating was recorded without research content."); }, { once: true }));
     resetView();
   }
 
   window.addEventListener("DOMContentLoaded", () => {
     app();
+    if (readPersistedJob()?.job_id) matchView();
     void loadRuntime();
   });
   document.addEventListener("click", (event) => {
@@ -539,5 +649,5 @@
     if (location.hash !== "#home") history.pushState(null, "", "#home");
     app();
   });
-  window.RafidApp = Object.freeze({ home: app, general: generalView, match: matchView, discovery: () => window.RafidAdvancedServices.discovery(), portfolio: () => window.RafidAdvancedServices.portfolio() });
+  window.RafidApp = Object.freeze({ home: app, general: generalView, match: matchView, showMatchResult: renderMatchResults, discovery: () => window.RafidAdvancedServices.discovery(), portfolio: () => window.RafidAdvancedServices.portfolio() });
 })();

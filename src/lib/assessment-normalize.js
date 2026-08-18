@@ -1,7 +1,7 @@
 "use strict";
 
 const { arr, clamp, stableId } = require("./opportunity-normalize");
-const { applySecondReview } = require("./assessment-quality");
+const { applySecondReview, compareAssessmentRounds, evidenceWeight, RUBRIC_VERSION } = require("./assessment-quality");
 
 const ASSESSMENT_VERSION = "rafid.opportunity-match.v1";
 const FUNDING_DISCLAIMER =
@@ -55,6 +55,7 @@ function missingGate(requirement) {
     requirement_id: requirement.requirement_id,
     requirement: requirement.title || requirement.description || "شرط غير مسمى",
     status: "غير معروف",
+    confidence: 20,
     resolution: "يحتاج تحقق",
     verdict_basis: "لم يرجع المحرك حكمًا موثقًا لهذا الشرط؛ أضافه رافد حتميًا للمراجعة.",
     project_evidence: [],
@@ -81,15 +82,29 @@ function expandGate(requirement, gate) {
       ? { evidence: item, source: "بيانات المشروع المنظمة", strength: "جزئي" }
       : item,
   );
+  const status = GATE_STATUSES.has(gate.status) ? gate.status : "غير معروف";
+  const evidenceStrength = evidence.reduce((best, item) => Math.max(best, evidenceWeight(item?.strength)), 0);
+  const confidence = status === "غير معروف"
+    ? 20
+    : status === "لا ينطبق"
+      ? 55
+      : Math.round(evidenceStrength * 85 + (requirement.source_quote ? 15 : 0));
   return {
     ...missingGate(requirement),
     ...gate,
     requirement_id: requirement.requirement_id,
     requirement: requirement.title || requirement.description || gate.requirement || "شرط غير مسمى",
-    status: GATE_STATUSES.has(gate.status) ? gate.status : "غير معروف",
-    resolution: gate.resolution || gateResolution(GATE_STATUSES.has(gate.status) ? gate.status : "غير معروف"),
+    status,
+    resolution: gate.resolution || gateResolution(status),
+    confidence: clamp(confidence),
     project_evidence: evidence,
-    missing_evidence: arr(gate.missing_evidence),
+    missing_evidence: arr(gate.missing_evidence).length
+      ? arr(gate.missing_evidence)
+      : status === "مستوفى" || status === "لا ينطبق"
+        ? []
+        : arr(requirement.evidence_required).length
+          ? arr(requirement.evidence_required)
+          : ["دليل يثبت استيفاء الشرط"],
     remediation: gate.remediation || "استكمل الدليل واربطه بالنص الرسمي للشرط.",
     owner_role: gate.owner_role || "فريق المشروع",
     due_date: gate.due_date || null,
@@ -316,7 +331,7 @@ function fallbackAssessmentData({ opportunity, project } = {}) {
   };
 }
 
-function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
+function normalizeAssessmentData(assessment, { opportunity, project, previousAssessment = null } = {}) {
   const item = structuredClone(assessment || {});
   item.analysis_version = ASSESSMENT_VERSION;
   item.funding_disclaimer = FUNDING_DISCLAIMER;
@@ -460,6 +475,11 @@ function normalizeAssessmentData(assessment, { opportunity, project } = {}) {
     item.institutional_review.recommendation = recommendationByDecision;
   }
   item.readiness.summary = `${item.eligibility.reason} الدرجة ${item.readiness.opportunity_readiness_score} من 100 حُسبت بروبريك ثابت، وقوة الأدلة ${item.readiness.evidence_strength_score} من 100.`;
+  if (!item.readiness.score_available) {
+    const range = item.readiness.score_range;
+    item.readiness.summary = `${item.eligibility.reason} البيانات الحالية لا تكفي لعرض درجة دقيقة وفق روبريك ثابت${range ? `؛ النطاق الاسترشادي ${range.minimum}–${range.maximum}` : ""}. قوة الأدلة ${item.readiness.evidence_strength_score} من 100.`;
+  }
+  item.round_comparison = compareAssessmentRounds(previousAssessment, item);
 
   return item;
 }
@@ -473,8 +493,20 @@ function validateAssessmentData(assessment) {
   if (!assessment?.eligibility?.status) errors.push("لم يمكن اشتقاق حالة الأهلية.");
   if (assessment?.analysis_version !== ASSESSMENT_VERSION)
     errors.push("إصدار تحليل الملاءمة غير صالح.");
-  if (assessment?.quality_review?.rubric_version !== "rafid.deterministic-rubric.v2")
+  if (assessment?.quality_review?.rubric_version !== RUBRIC_VERSION)
     errors.push("لم تمر النتيجة بمحرك التقييم الحتمي والمراجع الثاني.");
+  if (assessment?.readiness?.score_available === false && assessment?.readiness?.opportunity_readiness_score !== null)
+    errors.push("لا يجوز عرض درجة دقيقة عندما تكون بيانات التقييم غير كافية.");
+  if (assessment?.readiness?.score_available === true && !Number.isFinite(Number(assessment?.readiness?.opportunity_readiness_score)))
+    errors.push("درجة الجاهزية المطلوبة غير موجودة رغم كفاية البيانات.");
+  for (const dimension of arr(assessment?.fit_dimensions)) {
+    if (!Number.isFinite(Number(dimension.confidence)) || dimension.confidence < 0 || dimension.confidence > 100)
+      errors.push(`ثقة بُعد «${dimension.dimension || "غير مسمى"}» غير صالحة.`);
+    if (!arr(dimension.evidence).length)
+      errors.push(`بُعد «${dimension.dimension || "غير مسمى"}» لا يصرح بالدليل أو غيابه.`);
+    if (dimension.score_available === false && dimension.score !== null)
+      errors.push(`بُعد «${dimension.dimension || "غير مسمى"}» يعرض درجة دقيقة دون أدلة كافية.`);
+  }
   if (!arr(assessment?.hard_gates).length)
     warnings.push("لم تحتوِ الفرصة على بوابات أهلية صارمة؛ يلزم تحقق بشري موسع.");
   if (assessment?.readiness?.assessment_confidence < 60)
@@ -486,10 +518,20 @@ function portfolioSort(a, b) {
   const aRank = STATUS_RANK[a?.assessment?.eligibility?.status] ?? 9;
   const bRank = STATUS_RANK[b?.assessment?.eligibility?.status] ?? 9;
   if (aRank !== bRank) return aRank - bRank;
-  return (
-    (b?.assessment?.readiness?.opportunity_readiness_score || 0) -
-    (a?.assessment?.readiness?.opportunity_readiness_score || 0)
-  );
+  const aReadiness = a?.assessment?.readiness || {};
+  const bReadiness = b?.assessment?.readiness || {};
+  if (Boolean(aReadiness.score_available) !== Boolean(bReadiness.score_available)) {
+    return bReadiness.score_available ? 1 : -1;
+  }
+  if (aReadiness.score_available) {
+    const scoreDelta = Number(bReadiness.opportunity_readiness_score) - Number(aReadiness.opportunity_readiness_score);
+    if (scoreDelta) return scoreDelta;
+  }
+  const evidenceDelta = clamp(bReadiness.evidence_strength_score || 0) - clamp(aReadiness.evidence_strength_score || 0);
+  if (evidenceDelta) return evidenceDelta;
+  const confidenceDelta = clamp(bReadiness.assessment_confidence || 0) - clamp(aReadiness.assessment_confidence || 0);
+  if (confidenceDelta) return confidenceDelta;
+  return arr(a?.assessment?.gaps).length - arr(b?.assessment?.gaps).length;
 }
 
 module.exports = {
@@ -502,4 +544,5 @@ module.exports = {
   normalizeAssessmentData,
   validateAssessmentData,
   portfolioSort,
+  compareAssessmentRounds,
 };

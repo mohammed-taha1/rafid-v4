@@ -39,6 +39,7 @@ assert.match(css, /service-card-top\{[^}]+justify-content:space-between/, "Servi
 assert.match(css, /@media\(max-width:620px\)\{[^}]*\.service-grid\{grid-template-columns:1fr\}/, "Services must use one readable column on small phones.");
 assert.match(css, /\.match-progress span\{display:grid;grid-template-columns:18px minmax\(0,1fr\)/, "Analysis progress markers need a dedicated column that cannot overlap their labels.");
 assert.match(css, /\.match-progress span::before\{position:static[^}]+transform:none/, "Analysis progress markers must participate in layout instead of using absolute positioning.");
+assert.match(css, /\.score-ring\.score-unavailable\{[^}]+dashed/, "Unavailable scores need a distinct non-zero visual state.");
 assert.doesNotMatch(html, /class="topbar"|class="app-shell"|id="authGate"/, "Legacy UI must not exist in the entry document.");
 assert.doesNotMatch(html, /rafid-v4\.js|results-report\.js|optional-feedback\.js|supabase\.min\.js/, "Unused legacy bundles must not load.");
 assert.match(html, /rafid-config\.js[^]*research-ui\.js/, "Central product configuration must load before the UI.");
@@ -53,6 +54,10 @@ assert.match(ui, /researchFile[^]*multiple/, "Research intake must support multi
 assert.match(ui, /workflow-stepper/, "Opportunity matching must use a short guided workflow.");
 assert.match(ingest, /PDF وDOCX وTXT وMD/, "Document ingestion must clearly expose supported types.");
 assert.match(ui, /report-command/, "The report must lead with an executive next-action summary.");
+assert.match(ui, /لا توجد بيانات كافية لدرجة جاهزية دقيقة/, "Insufficient evidence must not render a precise readiness score.");
+assert.match(ui, /dimension\.confidence/, "Every fit dimension must expose its own confidence.");
+assert.match(ui, /round-comparison/, "Improved research must support an in-session before/after comparison.");
+assert.match(ui, /item\.evidence_id/, "Evidence entries must expose stable traceable ids.");
 for (const code of ["RAFID_GLOBAL_DAILY_LIMIT", "RAFID_USER_RATE_LIMIT", "RAFID_PROVIDER_TIMEOUT", "RAFID_PROVIDER_UNAVAILABLE", "RAFID_INVALID_PROVIDER_RESPONSE", "RAFID_GROQ_UNAVAILABLE", "RAFID_GROQ_RATE_LIMITED", "RAFID_PROVIDER_NOT_CONFIGURED", "RAFID_ZDR_REQUIRED", "RAFID_STRUCTURED_OUTPUT_SCHEMA_FAILED"]) {
   assert.match(ui, new RegExp(code), `A safe Arabic UI message is required for ${code}.`);
 }

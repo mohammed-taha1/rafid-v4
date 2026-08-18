@@ -168,13 +168,16 @@ function inspectEnvironment() {
       message: "Supabase authentication requires the browser-safe anonymous key.",
     });
   }
-  if (supabase.serviceRoleConfigured) {
+  if (supabase.serviceRoleConfigured && !envFlag("RAFID_PRODUCT_TELEMETRY_ENABLED", true)) {
     issues.push({
       severity: "warning",
       code: "SUPABASE_SERVICE_ROLE_KEY_UNUSED",
       variables: ["SUPABASE_SERVICE_ROLE_KEY"],
-      message: "This application does not use the service-role key; keep it server-only or remove it.",
+      message: "Product telemetry is disabled, so the service-role key is unused; remove it or keep it server-only.",
     });
+  }
+  if (envFlag("RAFID_PRODUCT_TELEMETRY_ENABLED", true) && supabase.configured && !supabase.serviceRoleConfigured) {
+    issues.push({ severity: "warning", code: "RAFID_TELEMETRY_DISABLED", variables: ["SUPABASE_SERVICE_ROLE_KEY"], message: "The operations dashboard needs a server-only service-role key to persist content-free events." });
   }
 
   if (deploymentMode === "shared" && !authRequired) {

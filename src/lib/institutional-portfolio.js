@@ -8,7 +8,6 @@ const {
   normalizeAssessmentData,
   validateAssessmentData,
   portfolioSort,
-  STATUS_RANK,
 } = require("./assessment-normalize");
 
 const PORTFOLIO_VERSION = "rafid.institutional-portfolio.v1";
@@ -24,6 +23,7 @@ function priorityBand(assessment) {
   const score = assessment.readiness.opportunity_readiness_score;
   if (eligibility === "غير مؤهل") return "استبعاد من هذه الدورة";
   if (eligibility === "غير محسوم") return "تحقق أهلية عاجل";
+  if (!assessment.readiness.score_available) return "استكمل الأدلة قبل ترتيب الجاهزية";
   if (eligibility === "مؤهل بشروط") return score >= 60 ? "أغلق الفجوات ثم قدم" : "تحسين قبل التقديم";
   return score >= 70 ? "أولوية مراجعة عالية" : "مراجعة وتدعيم الأدلة";
 }
@@ -106,11 +106,7 @@ function comparePortfolio(opportunityInput, projectInputs) {
     counts[status] = (counts[status] || 0) + 1;
     return counts;
   }, {});
-  const reviewQueue = [...rows].sort((a, b) => {
-    const eligibilityDelta = (STATUS_RANK[a.decision.eligibility] ?? 9) - (STATUS_RANK[b.decision.eligibility] ?? 9);
-    if (eligibilityDelta !== 0) return eligibilityDelta;
-    return b.decision.readiness_score - a.decision.readiness_score;
-  });
+  const reviewQueue = [...rows].sort(portfolioSort);
 
   return {
     portfolio_version: PORTFOLIO_VERSION,

@@ -1,6 +1,7 @@
 "use strict";
 
 const { FUNDING_CATALOG, CATALOG_VERSION, VERIFIED_AT } = require("../data/funding-catalog");
+const { publishableCatalog, publicOpportunity, evaluateStrictGates } = require("./funding-registry");
 const { normalizeProjectData, validateProjectData, arr } = require("./normalize");
 
 const DISCOVERY_VERSION = "rafid.opportunity-discovery.v1";
@@ -148,6 +149,7 @@ function matchOpportunity(project, opportunity) {
   if (!signals.hasTeam) missing.push("أدوار الفريق");
   if (signals.trl === null) missing.push("مستوى الجاهزية التقنية");
   missing.push("تأكيد أن الدعوة مفتوحة وشروط الدورة الحالية");
+  const deterministicGates = evaluateStrictGates({ application_status: opportunity.application_status }, opportunity);
   return {
     opportunity: {
       opportunity_id: opportunity.opportunity_id,
@@ -166,6 +168,7 @@ function matchOpportunity(project, opportunity) {
     dimensions,
     why_recommended: dimensions.filter((item) => item.score >= 70).slice(0, 3).map((item) => `${item.label}: ${item.rationale}`),
     missing_for_decision: missing,
+    deterministic_gates: deterministicGates,
     hard_gate_warning: "الترتيب تمهيدي؛ لا تصبح الفرصة مؤهلة قبل التحقق من الدعوة الحالية وجميع الشروط الصارمة.",
   };
 }
@@ -182,7 +185,7 @@ function discoverOpportunities(projectInput, options = {}) {
   const query = normalizeArabic(options.query);
   const funder = normalizeArabic(options.funder);
   const limit = Math.max(1, Math.min(20, Number.parseInt(options.limit || "8", 10)));
-  const catalog = arr(options.catalog).length ? options.catalog : FUNDING_CATALOG;
+  const catalog = publishableCatalog(arr(options.catalog).length ? options.catalog : FUNDING_CATALOG);
   const filtered = catalog.filter((item) => {
     const haystack = normalizeArabic(`${item.title} ${item.funder} ${item.summary} ${arr(item.keywords).join(" ")}`);
     return (!query || haystack.includes(query)) && (!funder || normalizeArabic(item.funder).includes(funder));
@@ -217,19 +220,12 @@ function discoverOpportunities(projectInput, options = {}) {
 }
 
 function publicCatalog() {
+  const approved = publishableCatalog(FUNDING_CATALOG);
   return {
     catalog_version: CATALOG_VERSION,
     verified_at: VERIFIED_AT,
-    opportunities: FUNDING_CATALOG.map((item) => ({
-      opportunity_id: item.opportunity_id,
-      title: item.title,
-      funder: item.funder,
-      summary: item.summary,
-      official_url: item.official_url,
-      application_status: item.application_status,
-      deadline: item.deadline,
-      last_verified_at: item.last_verified_at,
-    })),
+    review_policy: "human_approval_required_before_publication",
+    opportunities: approved.map(publicOpportunity),
     notice: "وجود البرنامج في الكتالوج لا يعني أن التقديم مفتوح. حالة الدورة تُراجع في المصدر الرسمي.",
   };
 }

@@ -62,7 +62,8 @@ async function main() {
     const catalog = await catalogResponse.json();
     assert.equal(catalog.ok, true);
     assert.ok(catalog.opportunities.length >= 8);
-    assert.ok(catalog.opportunities.every((item) => item.application_status === "تحقق من المصدر الرسمي"));
+    assert.ok(catalog.opportunities.every((item) => item.application_status === "verify_official_source"));
+    assert.ok(catalog.opportunities.every((item) => item.review.status === "approved"));
 
     const health = await fetch(`http://127.0.0.1:${port}/api/rafid/health`);
     assert.equal(health.status, 503);

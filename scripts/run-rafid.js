@@ -72,6 +72,8 @@ const { analyzeResearch } = require("../src/lib/research-pipeline");
 const { createGroqResearchProvider } = require("../src/lib/research-provider");
 const { discoverOpportunities, publicCatalog } = require("../src/lib/funding-discovery");
 const { comparePortfolio } = require("../src/lib/institutional-portfolio");
+const { createAnalysisJob, getAnalysisJob, cancelAnalysisJob, jobMetrics } = require("../src/lib/analysis-jobs");
+const { gapTaxonomy, recordProductEvent } = require("../src/lib/product-telemetry");
 
 const version = "4.3.0";
 const deploymentMode = String(process.env.RAFID_DEPLOYMENT_MODE || "local").toLowerCase();
@@ -120,8 +122,8 @@ function sendOptions(response) {
   response.writeHead(204, {
     ...securityHeaders(),
     "Access-Control-Allow-Origin": `http://${host}:${port}`,
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization,Content-Type,x-rafid-access-token",
+    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization,Content-Type,x-rafid-access-token,x-rafid-job-token",
   });
   response.end();
 }
@@ -228,6 +230,9 @@ function normalizeAssessmentRequest(body) {
   return {
     opportunity,
     project,
+    previousAssessment: body.previous_assessment && typeof body.previous_assessment === "object"
+      ? body.previous_assessment
+      : null,
     context: body.context && typeof body.context === "object" ? body.context : {},
     privacy: normalizePrivacy(body),
   };
@@ -597,6 +602,7 @@ async function handleApi(request, response, pathname) {
       deployment_mode: runtime.deployment_mode,
       local_only: runtime.deployment_mode === "local",
       raw_content_persistence: false,
+      analysis_jobs: jobMetrics(),
       workspace_sync: runtime.workspace_sync.enabled,
       endpoints: [
         "/api/rafid/public/config",
@@ -607,8 +613,32 @@ async function handleApi(request, response, pathname) {
         "/api/rafid/opportunities/catalog",
         "/api/rafid/opportunities/discover",
         "/api/rafid/portfolio/compare",
+        "/api/rafid/telemetry",
       ],
     });
+  }
+
+  if (pathname === "/api/rafid/analysis/jobs" && request.method === "POST") {
+    assertRateLimit(request, auth);
+    const created = createAnalysisJob(await readJson(request));
+    return sendJson(response, 202, { ok: true, ...created });
+  }
+  const jobMatch = pathname.match(/^\/api\/rafid\/analysis\/jobs\/([0-9a-f-]+)$/i);
+  if (jobMatch && request.method === "GET") {
+    return sendJson(response, 200, { ok: true, job: getAnalysisJob(jobMatch[1], request.headers["x-rafid-job-token"]) });
+  }
+  if (jobMatch && request.method === "DELETE") {
+    return sendJson(response, 202, { ok: true, job: cancelAnalysisJob(jobMatch[1], request.headers["x-rafid-job-token"]) });
+  }
+
+  if (pathname === "/api/rafid/telemetry" && request.method === "POST") {
+    assertRateLimit(request, auth, { countGlobal: false });
+    const event = await readJson(request);
+    if (!["service_started","report_viewed","report_downloaded","feedback_submitted"].includes(String(event.event_name || ""))) {
+      const error = new Error("نوع حدث التشغيل غير مدعوم."); error.statusCode = 400; error.code = "RAFID_INVALID_PRODUCT_EVENT"; throw error;
+    }
+    const result = await recordProductEvent(event);
+    return sendJson(response, 202, { ok: true, recorded: result.recorded });
   }
 
   if (request.method !== "POST") return sendJson(response, 405, { ok: false, error: "الطريقة غير مدعومة." });
@@ -640,10 +670,14 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === "/api/rafid/research/analyze") {
     assertRateLimit(request, auth);
+    const telemetryFlow = /^[0-9a-f-]{36}$/i.test(String(body.telemetry_flow_id || "")) ? String(body.telemetry_flow_id) : requestId();
+    const telemetryStarted = Date.now();
     try {
       const result = await analyzeResearch(body, { provider: createGroqResearchProvider(), maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 20), maxAnalysisInputChars: Number(process.env.MAX_ANALYSIS_INPUT_CHARS || 16000), timeoutMs: Number(process.env.ANALYSIS_TIMEOUT_SECONDS || 60) * 1000 });
+      void recordProductEvent({ flow_id: telemetryFlow, event_name: "analysis_finished", service_key: "general_readiness", outcome: "succeeded", duration_ms: Date.now() - telemetryStarted, stage_timings: { total: Date.now() - telemetryStarted }, gap_keys: gapTaxonomy(result.result?.criticalGaps) });
       return sendJson(response, 200, { ok: true, ...result });
     } catch (error) {
+      void recordProductEvent({ flow_id: telemetryFlow, event_name: "analysis_finished", service_key: "general_readiness", outcome: error.code === "TIMEOUT" ? "timed_out" : "failed", duration_ms: Date.now() - telemetryStarted, stage_timings: { total: Date.now() - telemetryStarted }, error_code: error.code || "PROVIDER_UNAVAILABLE" });
       return sendJson(response, error.statusCode || 503, { ok: false, code: error.code || "PROVIDER_UNAVAILABLE", error: error.message || "تعذر إكمال التحليل الآن." });
     }
   }
@@ -653,7 +687,9 @@ async function handleApi(request, response, pathname) {
     assertInputSize(body, "طلب اكتشاف الفرص");
     normalizePrivacy(body);
     const startedAt = Date.now();
+    const telemetryFlow = /^[0-9a-f-]{36}$/i.test(String(body.telemetry_flow_id || "")) ? String(body.telemetry_flow_id) : requestId();
     const result = discoverOpportunities(body.project_data, body.filters || {});
+    void recordProductEvent({ flow_id: telemetryFlow, event_name: "analysis_finished", service_key: "funding_discovery", outcome: "succeeded", duration_ms: Date.now() - startedAt, stage_timings: { total: Date.now() - startedAt } });
     return sendJson(response, 200, {
       ok: true,
       result,
@@ -666,7 +702,9 @@ async function handleApi(request, response, pathname) {
     assertInputSize(body, "طلب مقارنة المحفظة");
     normalizePrivacy(body);
     const startedAt = Date.now();
+    const telemetryFlow = /^[0-9a-f-]{36}$/i.test(String(body.telemetry_flow_id || "")) ? String(body.telemetry_flow_id) : requestId();
     const result = comparePortfolio(body.opportunity, body.projects);
+    void recordProductEvent({ flow_id: telemetryFlow, event_name: "analysis_finished", service_key: "portfolio_compare", outcome: "succeeded", duration_ms: Date.now() - startedAt, stage_timings: { total: Date.now() - startedAt } });
     return sendJson(response, 200, {
       ok: true,
       result,

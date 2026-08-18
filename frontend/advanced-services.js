@@ -2,8 +2,15 @@
 
 (() => {
   let activeController;
+  let activeFlowId;
   let runtimeLimits;
   const t = (ar, en) => window.RafidI18n?.t(ar, en) ?? ar;
+  const applicationStatus = (value) => ({
+    open: t("مفتوحة", "Open"),
+    closed: t("مغلقة", "Closed"),
+    upcoming: t("قادمة", "Upcoming"),
+    verify_official_source: t("تحقق من المصدر الرسمي", "Verify the official source"),
+  })[value] || value;
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   const root = () => document.querySelector(".rafid");
   const privacy = () => ({ classification: "internal", remote_processing_confirmed: true, redaction_preview_confirmed: true, redactions_applied: [] });
@@ -100,12 +107,13 @@
         cancel.hidden = false;
         error.textContent = "";
         activeController = new AbortController();
+        activeFlowId = window.RafidTelemetry?.start("funding_discovery");
         const source = await sourceFrom(main.querySelector("#discoveryText"), main.querySelector("#discoveryFile"), t("البحث", "research"));
         if (source.text.length < 30) throw new Error(t("أدخل 30 حرفًا على الأقل من البحث.", "Enter at least 30 characters of research content."));
         progress.textContent = t("١/٢ استخراج عناصر البحث والأدلة…", "1/2 Extracting research elements and evidence…");
         const project = await extractProject(source, main.querySelector("#discoveryTitle").value.trim(), activeController.signal);
         progress.textContent = t("٢/٢ مقارنة المشروع بالفرص وترتيبها…", "2/2 Comparing and ranking opportunities…");
-        const response = await callApi("opportunities/discover", { project_data: project, filters: { limit: 8 }, output_language: window.RafidI18n?.language || "ar", privacy: privacy() }, activeController.signal);
+        const response = await callApi("opportunities/discover", { project_data: project, filters: { limit: 8 }, output_language: window.RafidI18n?.language || "ar", privacy: privacy(), telemetry_flow_id: activeFlowId }, activeController.signal);
         renderDiscovery(response.result);
       } catch (value) {
         error.textContent = value.name === "AbortError" ? t("أُلغي الطلب، ويمكنك البدء مجددًا.", "The request was canceled. You can start again.") : value.message;
@@ -122,10 +130,11 @@
     root().innerHTML = `${header(t("نتيجة اكتشاف الفرص", "Opportunity discovery result"))}
       <section class="advanced-report"><div class="advanced-report-head"><div><span class="rafid-kicker">${esc(result.catalog_version)}</span><h1 tabindex="-1">${t("أفضل المسارات لبحثك", "Best funding paths for your research")}</h1><p>${esc(result.project_summary?.title)} · ${t(`تمت مقارنة ${esc(result.considered_items)} برامج`, `${esc(result.considered_items)} programs compared`)}</p></div><button id="newDiscovery" class="rafid-primary" type="button">${t("تحليل بحث آخر", "Analyze another research project")}</button></div>
       <p class="source-freshness">${t("آخر تحقق من الكتالوج:", "Catalog last verified:")} ${esc(result.catalog_verified_at)} · ${t("لا تعني الإضافة أن باب التقديم مفتوح.", "Inclusion does not mean applications are open.")}</p>
-      <div class="discovery-list">${matches.map((match) => `<article class="discovery-card"><div class="discovery-rank"><span>#${match.rank}</span><div class="score-ring compact ${scoreTone(match.match_score)}" style="--score:${match.match_score}" role="img" aria-label="${t(`درجة الملاءمة التمهيدية ${match.match_score} من 100`, `Preliminary fit score ${match.match_score} out of 100`)}"><b>${match.match_score}<small>/100</small></b></div></div><div class="discovery-main"><div><span>${esc(match.opportunity.funder)}</span><h2>${esc(match.opportunity.title)}</h2><p>${esc(match.opportunity.summary)}</p></div><div class="discovery-badges"><span>${t("الأهلية:", "Eligibility:")} ${esc(match.preliminary_eligibility)}</span><span>${t("الثقة:", "Confidence:")} ${esc(match.confidence_score)}/100</span><span>${esc(match.opportunity.application_status)}</span></div><details><summary>${t("لماذا رُشحت؟", "Why was it suggested?")}</summary>${match.why_recommended.length ? `<ul>${match.why_recommended.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>` : `<p>${t("التشابه محدود ويحتاج مراجعة بشرية.", "The match is limited and requires human review.")}</p>`}</details><details><summary>${t("ما الذي يجب التحقق منه؟", "What must be verified?")}</summary><ul>${match.missing_for_decision.map((item) => `<li>${esc(item)}</li>`).join("")}</ul></details><div class="discovery-actions"><a class="rafid-primary" href="${esc(match.opportunity.official_url)}" target="_blank" rel="noopener noreferrer">${t("افتح المصدر الرسمي", "Open official source")}</a><small>${esc(match.hard_gate_warning)}</small></div></div></article>`).join("") || `<p class="empty-value">${t("لا توجد فرص مطابقة للفلاتر الحالية.", "No opportunities match the current filters.")}</p>`}</div>
+      <div class="discovery-list">${matches.map((match) => `<article class="discovery-card"><div class="discovery-rank"><span>#${match.rank}</span><div class="score-ring compact ${scoreTone(match.match_score)}" style="--score:${match.match_score}" role="img" aria-label="${t(`درجة الملاءمة التمهيدية ${match.match_score} من 100`, `Preliminary fit score ${match.match_score} out of 100`)}"><b>${match.match_score}<small>/100</small></b></div></div><div class="discovery-main"><div><span>${esc(match.opportunity.funder)}</span><h2>${esc(match.opportunity.title)}</h2><p>${esc(match.opportunity.summary)}</p></div><div class="discovery-badges"><span>${t("الأهلية:", "Eligibility:")} ${esc(match.preliminary_eligibility)}</span><span>${t("الثقة:", "Confidence:")} ${esc(match.confidence_score)}/100</span><span>${esc(applicationStatus(match.opportunity.application_status))}</span></div><details><summary>${t("لماذا رُشحت؟", "Why was it suggested?")}</summary>${match.why_recommended.length ? `<ul>${match.why_recommended.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>` : `<p>${t("التشابه محدود ويحتاج مراجعة بشرية.", "The match is limited and requires human review.")}</p>`}</details><details><summary>${t("ما الذي يجب التحقق منه؟", "What must be verified?")}</summary><ul>${match.missing_for_decision.map((item) => `<li>${esc(item)}</li>`).join("")}</ul></details><div class="discovery-actions"><a class="rafid-primary" href="${esc(match.opportunity.official_url)}" target="_blank" rel="noopener noreferrer">${t("افتح المصدر الرسمي", "Open official source")}</a><small>${esc(match.hard_gate_warning)}</small></div></div></article>`).join("") || `<p class="empty-value">${t("لا توجد فرص مطابقة للفلاتر الحالية.", "No opportunities match the current filters.")}</p>`}</div>
       <p class="rafid-notice">${esc(result.disclaimer)}</p></section>`;
     root().querySelector("#advancedBack").addEventListener("click", () => window.RafidApp.home());
     root().querySelector("#newDiscovery").addEventListener("click", discoveryView);
+    if (activeFlowId) window.RafidTelemetry?.record("report_viewed", "funding_discovery", activeFlowId);
     resetView();
   }
 
@@ -150,6 +159,7 @@
         cancel.hidden = false;
         error.textContent = "";
         activeController = new AbortController();
+        activeFlowId = window.RafidTelemetry?.start("portfolio_compare");
         const url = main.querySelector("#portfolioUrl").value.trim();
         if (url && new URL(url).protocol !== "https:") throw new Error(t("الرابط الرسمي يجب أن يستخدم HTTPS.", "The official URL must use HTTPS."));
         const opportunitySource = await sourceFrom(main.querySelector("#portfolioOppText"), main.querySelector("#portfolioOppFile"), t("الفرصة", "opportunity"));
@@ -168,7 +178,7 @@
           projects.push(await extractProject(sources[index], sources[index].name, activeController.signal));
         }
         progress.textContent = t("٣/٣ تطبيق قواعد الأهلية وترتيب المحفظة…", "3/3 Applying eligibility rules and ranking the portfolio…");
-        const response = await callApi("portfolio/compare", { opportunity, projects, output_language: window.RafidI18n?.language || "ar", privacy: privacy() }, activeController.signal);
+        const response = await callApi("portfolio/compare", { opportunity, projects, output_language: window.RafidI18n?.language || "ar", privacy: privacy(), telemetry_flow_id: activeFlowId }, activeController.signal);
         renderPortfolio(response.result);
       } catch (value) {
         error.textContent = value.name === "AbortError" ? t("أُلغيت المقارنة، ويمكنك البدء مجددًا.", "The comparison was canceled. You can start again.") : value.message;
@@ -191,9 +201,10 @@
     root().innerHTML = `${header(t("نتيجة المحفظة المؤسسية", "Institutional portfolio result"))}
       <section class="advanced-report"><div class="advanced-report-head"><div><span class="rafid-kicker">${esc(result.portfolio_version)}</span><h1 tabindex="-1">${t("ترتيب المشاريع لفرصة", "Project ranking for")} ${esc(result.opportunity?.title)}</h1><p>${esc(result.summary?.decision_rule)}</p></div><div class="report-actions"><button id="downloadPortfolio" class="rafid-secondary" type="button">${t("تنزيل CSV", "Download CSV")}</button><button id="newPortfolio" class="rafid-primary" type="button">${t("مقارنة جديدة", "New comparison")}</button></div></div>
       <div class="portfolio-summary"><article><span>${t("المشاريع", "Projects")}</span><b>${esc(result.summary?.total_projects)}</b></article><article><span>${t("تحتاج مراجعة بشرية", "Require human review")}</span><b>${esc(result.summary?.projects_requiring_human_review)}</b></article><article><span>${t("الحفظ الافتراضي", "Default storage")}</span><b>${t("لا يوجد", "None")}</b></article></div>
-      <div class="portfolio-ranking">${rows.map((row) => `<article class="portfolio-row"><div class="portfolio-position"><span>${row.rank}</span><small>${t("الترتيب", "Rank")}</small></div><div class="portfolio-project"><span class="eligibility-badge ${row.decision.eligibility === "غير مؤهل" ? "failed" : "unknown"}">${esc(row.decision.eligibility)}</span><h2>${esc(row.title)}</h2><p>${esc(row.decision.priority_band)}</p></div><div class="portfolio-metrics"><span><b>${row.decision.readiness_score}</b> ${t("الجاهزية", "Readiness")}</span><span><b>${row.decision.evidence_score}</b> ${t("الأدلة", "Evidence")}</span><span><b>${row.decision.confidence_score}</b> ${t("الثقة", "Confidence")}</span></div><details><summary>${t("قرار المراجع والإجراء التالي", "Reviewer decision and next action")}</summary><p><b>${t("الإجراء:", "Action:")}</b> ${esc(row.decision.next_action)}</p><p><b>${t("بوابات فاشلة:", "Failed gates:")}</b> ${row.decision.failed_gates} · <b>${t("غير محسومة:", "Unresolved:")}</b> ${row.decision.unknown_gates} · <b>${t("فجوات حرجة:", "Critical gaps:")}</b> ${row.decision.critical_gaps}</p>${row.decision.top_blockers.length ? `<ul>${row.decision.top_blockers.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>` : ""}</details></article>`).join("")}</div><p class="rafid-notice">${esc(result.disclaimer)}</p></section>`;
+      <div class="portfolio-ranking">${rows.map((row) => `<article class="portfolio-row"><div class="portfolio-position"><span>${row.rank}</span><small>${t("الترتيب", "Rank")}</small></div><div class="portfolio-project"><span class="eligibility-badge ${row.decision.eligibility === "غير مؤهل" ? "failed" : "unknown"}">${esc(row.decision.eligibility)}</span><h2>${esc(row.title)}</h2><p>${esc(row.decision.priority_band)}</p></div><div class="portfolio-metrics"><span><b>${row.decision.readiness_score === null ? t("غير كافٍ", "Insufficient") : row.decision.readiness_score}</b> ${t("الجاهزية", "Readiness")}</span><span><b>${row.decision.evidence_score}</b> ${t("الأدلة", "Evidence")}</span><span><b>${row.decision.confidence_score}</b> ${t("الثقة", "Confidence")}</span></div><details><summary>${t("قرار المراجع والإجراء التالي", "Reviewer decision and next action")}</summary><p><b>${t("الإجراء:", "Action:")}</b> ${esc(row.decision.next_action)}</p><p><b>${t("بوابات فاشلة:", "Failed gates:")}</b> ${row.decision.failed_gates} · <b>${t("غير محسومة:", "Unresolved:")}</b> ${row.decision.unknown_gates} · <b>${t("فجوات حرجة:", "Critical gaps:")}</b> ${row.decision.critical_gaps}</p>${row.decision.top_blockers.length ? `<ul>${row.decision.top_blockers.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>` : ""}</details></article>`).join("")}</div><p class="rafid-notice">${esc(result.disclaimer)}</p></section>`;
     root().querySelector("#advancedBack").addEventListener("click", () => window.RafidApp.home());
     root().querySelector("#newPortfolio").addEventListener("click", portfolioView);
+    if (activeFlowId) window.RafidTelemetry?.record("report_viewed", "portfolio_compare", activeFlowId);
     root().querySelector("#downloadPortfolio").addEventListener("click", () => {
       const blob = new Blob([portfolioCsv(result)], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -202,6 +213,7 @@
       link.download = `rafid-portfolio-${new Date().toISOString().slice(0, 10)}.csv`;
       link.click();
       URL.revokeObjectURL(url);
+      if (activeFlowId) window.RafidTelemetry?.record("report_downloaded", "portfolio_compare", activeFlowId);
     });
     resetView();
   }

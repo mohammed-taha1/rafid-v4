@@ -4,6 +4,7 @@ const { app } = require("@azure/functions");
 const { optionsResponse, jsonResponse, authorize } = require("../lib/http");
 const { currentProviderStatus } = require("../lib/ai");
 const { publicRuntimeConfig } = require("../lib/auth");
+const { jobMetrics } = require("../lib/analysis-jobs");
 
 async function healthHandler(request) {
   if (request.method === "OPTIONS") return optionsResponse(request);
@@ -31,6 +32,7 @@ async function healthHandler(request) {
     workspace_sync: runtime.workspace_sync.enabled,
     privacy_gateway: true,
     raw_content_persistence: false,
+    analysis_jobs: jobMetrics(),
     endpoints: [
       "/api/rafid/health",
       "/api/rafid/public/config",
@@ -38,6 +40,9 @@ async function healthHandler(request) {
       "/api/rafid/extract",
       "/api/rafid/opportunity/extract",
       "/api/rafid/opportunity/assess",
+      "/api/rafid/analysis/jobs",
+      "/api/rafid/telemetry",
+      "/api/rafid/opportunities/catalog",
     ],
   });
 }
