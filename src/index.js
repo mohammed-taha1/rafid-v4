@@ -12,3 +12,4 @@ require("./functions/opportunity");
 require("./functions/assess");
 require("./functions/discovery");
 require("./functions/portfolio");
+require("./functions/analysis-jobs");

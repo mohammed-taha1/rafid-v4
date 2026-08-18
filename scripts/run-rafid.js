@@ -72,6 +72,7 @@ const { analyzeResearch } = require("../src/lib/research-pipeline");
 const { createGroqResearchProvider } = require("../src/lib/research-provider");
 const { discoverOpportunities, publicCatalog } = require("../src/lib/funding-discovery");
 const { comparePortfolio } = require("../src/lib/institutional-portfolio");
+const { createAnalysisJob, getAnalysisJob, cancelAnalysisJob, jobMetrics } = require("../src/lib/analysis-jobs");
 
 const version = "4.3.0";
 const deploymentMode = String(process.env.RAFID_DEPLOYMENT_MODE || "local").toLowerCase();
@@ -120,8 +121,8 @@ function sendOptions(response) {
   response.writeHead(204, {
     ...securityHeaders(),
     "Access-Control-Allow-Origin": `http://${host}:${port}`,
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization,Content-Type,x-rafid-access-token",
+    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization,Content-Type,x-rafid-access-token,x-rafid-job-token",
   });
   response.end();
 }
@@ -600,6 +601,7 @@ async function handleApi(request, response, pathname) {
       deployment_mode: runtime.deployment_mode,
       local_only: runtime.deployment_mode === "local",
       raw_content_persistence: false,
+      analysis_jobs: jobMetrics(),
       workspace_sync: runtime.workspace_sync.enabled,
       endpoints: [
         "/api/rafid/public/config",
@@ -612,6 +614,19 @@ async function handleApi(request, response, pathname) {
         "/api/rafid/portfolio/compare",
       ],
     });
+  }
+
+  if (pathname === "/api/rafid/analysis/jobs" && request.method === "POST") {
+    assertRateLimit(request, auth);
+    const created = createAnalysisJob(await readJson(request));
+    return sendJson(response, 202, { ok: true, ...created });
+  }
+  const jobMatch = pathname.match(/^\/api\/rafid\/analysis\/jobs\/([0-9a-f-]+)$/i);
+  if (jobMatch && request.method === "GET") {
+    return sendJson(response, 200, { ok: true, job: getAnalysisJob(jobMatch[1], request.headers["x-rafid-job-token"]) });
+  }
+  if (jobMatch && request.method === "DELETE") {
+    return sendJson(response, 202, { ok: true, job: cancelAnalysisJob(jobMatch[1], request.headers["x-rafid-job-token"]) });
   }
 
   if (request.method !== "POST") return sendJson(response, 405, { ok: false, error: "الطريقة غير مدعومة." });

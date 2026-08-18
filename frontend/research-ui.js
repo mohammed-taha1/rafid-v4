@@ -4,6 +4,7 @@
   let controller;
   let elapsedTimer;
   let requestInFlight = false;
+  let activeJob = null;
   let previousMatchAssessment = null;
   let runtime = { auth: { enabled: false, required: false }, limits: { max_file_size_mb: 20 } };
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -139,6 +140,77 @@
     return payload;
   }
 
+  const JOB_STORAGE_KEY = "rafid.active.analysis-job.v1";
+
+  async function jobApi(id, token, { method = "GET", body, signal } = {}) {
+    const response = await fetch(`/api/rafid/analysis/jobs${id ? `/${encodeURIComponent(id)}` : ""}`, {
+      method,
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { "x-rafid-job-token": token } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.ok === false) {
+      const error = new Error(payload.error || "تعذر استعادة مهمة التحليل.");
+      error.code = payload.code || "RAFID_JOB_FAILED";
+      throw error;
+    }
+    return payload;
+  }
+
+  function persistJob(jobId, token) {
+    const state = { job_id: jobId, resume_token: token };
+    sessionStorage.setItem(JOB_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(JOB_STORAGE_KEY, JSON.stringify(state));
+    activeJob = state;
+  }
+
+  function readPersistedJob() {
+    try { return JSON.parse(sessionStorage.getItem(JOB_STORAGE_KEY) || localStorage.getItem(JOB_STORAGE_KEY) || "null"); }
+    catch { return null; }
+  }
+
+  function clearPersistedJob() {
+    sessionStorage.removeItem(JOB_STORAGE_KEY);
+    localStorage.removeItem(JOB_STORAGE_KEY);
+    activeJob = null;
+  }
+
+  const wait = (milliseconds, signal) => new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, milliseconds);
+    signal?.addEventListener("abort", () => { clearTimeout(timer); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
+  });
+
+  function stageFromJob(stage) {
+    return ({ queued: "opportunity", extracting: "research", assessing: "assessment", reporting: "report", completed: "report" })[stage] || "research";
+  }
+
+  function jobStageLabel(stage) {
+    return ({ queued: "في قائمة الانتظار", extracting: "استخراج الفرصة والبحث", assessing: "مطابقة الأهلية والملاءمة", reporting: "إعداد التقرير", completed: "اكتمل", failed: "تعذر الإكمال", timed_out: "انتهت المهلة", cancelled: "أُلغي" })[stage] || "جارٍ التحليل";
+  }
+
+  async function followJob(state, signal) {
+    for (;;) {
+      const payload = await jobApi(state.job_id, state.resume_token, { signal });
+      const job = payload.job;
+      setStage(stageFromJob(job.stage));
+      const elapsed = root()?.querySelector("#analysisElapsed");
+      if (elapsed) elapsed.textContent = `تقدم حقيقي: ${job.progress}% · ${jobStageLabel(job.stage)} · يمكن إغلاق التبويب والعودة خلال مدة المهمة.`;
+      if (job.status === "completed") { clearPersistedJob(); return job; }
+      if (["failed", "timed_out", "cancelled"].includes(job.status)) {
+        clearPersistedJob();
+        const error = new Error(job.error?.message || "لم تكتمل مهمة التحليل.");
+        error.code = job.error?.code || "RAFID_JOB_FAILED";
+        throw error;
+      }
+      await wait(900, signal);
+    }
+  }
+
   function setFileStatus(main, input, target, defaultText) {
     input.addEventListener("change", () => {
       const selected = Array.from(input.files || []);
@@ -242,7 +314,11 @@
     setFileStatus(main, oppFile, main.querySelector("#oppFileStatus"), `PDF · DOCX · TXT · MD حتى ${maxSize}MB`);
     setFileStatus(main, researchFile, main.querySelector("#researchFileStatus"), `حتى 5 ملفات: PDF · DOCX · TXT · MD، كل ملف حتى ${maxSize}MB`);
     main.querySelector("#go").addEventListener("click", runMatch);
-    main.querySelector("#cancel").addEventListener("click", () => controller?.abort());
+    main.querySelector("#cancel").addEventListener("click", async () => {
+      if (activeJob) await jobApi(activeJob.job_id, activeJob.resume_token, { method: "DELETE" }).catch(() => {});
+      controller?.abort();
+      clearPersistedJob();
+    });
     main.querySelector("#loadTrainingExample").addEventListener("click", () => {
       const demo = window.RafidDemoData;
       if (!demo) return;
@@ -260,6 +336,24 @@
       main.querySelector("#go").focus();
     });
     resetView();
+    const pending = readPersistedJob();
+    if (pending?.job_id && pending?.resume_token) {
+      showWizardStep(main, 3);
+      requestInFlight = true;
+      activeJob = pending;
+      main.querySelector("#go").disabled = true;
+      main.querySelector("#cancel").hidden = false;
+      main.querySelector("#analysisElapsed").hidden = false;
+      controller = new AbortController();
+      followJob(pending, controller.signal).then((job) => {
+        renderMatchResults({ opportunity: job.result.opportunity, assessment: job.result.assessment, meta: { job: job.timings_ms, chunks: job.chunk_metrics, cache_hit: job.result.meta?.opportunity_cache_hit } });
+        previousMatchAssessment = job.result.assessment;
+      }).catch((error) => {
+        const errorNode = root()?.querySelector("#error");
+        if (errorNode) { errorNode.textContent = error.message; errorNode.classList.add("is-error"); }
+        requestInFlight = false;
+      });
+    }
   }
 
   function setStage(name) {
@@ -329,36 +423,24 @@
         projectFiles: researchSource.files,
         privacy,
       });
-      opportunityRequest.output_language = window.RafidI18n?.language || "ar";
-      const opportunityResponse = await callApi("opportunity/extract", opportunityRequest, controller.signal);
-
-      setStage("research");
-      projectRequest.output_language = window.RafidI18n?.language || "ar";
-      const projectResponse = await callApi("extract", projectRequest, controller.signal);
-
-      setStage("assessment");
-      const assessmentRequest = match().buildAssessmentRequest({
-        opportunity: opportunityResponse.opportunity,
-        project: projectResponse.project_data,
-        previousAssessment: previousMatchAssessment,
-        privacy,
-      });
-      assessmentRequest.output_language = window.RafidI18n?.language || "ar";
-      const assessmentResponse = await callApi("opportunity/assess", assessmentRequest, controller.signal);
-      const assessmentValidation = match().validateAssessment(assessmentResponse.assessment);
+      const language = window.RafidI18n?.language || "ar";
+      const created = await jobApi("", "", { method: "POST", body: { opportunity_request: opportunityRequest, project_request: projectRequest, previous_assessment: previousMatchAssessment, output_language: language }, signal: controller.signal });
+      persistJob(created.job.job_id, created.resume_token);
+      const completed = await followJob(activeJob, controller.signal);
+      const assessmentValidation = match().validateAssessment(completed.result.assessment);
       if (!assessmentValidation.valid) throw new Error("أعاد الخادم نتيجة غير مكتملة. أعد المحاولة لاحقًا.");
 
       setStage("report");
       renderMatchResults({
-        opportunity: opportunityResponse.opportunity,
-        assessment: assessmentResponse.assessment,
+        opportunity: completed.result.opportunity,
+        assessment: completed.result.assessment,
         meta: {
-          opportunity: opportunityResponse.extraction_meta,
-          project: projectResponse.extraction_meta,
-          assessment: assessmentResponse.assessment_meta,
+          job: completed.timings_ms,
+          chunks: completed.chunk_metrics,
+          cache_hit: completed.result.meta?.opportunity_cache_hit,
         },
       });
-      previousMatchAssessment = assessmentResponse.assessment;
+      previousMatchAssessment = completed.result.assessment;
     } catch (errorValue) {
       stopElapsedTimer();
       errorNode.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. بقيت المدخلات لتستطيع المحاولة مجددًا." : errorValue.message;
@@ -539,6 +621,7 @@
 
   window.addEventListener("DOMContentLoaded", () => {
     app();
+    if (readPersistedJob()?.job_id) matchView();
     void loadRuntime();
   });
   document.addEventListener("click", (event) => {
