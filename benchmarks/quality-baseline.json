@@ -1,0 +1,14 @@
+{
+  "benchmark_version": "rafid.quality-lab.v1",
+  "case_count": 48,
+  "metrics": {
+    "eligibility_accuracy": 1,
+    "evidence_citation_accuracy": 1,
+    "hallucination_safety": 1,
+    "missing_information_recall": 1,
+    "repeat_stability": 1,
+    "human_reference_agreement": 1,
+    "action_plan_utility": 1,
+    "contradiction_recall": 1
+  }
+}

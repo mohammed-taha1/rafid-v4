@@ -53,9 +53,12 @@ function normalizeAssessmentRequest(body) {
   }
 
   const context = body.context && typeof body.context === "object" ? body.context : {};
+  const previousAssessment = body.previous_assessment && typeof body.previous_assessment === "object"
+    ? body.previous_assessment
+    : null;
   const privacy = normalizePrivacy(body);
   const outputLanguage = body.output_language === "en" ? "en" : "ar";
-  return { opportunity, project, context, privacy, outputLanguage };
+  return { opportunity, project, previousAssessment, context, privacy, outputLanguage };
 }
 
 async function assessHandler(request, context) {

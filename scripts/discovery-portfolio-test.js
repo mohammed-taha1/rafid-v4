@@ -101,7 +101,7 @@ assert.equal(portfolio.methodology.deterministic, true);
 assert.equal(portfolio.methodology.raw_research_retained, false);
 assert.equal(portfolio.ranking[0].title, strongProject.project_identity.project_title);
 assert.equal(portfolio.ranking[0].rank, 1);
-assert.ok(portfolio.ranking[0].decision.readiness_score > portfolio.ranking[1].decision.readiness_score);
+assert.ok(portfolio.ranking[0].decision.evidence_score > portfolio.ranking[1].decision.evidence_score);
 assert.equal(portfolio.ranking.every((row) => row.decision.reviewer_required), true);
 assert.throws(() => comparePortfolio(opportunity, [strongProject]), /مشروعين على الأقل/);
 assert.throws(

@@ -61,10 +61,11 @@
     };
   }
 
-  function buildAssessmentRequest({ opportunity, project, privacy, date }) {
+  function buildAssessmentRequest({ opportunity, project, previousAssessment, privacy, date }) {
     return {
       opportunity,
       project_data: project,
+      previous_assessment: previousAssessment || null,
       context: {
         assessment_date: text(date) || new Date().toISOString().slice(0, 10),
         reviewer_role: "الباحث أو المراجع",
@@ -101,8 +102,11 @@
     for (const field of ["hard_gates", "fit_dimensions", "gaps", "action_plan", "application_package"]) {
       if (!Array.isArray(assessment?.[field])) errors.push(`قسم النتيجة غير صالح: ${field}`);
     }
+    const readinessScore = assessment?.readiness?.opportunity_readiness_score;
+    if (readinessScore !== null && readinessScore !== undefined && (!Number.isFinite(Number(readinessScore)) || Number(readinessScore) < 0 || Number(readinessScore) > 100)) {
+      errors.push("تحتوي النتيجة على درجة جاهزية خارج النطاق 0–100.");
+    }
     for (const score of [
-      assessment?.readiness?.opportunity_readiness_score,
       assessment?.readiness?.evidence_strength_score,
       assessment?.readiness?.assessment_confidence,
     ]) {
@@ -116,10 +120,14 @@
 
   function summaryText(assessment) {
     const status = text(assessment?.eligibility?.status) || "غير محسوم";
-    const score = Math.round(Number(assessment?.readiness?.opportunity_readiness_score) || 0);
+    const score = assessment?.readiness?.score_available
+      ? `${Math.round(Number(assessment?.readiness?.opportunity_readiness_score) || 0)} من 100`
+      : assessment?.readiness?.score_range
+        ? `نطاق ${assessment.readiness.score_range.minimum}–${assessment.readiness.score_range.maximum}`
+        : "غير متاحة لعدم كفاية البيانات";
     const reason = text(assessment?.eligibility?.reason) || text(assessment?.readiness?.summary) || "لا توجد خلاصة كافية.";
     const next = list(assessment?.action_plan)[0]?.action || list(assessment?.gaps)[0]?.required_action || "راجع الشروط والأدلة يدويًا.";
-    return `حالة الأهلية: ${status}. درجة الملاءمة والجاهزية: ${score} من 100. ${reason} الإجراء التالي: ${next}`;
+    return `حالة الأهلية: ${status}. درجة الملاءمة والجاهزية: ${score}. ${reason} الإجراء التالي: ${next}`;
   }
 
   return {

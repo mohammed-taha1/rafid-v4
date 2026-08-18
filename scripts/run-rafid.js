@@ -228,6 +228,9 @@ function normalizeAssessmentRequest(body) {
   return {
     opportunity,
     project,
+    previousAssessment: body.previous_assessment && typeof body.previous_assessment === "object"
+      ? body.previous_assessment
+      : null,
     context: body.context && typeof body.context === "object" ? body.context : {},
     privacy: normalizePrivacy(body),
   };

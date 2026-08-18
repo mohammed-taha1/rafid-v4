@@ -517,3 +517,8 @@ html[data-language="en"] .boot-en{display:inline}
 .match-progress span{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:8px;padding:10px 12px;text-align:start}
 .match-progress span::before{position:static;justify-self:center;transform:none}
 .match-progress span.done::before{width:18px;height:18px}
+
+/* Evidence-aware score states: unavailable scores are explicit, never rendered as zero. */
+.fit-grid small{display:block;margin-top:6px}
+.score-ring.score-unavailable{border:2px dashed #9db6b0;background:#edf2f0}
+.score-ring.score-unavailable b{color:#607775;font-size:1.8rem}
