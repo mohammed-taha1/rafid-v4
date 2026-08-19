@@ -33,6 +33,12 @@ assert.doesNotMatch(migration, /revoke all on all tables in schema public from a
 assert.doesNotMatch(frontend + html, /SUPABASE_SERVICE_ROLE_KEY|service[_-]?role/i, "Service role material must not appear in the browser bundle.");
 assert.match(frontend, /headers\.Authorization = `Bearer \$\{token\}`/, "Institution requests must carry the user's JWT for RLS.");
 assert.match(frontend, /sessionStorage/, "Institution sessions must not be persisted beyond the browser tab.");
+assert.match(frontend, /storage: window\.sessionStorage[^]*flowType: "pkce"/s, "Google OAuth must use PKCE with tab-scoped storage.");
+assert.match(frontend, /auth\.signOut\(\{ scope: "local" \}\)/, "Signing out must clear the SDK's local OAuth session.");
+assert.match(frontend, /provider: "google"/, "Institution owners need a Google OAuth sign-in path.");
+assert.match(frontend, /redirectTo: oauthRedirectUrl\(\)/, "OAuth must return through the controlled same-origin callback.");
+assert.match(frontend, /searchParams\.delete\("rafid_auth"\)[^]*history\.replaceState/s, "OAuth callback markers must be removed from the visible URL.");
+assert.match(frontend, /addEventListener\("load", async \(\) =>[^]*restoreOAuthSession\(\)/s, "OAuth restoration must run after the main shell has finished initializing.");
 assert.match(frontend, /raw_content_stored: false/, "Project writes must explicitly reject raw content persistence.");
 assert.match(auth, /service_role_exposed: false/, "Public config must declare that service role is not exposed.");
 assert.match(html, /rafid-i18n\.js[^]*institution-workspace\.js/, "Language support must load before the institution workspace.");

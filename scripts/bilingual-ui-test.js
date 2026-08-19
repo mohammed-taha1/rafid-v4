@@ -18,6 +18,7 @@ assert.match(html, /class="boot-ar"[^]*class="boot-en"[^]*A clearer decision for
 assert.match(i18n, /document\.documentElement\.dir = language === "ar" \? "rtl" : "ltr"/, "Direction must follow the selected language.");
 assert.match(i18n, /data-rafid-language="en"/, "An English control is required.");
 assert.match(institution, /Rafid for research institutions/, "Institution experience requires English copy.");
+assert.match(institution, /متابعة باستخدام Google[^]*Continue with Google/, "Google sign-in needs matching Arabic and English copy.");
 assert.match(education, /Research funding[^]*Pre-submission readiness/s, "The full learning center needs English content.");
 assert.match(research, /output_language: window\.RafidI18n/, "Research analysis must request the selected output language.");
 assert.match(research, /General assessment result/, "Dynamic general-analysis results require English labels.");
