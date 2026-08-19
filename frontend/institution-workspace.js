@@ -7,6 +7,7 @@
   let config;
   let session;
   let selectedOrganization;
+  let authClientPromise;
 
   function safeSession() {
     try { return JSON.parse(sessionStorage.getItem(sessionKey) || "null"); } catch { return null; }
@@ -24,6 +25,68 @@
     if (!response.ok) throw new Error(t("تعذر تحميل إعداد مساحة المؤسسة.", "Could not load institution workspace configuration."));
     config = await response.json();
     return config;
+  }
+
+  async function authClient() {
+    if (authClientPromise) return authClientPromise;
+    authClientPromise = (async () => {
+      const cfg = await runtime();
+      if (!cfg.auth?.enabled) throw new Error(t("مساحة المؤسسات غير مهيأة بعد.", "Institution workspaces are not configured yet."));
+      const { createClient } = await import("./vendor/supabase-auth.min.mjs");
+      return createClient(cfg.auth.supabase_url, cfg.auth.publishable_key, {
+        auth: {
+          storage: window.sessionStorage,
+          storageKey: "rafid-institution-oauth",
+          persistSession: true,
+          autoRefreshToken: false,
+          detectSessionInUrl: true,
+          flowType: "pkce",
+        },
+      });
+    })();
+    return authClientPromise;
+  }
+
+  async function signOut() {
+    saveSession(null);
+    selectedOrganization = null;
+    try { await (await authClient()).auth.signOut({ scope: "local" }); } catch { /* The local Rafid session is already cleared. */ }
+    authView();
+  }
+
+  function oauthRedirectUrl() {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.searchParams.set("rafid_auth", "institution");
+    url.hash = "";
+    return url.toString();
+  }
+
+  async function restoreOAuthSession() {
+    const current = new URL(window.location.href);
+    if (current.searchParams.get("rafid_auth") !== "institution") return false;
+    try {
+      const client = await authClient();
+      const { data, error } = await client.auth.getSession();
+      if (error || !data.session?.access_token) throw new Error("oauth_session_missing");
+      saveSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+        user: data.session.user,
+        expires_at: Number(data.session.expires_at || 0) * 1000,
+        project: new URL((await runtime()).auth.supabase_url).host,
+      });
+      current.searchParams.delete("rafid_auth");
+      current.hash = "institution";
+      history.replaceState(null, "", `${current.pathname}${current.search}${current.hash}`);
+      return true;
+    } catch {
+      current.searchParams.delete("rafid_auth");
+      current.hash = "institution";
+      history.replaceState(null, "", `${current.pathname}${current.search}${current.hash}`);
+      authView(t("تعذر إكمال تسجيل الدخول عبر Google. حاول مرة أخرى.", "Google sign-in could not be completed. Please try again."));
+      return false;
+    }
   }
 
   async function supabase(path, { method = "GET", body, token = session?.access_token, prefer } = {}) {
@@ -66,8 +129,23 @@
   }
 
   function authView(message = "") {
-    const root = shell(`<section class="institution-auth"><div><span class="rafid-kicker">${t("رافد للمؤسسات البحثية", "Rafid for research institutions")}</span><h1 tabindex="-1">${t("حوّل محفظة الأبحاث إلى قائمة قرارات", "Turn a research portfolio into an action list")}</h1><p>${t("مساحات عمل معزولة، أدوار واضحة، ترتيب للمشاريع، وفجوات مشتركة قابلة للتنفيذ.", "Isolated workspaces, explicit roles, project prioritization, and actionable shared gaps.")}</p><ul><li>${t("عزل كامل بين المؤسسات عبر RLS", "Strict tenant isolation through RLS")}</li><li>${t("لا يُخزن نص البحث الخام", "Raw research text is not stored")}</li><li>${t("سجل تدقيق للإجراءات الحساسة", "Audit log for sensitive actions")}</li></ul></div><form id="institutionAuth" class="institution-card"><h2>${t("دخول مساحة المؤسسة", "Institution sign in")}</h2><label>${t("البريد الإلكتروني", "Email")}<input id="institutionEmail" type="email" autocomplete="email" required /></label><label>${t("كلمة المرور", "Password")}<input id="institutionPassword" type="password" autocomplete="current-password" minlength="8" required /></label><div class="form-actions"><button class="rafid-primary" value="signin" type="submit">${t("تسجيل الدخول", "Sign in")}</button><button class="rafid-secondary" value="signup" type="submit">${t("إنشاء حساب", "Create account")}</button></div><p class="rafid-notice">${t("يُطلب الدخول فقط لمساحات المؤسسات لحماية بياناتها. التحليل الفردي العام يبقى متاحًا دون تسجيل.", "Sign-in is only required for protected institution workspaces. Public individual analysis remains available without sign-in.")}</p><p id="institutionMessage" class="rafid-error" role="alert">${esc(message)}</p></form></section>`);
+    const root = shell(`<section class="institution-auth"><div><span class="rafid-kicker">${t("رافد للمؤسسات البحثية", "Rafid for research institutions")}</span><h1 tabindex="-1">${t("حوّل محفظة الأبحاث إلى قائمة قرارات", "Turn a research portfolio into an action list")}</h1><p>${t("مساحات عمل معزولة، أدوار واضحة، ترتيب للمشاريع، وفجوات مشتركة قابلة للتنفيذ.", "Isolated workspaces, explicit roles, project prioritization, and actionable shared gaps.")}</p><ul><li>${t("عزل كامل بين المؤسسات عبر RLS", "Strict tenant isolation through RLS")}</li><li>${t("لا يُخزن نص البحث الخام", "Raw research text is not stored")}</li><li>${t("سجل تدقيق للإجراءات الحساسة", "Audit log for sensitive actions")}</li></ul></div><form id="institutionAuth" class="institution-card"><h2>${t("دخول مساحة المؤسسة", "Institution sign in")}</h2><button id="institutionGoogleAuth" class="institution-google-auth" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path fill="#4285f4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.8 3-4.4 3-7.4Z"/><path fill="#34a853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1a5.8 5.8 0 0 1-5.5-4H3.2v2.6A10 10 0 0 0 12 22Z"/><path fill="#fbbc05" d="M6.5 14.1a6 6 0 0 1 0-4.2V7.3H3.2a10 10 0 0 0 0 9.4l3.3-2.6Z"/><path fill="#ea4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.8A9.7 9.7 0 0 0 3.2 7.3l3.3 2.6A5.8 5.8 0 0 1 12 5.9Z"/></svg><span>${t("متابعة باستخدام Google", "Continue with Google")}</span></button><div class="institution-auth-divider"><span>${t("أو باستخدام البريد الإلكتروني", "or use email")}</span></div><label>${t("البريد الإلكتروني", "Email")}<input id="institutionEmail" type="email" autocomplete="email" required /></label><label>${t("كلمة المرور", "Password")}<input id="institutionPassword" type="password" autocomplete="current-password" minlength="8" required /></label><div class="form-actions"><button class="rafid-primary" value="signin" type="submit">${t("تسجيل الدخول", "Sign in")}</button><button class="rafid-secondary" value="signup" type="submit">${t("إنشاء حساب", "Create account")}</button></div><p class="rafid-notice">${t("يُطلب الدخول فقط لمساحات المؤسسات لحماية بياناتها. التحليل الفردي العام يبقى متاحًا دون تسجيل.", "Sign-in is only required for protected institution workspaces. Public individual analysis remains available without sign-in.")}</p><p id="institutionMessage" class="rafid-error" role="alert">${esc(message)}</p></form></section>`);
     root.querySelector("h1")?.focus();
+    root.querySelector("#institutionGoogleAuth").addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      const target = root.querySelector("#institutionMessage");
+      button.disabled = true;
+      target.textContent = t("جارٍ فتح تسجيل الدخول الآمن عبر Google…", "Opening secure Google sign-in…");
+      try {
+        const client = await authClient();
+        const { error } = await client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: oauthRedirectUrl() } });
+        if (error) throw error;
+      } catch {
+        target.textContent = t("تعذر بدء تسجيل الدخول عبر Google. حاول مرة أخرى.", "Google sign-in could not be started. Please try again.");
+        target.classList.add("is-error");
+        button.disabled = false;
+      }
+    });
     root.querySelector("#institutionAuth").addEventListener("submit", async (event) => {
       event.preventDefault();
       const button = event.submitter;
@@ -109,7 +187,7 @@
       if (selectedOrganization && organizations.some((item) => item.id === selectedOrganization.id)) return dashboardView(selectedOrganization);
       const root = shell(organizationPicker(organizations, platformStatus));
       root.querySelector("h1")?.focus();
-      root.querySelector("#institutionSignout").addEventListener("click", () => { saveSession(null); selectedOrganization = null; authView(); });
+      root.querySelector("#institutionSignout").addEventListener("click", signOut);
       root.querySelector("#openOperationsDashboard")?.addEventListener("click", async () => {
         const cfg = await runtime();
         window.RafidOperations?.open({ config: cfg, session, status: platformStatus, back: workspaceView });
@@ -268,7 +346,7 @@
 
   function bindDashboard(root, org, data) {
     root.querySelector("#changeOrganization").addEventListener("click", () => { selectedOrganization = null; workspaceView(); });
-    root.querySelector("#institutionSignout").addEventListener("click", () => { saveSession(null); selectedOrganization = null; authView(); });
+    root.querySelector("#institutionSignout").addEventListener("click", signOut);
     root.querySelector("#exportInstitutionExcel").addEventListener("click", () => downloadExcel(org, data));
     root.querySelector("#exportInstitutionPdf").addEventListener("click", () => printManagementReport(org, data));
     const bind = (id, table, makeBody) => root.querySelector(id).addEventListener("submit", async (event) => {
@@ -348,6 +426,9 @@
   window.addEventListener("DOMContentLoaded", () => {
     enhanceLanding();
     observer.observe(document.querySelector("#rafidApp"), { childList: true, subtree: true });
+  });
+  window.addEventListener("load", async () => {
+    if (await restoreOAuthSession()) return workspaceView();
     if (location.hash === "#institution") institutionView();
   });
   window.addEventListener("hashchange", () => {

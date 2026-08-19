@@ -5,8 +5,9 @@
 1. اربط المستودع واختر الفرع `codex/mvp-launch` أو فرع إصدار معتمد.
 2. استخدم `render.yaml` أو اضبط Build: `npm ci && npm run build` وStart: `npm start`، والجذر هو المستودع.
 3. أضف أسرار الخادم فقط في لوحة Render: `GROQ_API_KEY` و`GROQ_MODEL` وبيانات Supabase عند تفعيل المصادقة. لتشغيل لوحة القياس أضف `SUPABASE_SERVICE_ROLE_KEY` إلى الخادم فقط واضبط `RAFID_PRODUCT_TELEMETRY_ENABLED=true`. لا تضع مفتاح الخدمة في YAML أو الواجهة أو أي متغير عام.
-4. اضبط `RAFID_HOST=0.0.0.0`، `MAX_FILE_SIZE_MB=20`، و`MAX_ANALYSIS_INPUT_CHARS=16000`، و`ANALYSIS_TIMEOUT_SECONDS=60`. يحمي حد الإدخال طلب Groq من تجاوز السعة؛ وعند تجاوزه تظهر نتيجة مع تنبيه بأنها غطّت الجزء المقبول فقط.
-5. اجعل health check هو `/health`. يعيد حالة تشغيل عامة فقط ولا يفحص مفتاح AI ولا يكشف أسرارًا.
+4. في Supabase Auth فعّل Google، وأضف نطاق الإنتاج إلى Redirect URLs بصيغة `https://rafid-v4.onrender.com/**` (وأي نطاق رسمي بديل تستخدمه). يستخدم رافد عودة من نفس الأصل إلى `/?rafid_auth=institution` ثم يزيل بيانات العودة من شريط العنوان ويحفظ جلسة المؤسسة داخل التبويب فقط.
+5. اضبط `RAFID_HOST=0.0.0.0`، `MAX_FILE_SIZE_MB=20`، و`MAX_ANALYSIS_INPUT_CHARS=16000`، و`ANALYSIS_TIMEOUT_SECONDS=60`. يحمي حد الإدخال طلب Groq من تجاوز السعة؛ وعند تجاوزه تظهر نتيجة مع تنبيه بأنها غطّت الجزء المقبول فقط.
+6. اجعل health check هو `/health`. يعيد حالة تشغيل عامة فقط ولا يفحص مفتاح AI ولا يكشف أسرارًا.
 
 بعد النشر: افتح `/health` ثم الصفحة العامة دون Supabase، وجرّب إدخالًا غير حساس. Cold start قد يسبب تأخرًا قصيرًا؛ تعرض الواجهة رسالة انتظار ولا تعد بزمن ثابت.
 
