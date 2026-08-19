@@ -39,6 +39,7 @@ assert.match(frontend, /provider: "google"/, "Institution owners need a Google O
 assert.match(frontend, /redirectTo: oauthRedirectUrl\(\)/, "OAuth must return through the controlled same-origin callback.");
 assert.match(frontend, /searchParams\.delete\("rafid_auth"\)[^]*history\.replaceState/s, "OAuth callback markers must be removed from the visible URL.");
 assert.match(frontend, /addEventListener\("load", async \(\) =>[^]*restoreOAuthSession\(\)/s, "OAuth restoration must run after the main shell has finished initializing.");
+assert.match(frontend, /oauthRestored === false\) return;/, "A safe OAuth failure message must not be overwritten by a second navigation.");
 assert.match(frontend, /raw_content_stored: false/, "Project writes must explicitly reject raw content persistence.");
 assert.match(auth, /service_role_exposed: false/, "Public config must declare that service role is not exposed.");
 assert.match(html, /rafid-i18n\.js[^]*institution-workspace\.js/, "Language support must load before the institution workspace.");

@@ -64,7 +64,7 @@
 
   async function restoreOAuthSession() {
     const current = new URL(window.location.href);
-    if (current.searchParams.get("rafid_auth") !== "institution") return false;
+    if (current.searchParams.get("rafid_auth") !== "institution") return null;
     try {
       const client = await authClient();
       const { data, error } = await client.auth.getSession();
@@ -428,7 +428,9 @@
     observer.observe(document.querySelector("#rafidApp"), { childList: true, subtree: true });
   });
   window.addEventListener("load", async () => {
-    if (await restoreOAuthSession()) return workspaceView();
+    const oauthRestored = await restoreOAuthSession();
+    if (oauthRestored === true) return workspaceView();
+    if (oauthRestored === false) return;
     if (location.hash === "#institution") institutionView();
   });
   window.addEventListener("hashchange", () => {
