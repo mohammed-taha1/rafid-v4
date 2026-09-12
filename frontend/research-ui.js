@@ -65,7 +65,7 @@
     main.className = "rafid";
     main.removeAttribute("aria-busy");
     main.innerHTML = `${header('<nav aria-label="روابط رافد"><a href="#services">الخدمات</a><a href="#institution">للمؤسسات</a><a href="#how">كيف يعمل؟</a><a href="#learn">مركز التعلم</a><a href="#about">عن رافد</a><a href="#contact">تواصل معنا</a></nav>')}
-      <section class="portal-hero">
+      <section id="home" class="portal-hero">
         <div><span class="rafid-kicker"><i aria-hidden="true"></i> منصة الجاهزية البحثية والتمويلية</span><h1 tabindex="-1">قرار أوضح لبحثك، <em>قبل أن تبدأ التقديم</em></h1><p>حلّل جاهزية بحثك أو قارنه مباشرة بفرصة تمويل. خطوات قصيرة، ملفات متعددة، ونتيجة عربية قابلة للمراجعة.</p></div>
         <aside><b>مصمم للعمل المؤسسي</b><ul><li>لا يحتاج تسجيل دخول</li><li>لا نخزن البحث افتراضيًا</li><li>لا نعرض نتيجة بلا تفسير</li></ul></aside>
       </section>
