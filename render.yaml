@@ -2,7 +2,7 @@ services:
   - type: web
     name: rafid-mvp
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /health
@@ -11,12 +11,22 @@ services:
         value: 22.20.0
       - key: RAFID_HOST
         value: 0.0.0.0
+      - key: APP_URL
+        value: https://rafid.rafid-platform.workers.dev
+      - key: RAFID_DEPLOYMENT_MODE
+        value: shared
+      - key: RAFID_PROVIDER_CONFIGURATION_MODE
+        value: server
+      - key: RAFID_AUTH_REQUIRED
+        value: false
+      - key: RAFID_ALLOWED_ORIGINS
+        value: https://rafid.rafid-platform.workers.dev,https://rafid-v4.onrender.com
       - key: MAX_FILE_SIZE_MB
         value: 20
       - key: MAX_ANALYSIS_INPUT_CHARS
         value: 16000
       - key: ANALYSIS_TIMEOUT_SECONDS
-        value: 60
+        value: 120
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
