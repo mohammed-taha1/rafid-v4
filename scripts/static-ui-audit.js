@@ -48,6 +48,7 @@ assert.match(ui, /void loadRuntime\(\)/, "Public runtime configuration must not 
 assert.match(ui, /RafidDemoData/, "The labeled training fixture must be available from the analysis form.");
 assert.match(ui, /تنزيل تقرير مقروء/, "The result must offer a readable report download.");
 assert.match(ui, /service-console/, "The landing page must present clear service entry points.");
+assert.match(ui, /<section id="home" class="portal-hero">/, "The logo home link must resolve to a real landing-page anchor.");
 assert.match(ui, /حلّل جاهزية بحثك/, "General readiness analysis must be a first-class service.");
 assert.match(ui, /قارن بحثك بفرصة تمويل/, "Opportunity matching must be a first-class service.");
 assert.match(ui, /researchFile[^]*multiple/, "Research intake must support multiple files.");
