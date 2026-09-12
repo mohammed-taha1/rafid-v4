@@ -10,13 +10,16 @@
     "start": "node scripts/run-rafid.js",
     "azure": "func start",
     "frontend": "node scripts/serve-frontend.js",
+    "performance": "node scripts/performance-baseline.js",
+    "test:cloudflare": "node scripts/cloudflare-worker-test.js",
+    "deploy:cloudflare": "wrangler deploy",
     "build": "npm run build:vendor",
     "build:vendor": "node scripts/build-vendor.js",
     "check": "node scripts/check-js.js",
     "lint": "eslint frontend/*.js src scripts tests.js",
     "typecheck": "tsc --project jsconfig.json",
     "quality": "node scripts/quality-lab-test.js",
-    "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/env-test.js && node scripts/auth-test.js && node scripts/ingest-test.js && node scripts/research-schema-test.js && node scripts/research-prompts-test.js && node scripts/research-provider-test.js && node scripts/research-pipeline-test.js && node scripts/long-document-test.js && node scripts/results-report-test.js && node scripts/opportunity-match-test.js && node scripts/quality-lab-test.js && node scripts/funding-registry-test.js && node scripts/analysis-jobs-test.js && node scripts/discovery-portfolio-test.js && node scripts/institutional-security-test.js && node scripts/institutional-pilot-test.js && node scripts/improvement-workspace-test.js && node scripts/product-operations-test.js && node scripts/bilingual-ui-test.js && node scripts/mvp-final-coverage-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/server-smoke-test.js",
+    "test": "node tests.js && node scripts/sdk-contract-test.js && node scripts/env-test.js && node scripts/auth-test.js && node scripts/ingest-test.js && node scripts/research-schema-test.js && node scripts/research-prompts-test.js && node scripts/research-provider-test.js && node scripts/research-pipeline-test.js && node scripts/long-document-test.js && node scripts/results-report-test.js && node scripts/opportunity-match-test.js && node scripts/quality-lab-test.js && node scripts/funding-registry-test.js && node scripts/analysis-jobs-test.js && node scripts/discovery-portfolio-test.js && node scripts/institutional-security-test.js && node scripts/institutional-pilot-test.js && node scripts/improvement-workspace-test.js && node scripts/product-operations-test.js && node scripts/bilingual-ui-test.js && node scripts/mvp-final-coverage-test.js && node scripts/frontend-logic-test.js && node scripts/static-ui-audit.js && node scripts/cloudflare-worker-test.js && node scripts/server-smoke-test.js",
     "test:live": "node scripts/live-opportunity-test.js"
   },
   "engines": {
@@ -36,6 +39,7 @@
     "jszip": "^3.10.1",
     "mammoth": "1.12.0",
     "pdfjs-dist": "5.4.624",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "wrangler": "4.131.1"
   }
 }

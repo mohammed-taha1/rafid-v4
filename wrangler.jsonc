@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rafid",
+  "main": "./cloudflare/worker.mjs",
+  "compatibility_date": "2026-09-11",
+  "assets": {
+    "directory": "./frontend",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/health"
+    ]
+  },
+  "vars": {
+    "RAFID_API_ORIGIN": "https://rafid-v4.onrender.com"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
