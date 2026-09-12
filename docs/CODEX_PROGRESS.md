@@ -441,7 +441,7 @@
 - أضيف نشر Cloudflare Workers Static Assets مع Worker يمرر مسارات API و`/health` فقط إلى Render ويمنع التخزين المؤقت لاستجاباتها.
 - أضيفت رؤوس أمان وتخزين مؤقت مناسب للأصول، واختبار عقد الـWorker، وقياس أداء قابل للتكرار.
 - بقي رابط `https://rafid-v4.onrender.com` بلا تغيير حفاظًا على QR القديم.
-- نُشرت الواجهة فعليًا على `https://rafid.rafid-v4-opportunity-readiness.workers.dev` مع 29 أصلًا ثابتًا وWorker يمرر API إلى Render.
+- نُشرت الواجهة فعليًا على العنوان المجاني `https://rafid.rafid-platform.workers.dev` مع 29 أصلًا ثابتًا وWorker يمرر API إلى Render. غُيّر نطاق Cloudflare التجريبي الطويل إلى `rafid-platform.workers.dev`، وبقي رابط Render القديم يعمل.
 - نجحت الصفحة الرئيسية و`/health` والإعداد العام بحالة `200`، ولم تظهر أخطاء Console، وتحققت الواجهتان العربية والإنجليزية حيًا.
 - نجحت رحلة مطابقة تدريبية كاملة عبر Cloudflare باستخدام Groq خلال 108.33 ثانية دون fallback، وأعيدت نتيجة منظمة بتغطية أدلة 72%.
 - بقي رابط `https://rafid-v4.onrender.com` بلا تغيير وبحالة `200` حفاظًا على QR القديم.
