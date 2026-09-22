@@ -10,6 +10,12 @@ const managedNames = [
   "GROQ_API_KEY",
   "GROQ_MODEL",
   "GROQ_ZERO_DATA_RETENTION_CONFIRMED",
+  "OPENAI_API_KEY",
+  "OPENAI_MODEL",
+  "OPENAI_EXTRACTION_MODEL",
+  "OPENAI_OPPORTUNITY_MODEL",
+  "OPENAI_ASSESSMENT_MODEL",
+  "OPENAI_ZERO_DATA_RETENTION_CONFIRMED",
   "MAX_FILE_SIZE_MB",
   "RAFID_ALLOWED_ORIGINS",
   "RAFID_AUTH_REQUIRED",
@@ -91,6 +97,28 @@ function main() {
   assert.equal(serialized.includes(process.env.GROQ_API_KEY), false);
   assert.equal(serialized.includes(process.env.SUPABASE_SERVICE_ROLE_KEY), false);
   assert.equal(serialized.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
+
+  process.env.AI_PROVIDER = "openai";
+  process.env.OPENAI_API_KEY = "unit-openai-key-not-a-real-secret";
+  process.env.OPENAI_MODEL = "gpt-5.6-sol";
+  process.env.OPENAI_EXTRACTION_MODEL = "gpt-5.6-terra";
+  process.env.OPENAI_OPPORTUNITY_MODEL = "gpt-5.6-terra";
+  process.env.OPENAI_ASSESSMENT_MODEL = "gpt-5.6-sol";
+  process.env.OPENAI_ZERO_DATA_RETENTION_CONFIRMED = "true";
+  const openAIReady = inspectEnvironment();
+  assert.equal(openAIReady.analysisReady, true);
+
+  process.env.OPENAI_ASSESSMENT_MODEL = "unapproved-model";
+  const unsupportedOpenAI = inspectEnvironment();
+  assert.equal(unsupportedOpenAI.analysisReady, false);
+  assert.ok(
+    unsupportedOpenAI.issues.some(
+      (issue) =>
+        issue.code === "OPENAI_MODEL_UNSUPPORTED" &&
+        issue.variables.includes("OPENAI_ASSESSMENT_MODEL"),
+    ),
+  );
+  process.env.OPENAI_ASSESSMENT_MODEL = "gpt-5.6-sol";
 
   process.env.ANALYSIS_TIMEOUT_SECONDS = "not-a-number";
   const invalid = inspectEnvironment();

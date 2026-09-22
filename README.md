@@ -166,12 +166,17 @@ GROQ_REASONING_EFFORT=low
 ```text
 AI_PROVIDER=openai
 OPENAI_API_KEY=...
-OPENAI_MODEL=اسم_النموذج_المعتمد
+OPENAI_MODEL=gpt-5.6-sol
+OPENAI_EXTRACTION_MODEL=gpt-5.6-terra
+OPENAI_OPPORTUNITY_MODEL=gpt-5.6-terra
+OPENAI_ASSESSMENT_MODEL=gpt-5.6-sol
 OPENAI_BASE_URL=https://api.openai.com/v1
 RAFID_DATA_POLICY=strict_zdr
 OPENAI_ZERO_DATA_RETENTION_CONFIRMED=false
 RAFID_REASONING_EFFORT=high
 ```
+
+يوزع رافد العمل تلقائيًا: Terra لاستخراج حقائق البحث والفرصة بتكلفة أقل، وSol للحكم النهائي وخطة العمل. لا تغيّر `OPENAI_ZERO_DATA_RETENTION_CONFIRMED` إلى `true` إلا بعد اعتماد ZDR فعليًا للحساب. يظل Groq هو المزود الحي حتى إدخال المفتاح في مدير أسرار الخادم واجتياز اختبار حي غير حساس.
 
 ### Azure OpenAI / Microsoft Foundry
 

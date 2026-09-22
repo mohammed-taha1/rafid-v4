@@ -130,10 +130,16 @@ if ($Provider -eq "groq") {
 } elseif ($Provider -eq "openai") {
   $OpenAIKeySecure = Read-Host "أدخل OPENAI_API_KEY" -AsSecureString
   $OpenAIKey = [System.Net.NetworkCredential]::new("", $OpenAIKeySecure).Password
-  $OpenAIModel = Read-Host "اسم نموذج OpenAI [gpt-5.6]"
-  if ([string]::IsNullOrWhiteSpace($OpenAIModel)) { $OpenAIModel = "gpt-5.6" }
+  $OpenAIModel = Read-Host "نموذج التقييم النهائي OpenAI [gpt-5.6-sol]"
+  if ([string]::IsNullOrWhiteSpace($OpenAIModel)) { $OpenAIModel = "gpt-5.6-sol" }
+  if ($OpenAIModel -notin @("gpt-5.6-sol", "gpt-5.6-terra")) {
+    throw "نموذج OpenAI يجب أن يكون gpt-5.6-sol أو gpt-5.6-terra."
+  }
   $settings += "OPENAI_API_KEY=$OpenAIKey"
   $settings += "OPENAI_MODEL=$OpenAIModel"
+  $settings += "OPENAI_EXTRACTION_MODEL=gpt-5.6-terra"
+  $settings += "OPENAI_OPPORTUNITY_MODEL=gpt-5.6-terra"
+  $settings += "OPENAI_ASSESSMENT_MODEL=$OpenAIModel"
   $settings += "OPENAI_BASE_URL=https://api.openai.com/v1"
   $settings += "OPENAI_ZERO_DATA_RETENTION_CONFIRMED=$($ZdrConfirmed.ToString().ToLower())"
 } else {

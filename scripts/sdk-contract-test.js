@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const http = require("node:http");
-const { runStructured, resetAIClient } = require("../src/lib/ai");
+const { runStructured, resetAIClient, openAIStageModel } = require("../src/lib/ai");
 
 const schema = {
   type: "json_schema",
@@ -34,15 +34,15 @@ async function readBody(request) {
 }
 
 async function testResponsesContract() {
-  let captured;
+  const captured = [];
   await withFakeServer(async (request, response) => {
-    captured = { url: request.url, body: await readBody(request) };
+    captured.push({ url: request.url, body: await readBody(request) });
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify({
       id: "resp_test",
       object: "response",
       status: "completed",
-      model: "gpt-5.6",
+      model: "gpt-5.6-terra",
       output: [{
         id: "msg_test",
         type: "message",
@@ -56,9 +56,13 @@ async function testResponsesContract() {
     process.env.AI_PROVIDER = "openai";
     process.env.OPENAI_API_KEY = "test-openai-key-not-real";
     process.env.OPENAI_BASE_URL = baseURL;
-    process.env.OPENAI_MODEL = "gpt-5.6";
+    process.env.OPENAI_MODEL = "gpt-5.6-sol";
+    process.env.OPENAI_EXTRACTION_MODEL = "gpt-5.6-terra";
+    process.env.OPENAI_OPPORTUNITY_MODEL = "gpt-5.6-terra";
+    process.env.OPENAI_ASSESSMENT_MODEL = "gpt-5.6-sol";
     process.env.RAFID_DATA_POLICY = "standard";
     process.env.RAFID_REASONING_EFFORT = "high";
+    process.env.RAFID_TEST_MODE = "true";
     resetAIClient();
     const result = await runStructured({
       systemPrompt: "System",
@@ -66,14 +70,29 @@ async function testResponsesContract() {
       schema,
       privacy: { classification: "internal" },
       maxOutputTokens: 200,
+      model: openAIStageModel("extraction"),
     });
     assert.deepEqual(result.data, { ok: true });
+    assert.equal(result.model, "gpt-5.6-terra");
+
+    const assessment = await runStructured({
+      systemPrompt: "System",
+      userPrompt: "User",
+      schema,
+      privacy: { classification: "internal" },
+      maxOutputTokens: 200,
+      model: openAIStageModel("assessment"),
+    });
+    assert.deepEqual(assessment.data, { ok: true });
+    assert.equal(assessment.model, "gpt-5.6-sol");
   });
-  assert.equal(captured.url, "/v1/responses");
-  assert.equal(captured.body.store, false);
-  assert.equal(captured.body.reasoning.effort, "high");
-  assert.equal(captured.body.text.format.type, "json_schema");
-  assert.equal(captured.body.text.format.strict, true);
+  assert.equal(captured[0].url, "/v1/responses");
+  assert.equal(captured[0].body.model, "gpt-5.6-terra");
+  assert.equal(captured[1].body.model, "gpt-5.6-sol");
+  assert.equal(captured[0].body.store, false);
+  assert.equal(captured[0].body.reasoning.effort, "high");
+  assert.equal(captured[0].body.text.format.type, "json_schema");
+  assert.equal(captured[0].body.text.format.strict, true);
 }
 
 async function testOllamaContract() {

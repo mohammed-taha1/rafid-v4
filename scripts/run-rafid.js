@@ -454,9 +454,18 @@ function configureLocalProvider(body) {
     return currentProviderStatus();
   }
 
+  const openAIModel = String(body.model || "gpt-5.6-sol").trim() || "gpt-5.6-sol";
+  if (!["gpt-5.6-sol", "gpt-5.6-terra"].includes(openAIModel)) {
+    const error = new Error("اختر gpt-5.6-sol أو gpt-5.6-terra مع OpenAI.");
+    error.statusCode = 400;
+    throw error;
+  }
   process.env.AI_PROVIDER = "openai";
   process.env.OPENAI_API_KEY = apiKey;
-  process.env.OPENAI_MODEL = String(body.model || "gpt-5.6").trim() || "gpt-5.6";
+  process.env.OPENAI_MODEL = openAIModel;
+  process.env.OPENAI_EXTRACTION_MODEL = "gpt-5.6-terra";
+  process.env.OPENAI_OPPORTUNITY_MODEL = "gpt-5.6-terra";
+  process.env.OPENAI_ASSESSMENT_MODEL = "gpt-5.6-sol";
   process.env.OPENAI_BASE_URL = "https://api.openai.com/v1";
   process.env.RAFID_DATA_POLICY = dataPolicy;
   process.env.OPENAI_ZERO_DATA_RETENTION_CONFIRMED =

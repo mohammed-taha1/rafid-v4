@@ -33,3 +33,13 @@ services:
         sync: false
       - key: GROQ_ASSESSMENT_REASONING_EFFORT
         value: medium
+      # مسار OpenAI الهجين جاهز لكنه لا يصبح فعالًا إلا بعد تغيير AI_PROVIDER
+      # وإدخال OPENAI_API_KEY وتأكيد ZDR يدويًا في مدير أسرار Render.
+      - key: OPENAI_MODEL
+        value: gpt-5.6-sol
+      - key: OPENAI_EXTRACTION_MODEL
+        value: gpt-5.6-terra
+      - key: OPENAI_OPPORTUNITY_MODEL
+        value: gpt-5.6-terra
+      - key: OPENAI_ASSESSMENT_MODEL
+        value: gpt-5.6-sol

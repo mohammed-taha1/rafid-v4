@@ -6,7 +6,7 @@
 
 1. اربط المستودع واختر الفرع `main` بعد اجتياز Pull Request لفحص `verify` الإلزامي.
 2. استخدم `render.yaml` أو اضبط Build: `npm ci && npm run build` وStart: `npm start`، والجذر هو المستودع.
-3. أضف أسرار الخادم فقط في لوحة Render: `GROQ_API_KEY` و`GROQ_MODEL` وبيانات Supabase عند تفعيل المصادقة. لتشغيل لوحة القياس أضف `SUPABASE_SERVICE_ROLE_KEY` إلى الخادم فقط واضبط `RAFID_PRODUCT_TELEMETRY_ENABLED=true`. لا تضع مفتاح الخدمة في YAML أو الواجهة أو أي متغير عام.
+3. أضف أسرار الخادم فقط في لوحة Render. للمسار الحالي استخدم `GROQ_API_KEY`. وللمسار الهجين الاختياري استخدم `OPENAI_API_KEY` مع `OPENAI_EXTRACTION_MODEL=gpt-5.6-terra` و`OPENAI_OPPORTUNITY_MODEL=gpt-5.6-terra` و`OPENAI_ASSESSMENT_MODEL=gpt-5.6-sol`. لا تجعل `AI_PROVIDER=openai` قبل إدخال المفتاح وتأكيد سياسة البيانات واختبار طلب غير حساس. لتشغيل لوحة القياس أضف `SUPABASE_SERVICE_ROLE_KEY` إلى الخادم فقط واضبط `RAFID_PRODUCT_TELEMETRY_ENABLED=true`. لا تضع مفتاح الخدمة في YAML أو الواجهة أو أي متغير عام.
 4. في Supabase Auth فعّل Google، واضبط Site URL على `https://rafid.rafid-platform.workers.dev/`، وأضف عنوان العودة الدقيق `https://rafid.rafid-platform.workers.dev/?rafid_auth=institution` إلى Redirect URLs. أبقِ روابط Render القديمة لتوافق رابط QR. يزيل رافد بيانات العودة من شريط العنوان ويحفظ جلسة المؤسسة داخل التبويب فقط.
 5. اضبط `RAFID_HOST=0.0.0.0`، `MAX_FILE_SIZE_MB=20`، و`MAX_ANALYSIS_INPUT_CHARS=16000`، و`ANALYSIS_TIMEOUT_SECONDS=120`. يحمي حد الإدخال طلب Groq من تجاوز السعة؛ وعند تجاوزه تظهر نتيجة مع تنبيه بأنها غطّت الجزء المقبول فقط.
 6. اجعل health check هو `/health`. يعيد حالة تشغيل عامة فقط ولا يفحص مفتاح AI ولا يكشف أسرارًا.
@@ -24,5 +24,6 @@ Rollback: أعد النشر من آخر إصدار ناجح في Render أو ا�
 - الواجهة: `frontend` عبر Static Assets.
 - مسارات الخادم: `/api/rafid/*` و`/health` تمر عبر Worker إلى `RAFID_API_ORIGIN`.
 - لا تضع `GROQ_API_KEY` أو `SUPABASE_SERVICE_ROLE_KEY` في Cloudflare؛ تبقى أسرار التحليل على Render خلال هذه المرحلة.
+- لا تضع `OPENAI_API_KEY` في Cloudflare أو GitHub؛ يحفظ في Render Secret فقط، بينما أسماء النماذج غير سرية.
 - احتفظ بخدمة Render ورابطها القديم كي يظل QR الحالي صالحًا.
 - الخدمة الحية الحالية `rafid-v4` تعمل على خطة Render المجانية، مرتبطة بـ`main`، وCloudflare هو الواجهة العامة الأسرع.

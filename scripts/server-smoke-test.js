@@ -78,7 +78,7 @@ async function main() {
       body: JSON.stringify({
         provider: "openai",
         api_key: "test-openai-key-not-real",
-        model: "gpt-5.6",
+        model: "gpt-5.6-sol",
         data_policy: "standard",
         zero_data_retention_confirmed: false,
       }),
