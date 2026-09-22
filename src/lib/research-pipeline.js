@@ -3,10 +3,37 @@
 const crypto = require("node:crypto");
 const { ingestText, ingestFile, IngestError } = require("./ingest");
 const { chunkDocument } = require("./long-document");
-const { createAnalysis, emptyElements, validateAnalysis } = require("./research-schema");
+const { createAnalysis, emptyElements, scoreAnalysis, validateAnalysis } = require("./research-schema");
 
 const active = new Map();
-const LONG_DOCUMENT_LIMITATION = "تم تحليل الجزء المقبول من المستند الطويل فقط؛ راجع الأقسام المتبقية أو أعد التحليل على ملخص مركز.";
+const LONG_DOCUMENT_LIMITATION = "تجاوز المستند الحد الأقصى للتحليل الكامل؛ لذلك حُجبت الدرجة الدقيقة وأُظهر نطاق استرشادي فقط.";
+
+function guardEvidenceAndCoverage(result, { truncated = false, sourceMetadata = [] } = {}) {
+  const guarded = structuredClone(result);
+  const pageEvidenceRequired = sourceMetadata.some((source) => source?.sourceType === "pdf" && Number(source?.sections) > 0);
+  if (pageEvidenceRequired) {
+    for (const element of Object.values(guarded.extractedElements || {})) {
+      if (element.status === "غير موضح") continue;
+      const located = (element.evidence || []).some((entry) => /(?:\[PAGE\s+\d+\]|صفحة\s*\d+|page\s*\d+)/iu.test(String(entry)));
+      if (!located) {
+        if (element.status === "موجود") element.status = "جزئي";
+        element.assessmentNote = `${element.assessmentNote} لم يُربط الدليل برقم صفحة؛ يلزم التحقق من المصدر.`.trim();
+      }
+    }
+    const scores = scoreAnalysis(guarded.extractedElements);
+    guarded.technicalReadiness = scores.technical;
+    guarded.fundingReadiness = scores.funding;
+  }
+  if (truncated) {
+    for (const key of ["technicalReadiness", "fundingReadiness"]) {
+      const readiness = guarded[key];
+      const lowerBound = Number.isInteger(readiness.score) ? readiness.score : 0;
+      guarded[key] = { ...readiness, score: null, scoreAvailable: false, scoreRange: { minimum: lowerBound, maximum: 100 } };
+    }
+    guarded.confidence = "منخفض";
+  }
+  return guarded;
+}
 
 function apiError(code, message, status = 400) {
   const error = new Error(message);
@@ -24,7 +51,7 @@ function safeError(error) {
 async function analyzeResearch(payload, {
   provider,
   maxFileSizeMb = 20,
-  maxAnalysisInputChars = 16000,
+  maxAnalysisInputChars = 120000,
   timeoutMs = 65000,
   signal,
 } = {}) {
@@ -58,16 +85,20 @@ async function analyzeResearch(payload, {
   else signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
   try {
-    const safeInputLimit = Math.max(4000, Number(maxAnalysisInputChars) || 16000);
+    const safeInputLimit = Math.max(4000, Number(maxAnalysisInputChars) || 120000);
     const chunks = chunkDocument(input.fullText, { maxChars: 8000, maxTotalChars: safeInputLimit });
     if (controller.signal.aborted) throw apiError("TIMEOUT", "انتهت مهلة التحليل أو أُلغي الطلب.", 504);
 
-    const rawResult = provider.analyze
-      ? await provider.analyze({ requestId, textSize: input.fullText.length, chunks: chunks.chunks, outputLanguage: payload.output_language === "en" ? "en" : "ar", signal: controller.signal })
+    const providerResponse = provider.analyze
+      ? await provider.analyze({ requestId, textSize: input.fullText.length, chunks: chunks.chunks, sourceMetadata: Array.isArray(payload.source_metadata) ? payload.source_metadata : [], outputLanguage: payload.output_language === "en" ? "en" : "ar", signal: controller.signal })
       : createAnalysis({ elements: emptyElements() });
-    const result = chunks.truncated
+    const rawResult = providerResponse?.result || providerResponse;
+    const providerMeta = providerResponse?.meta || {};
+    const wasTruncated = chunks.truncated || providerMeta.extractionTruncated === true;
+    const withLimitations = wasTruncated
       ? { ...rawResult, limitations: [...new Set([...(rawResult.limitations || []), LONG_DOCUMENT_LIMITATION])] }
       : rawResult;
+    const result = guardEvidenceAndCoverage(withLimitations, { truncated: wasTruncated, sourceMetadata: Array.isArray(payload.source_metadata) ? payload.source_metadata : [] });
 
     if (controller.signal.aborted) throw apiError("TIMEOUT", "انتهت مهلة التحليل أو أُلغي الطلب.", 504);
     if (!validateAnalysis(result).valid) throw apiError("INVALID_RESPONSE", "تعذر التحقق من نتيجة التحليل.", 502);
@@ -77,8 +108,10 @@ async function analyzeResearch(payload, {
       meta: {
         sourceType: input.sourceType,
         wordCount: input.wordCount,
-        truncated: chunks.truncated,
+        truncated: wasTruncated,
         acceptedChars: Math.min(input.fullText.length, safeInputLimit),
+        sourceDocuments: Array.isArray(payload.source_metadata) ? payload.source_metadata.map((source) => ({ name: String(source?.name || "مستند").slice(0, 120), sourceType: String(source?.sourceType || "unknown").slice(0, 16), sections: Math.max(0, Number(source?.sections) || 0) })) : [],
+        extractionBatches: Number(providerMeta.extractionBatches) || chunks.chunks.length,
       },
     };
   } catch (error) {
@@ -90,4 +123,4 @@ async function analyzeResearch(payload, {
   }
 }
 
-module.exports = { analyzeResearch, apiError };
+module.exports = { analyzeResearch, apiError, guardEvidenceAndCoverage };

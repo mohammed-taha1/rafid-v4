@@ -14,11 +14,13 @@ function rubricResult(rubric, elements, map) {
     const source = elements[map[id]] || item(); const factor = source.status === "موجود" ? 1 : source.status === "جزئي" ? 0.5 : 0;
     return { id, weight, score: Math.round(weight * factor), explanation: source.assessmentNote || "لا توجد أدلة كافية." };
   });
-  return { score: dimensions.reduce((sum, row) => sum + row.score, 0), dimensions };
+  return { score: dimensions.reduce((sum, row) => sum + row.score, 0), scoreAvailable: true, dimensions };
 }
 function scoreAnalysis(elements) {
   const technical = rubricResult(TECHNICAL_RUBRIC, elements, { problem:"problem", objectives:"objectives", methodology:"methodology", feasibility:"applicability", resources:"resources", risks:"risks", preliminaryEvidence:"currentOrExpectedResults", measurement:"methodology", application:"applicability", workPlan:"timeline" });
-  const funding = rubricResult(FUNDING_RUBRIC, elements, { value:"innovation", impact:"scientificImpact", beneficiaries:"beneficiaries", budget:"budget", justification:"problem", deliveryPlan:"timeline", measurement:"methodology", risks:"risks", fundingFit:"applicability", researchToProject:"currentOrExpectedResults" });
+  const funding = rubricResult(FUNDING_RUBRIC, elements, { value:"innovation", impact:"scientificImpact", beneficiaries:"beneficiaries", budget:"budget", justification:"problem", deliveryPlan:"timeline", measurement:"methodology", risks:"risks", fundingFit:"__opportunityNotProvided", researchToProject:"currentOrExpectedResults" });
+  const fundingFit = funding.dimensions.find((dimension) => dimension.id === "fundingFit");
+  if (fundingFit) fundingFit.explanation = "لا يمكن قياس الملاءمة التمويلية دون إدخال فرصة تمويل ومعاييرها الرسمية.";
   return { technical, funding };
 }
 function validateAnalysis(value) {
@@ -26,7 +28,7 @@ function validateAnalysis(value) {
   if (!result || typeof result !== "object") errors.push("النتيجة غير كائن.");
   for (const key of ["analysisVersion","sourceSummary","researchSummary","extractedElements","technicalReadiness","fundingReadiness","strengths","criticalGaps","importantGaps","additionalImprovements","actionPlan","researcherQuestions","fundingChecklist","confidence","limitations","fundingDisclaimer"]) if (!(key in (result || {}))) errors.push(`حقل مفقود: ${key}`);
   for (const key of ELEMENTS) { const entry = result?.extractedElements?.[key]; if (!entry || !STATUS.has(entry.status) || typeof entry.summary !== "string" || !Array.isArray(entry.evidence) || typeof entry.assessmentNote !== "string") errors.push(`عنصر بحث غير صالح: ${key}`); }
-  for (const key of ["technicalReadiness","fundingReadiness"]) { const score = result?.[key]?.score; if (!Number.isInteger(score) || score < 0 || score > 100 || !Array.isArray(result?.[key]?.dimensions) || result[key].dimensions.some((d) => !d.explanation)) errors.push(`تقييم غير صالح: ${key}`); }
+  for (const key of ["technicalReadiness","fundingReadiness"]) { const readiness = result?.[key]; const score = readiness?.score; const available = readiness?.scoreAvailable !== false; const validScore = available ? Number.isInteger(score) && score >= 0 && score <= 100 : score === null && Number.isInteger(readiness?.scoreRange?.minimum) && Number.isInteger(readiness?.scoreRange?.maximum); if (!validScore || !Array.isArray(readiness?.dimensions) || readiness.dimensions.some((d) => !d.explanation)) errors.push(`تقييم غير صالح: ${key}`); }
   if (result?.fundingDisclaimer !== FUNDING_DISCLAIMER) errors.push("إخلاء المسؤولية الثابت مفقود.");
   return { valid: errors.length === 0, errors };
 }

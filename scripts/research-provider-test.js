@@ -1,7 +1,9 @@
 "use strict";
 const assert=require("node:assert/strict");
 const {createAnalysis,emptyElements}=require("../src/lib/research-schema");
-const {createGroqAdapter,ProviderError,normalizeModelAnalysis}=require("../src/lib/research-provider");
+const {createGroqAdapter,groupChunks,ProviderError,normalizeModelAnalysis}=require("../src/lib/research-provider");
+
+assert.deepEqual(groupChunks(["a".repeat(4), "b".repeat(4), "c".repeat(4)], 10), ["aaaa\n\nbbbb", "cccc"]);
 
 let requestOptions;
 const client={chat:{completions:{create:async(_request,options)=>{

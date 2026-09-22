@@ -13,7 +13,19 @@ const provider = { analyze: async () => createAnalysis({ elements: emptyElements
   const long = await analyzeResearch({ text: "بحث مطول ".repeat(4000) }, { provider, maxAnalysisInputChars: 8000 });
   assert.equal(long.meta.truncated, true);
   assert.equal(long.meta.acceptedChars, 8000);
-  assert.ok(long.result.limitations.some((value) => value.includes("الجزء المقبول")));
+  assert.ok(long.result.limitations.some((value) => value.includes("حُجبت الدرجة")));
+  assert.equal(long.result.technicalReadiness.scoreAvailable, false);
+  assert.equal(long.result.technicalReadiness.score, null);
+  assert.equal(long.result.confidence, "منخفض");
+
+  const locatedElements = emptyElements();
+  locatedElements.problem = { status: "موجود", summary: "مشكلة", evidence: ["دليل عام"], assessmentNote: "واضحة." };
+  const pageGuarded = await analyzeResearch({
+    text: "[PAGE 1]\nمشكلة بحثية موثقة وقابلة للتحليل",
+    source_metadata: [{ name: "paper.pdf", sourceType: "pdf", sections: 1 }],
+  }, { provider: { analyze: async () => createAnalysis({ elements: locatedElements }) } });
+  assert.equal(pageGuarded.result.extractedElements.problem.status, "جزئي");
+  assert.match(pageGuarded.result.extractedElements.problem.assessmentNote, /رقم صفحة/);
 
   await assert.rejects(
     () => analyzeResearch({ text: "a", file: {} }, { provider }),

@@ -24,7 +24,7 @@ services:
       - key: MAX_FILE_SIZE_MB
         value: 20
       - key: MAX_ANALYSIS_INPUT_CHARS
-        value: 16000
+        value: 120000
       - key: ANALYSIS_TIMEOUT_SECONDS
         value: 120
       - key: GROQ_API_KEY
