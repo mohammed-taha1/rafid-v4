@@ -33,6 +33,21 @@ services:
         sync: false
       - key: GROQ_ASSESSMENT_REASONING_EFFORT
         value: medium
+      # DeepSeek هو المزود التالي المعتمد ويبقى غير فعال حتى إضافة السر والاختبار الحي.
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-v4-pro
+      - key: DEEPSEEK_EXTRACTION_MODEL
+        value: deepseek-v4-pro
+      - key: DEEPSEEK_OPPORTUNITY_MODEL
+        value: deepseek-v4-pro
+      - key: DEEPSEEK_ASSESSMENT_MODEL
+        value: deepseek-v4-pro
+      - key: DEEPSEEK_BASE_URL
+        value: https://api.deepseek.com
+      - key: DEEPSEEK_ZERO_DATA_RETENTION_CONFIRMED
+        value: "false"
       # مسار OpenAI الهجين جاهز لكنه لا يصبح فعالًا إلا بعد تغيير AI_PROVIDER
       # وإدخال OPENAI_API_KEY وتأكيد ZDR يدويًا في مدير أسرار Render.
       - key: OPENAI_MODEL
