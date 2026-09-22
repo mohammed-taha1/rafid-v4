@@ -166,15 +166,16 @@ GROQ_REASONING_EFFORT=low
 ```text
 AI_PROVIDER=deepseek
 DEEPSEEK_API_KEY=...
-DEEPSEEK_MODEL=deepseek-v4-pro
-DEEPSEEK_EXTRACTION_MODEL=deepseek-v4-pro
-DEEPSEEK_OPPORTUNITY_MODEL=deepseek-v4-pro
-DEEPSEEK_ASSESSMENT_MODEL=deepseek-v4-pro
+DEEPSEEK_MODEL=deepseek-flash
+DEEPSEEK_EXTRACTION_MODEL=deepseek-flash
+DEEPSEEK_OPPORTUNITY_MODEL=deepseek-flash
+DEEPSEEK_ASSESSMENT_MODEL=deepseek-flash
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_ZERO_DATA_RETENTION_CONFIRMED=false
+RAFID_REASONING_EFFORT=none
 ```
 
-يبدأ رافد بـ`deepseek-v4-pro` في جميع المراحل لضبط خط جودة واضح. يمكن نقل الاستخراج وقراءة الفرصة إلى `deepseek-flash` بعد اجتياز مختبر الجودة. لا تغيّر تأكيد الاحتفاظ إلى `true` دون إثبات من المزود. راجع `docs/DEEPSEEK_SETUP.md` للتفعيل والرجوع.
+الإعداد التفاعلي المجتاز للاختبار يستخدم `deepseek-flash` مع محرك رافد الحتمي والناقد الثاني والتحقق البنيوي. تجاوز `deepseek-v4-pro` مهلة المسار المباشر، لذلك يبقى خيارًا مستقبليًا لمهمة خلفية غير متزامنة بعد قياسها. لا تغيّر تأكيد الاحتفاظ إلى `true` دون إثبات من المزود. راجع `docs/DEEPSEEK_SETUP.md` للتفعيل والرجوع.
 
 ### OpenAI مباشر
 
