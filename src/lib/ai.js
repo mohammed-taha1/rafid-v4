@@ -327,6 +327,49 @@ function friendlyStructuredOutputError(error) {
   return wrapped;
 }
 
+function parseStructuredOutputText(value) {
+  const text = String(value || "").trim();
+  if (!text) throw new SyntaxError("Empty structured output");
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Some OpenAI-compatible providers may wrap otherwise valid structured
+    // output in a Markdown fence even when JSON Schema mode is requested.
+  }
+
+  const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced) return JSON.parse(fenced[1]);
+
+  let start = -1;
+  let depth = 0;
+  let quote = false;
+  let escaped = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (start < 0) {
+      if (char !== "{" && char !== "[") continue;
+      start = index;
+      depth = 1;
+      continue;
+    }
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') quote = false;
+      continue;
+    }
+    if (char === '"') quote = true;
+    else if (char === "{" || char === "[") depth += 1;
+    else if (char === "}" || char === "]") {
+      depth -= 1;
+      if (depth === 0) return JSON.parse(text.slice(start, index + 1));
+    }
+  }
+
+  return JSON.parse(text);
+}
+
 function smartTruncate(text, maxChars) {
   const value = String(text || "").trim();
   if (value.length <= maxChars) return { text: value, truncated: false };
@@ -576,7 +619,7 @@ async function runStructured({
 
   let parsed;
   try {
-    parsed = JSON.parse(outputText);
+    parsed = parseStructuredOutputText(outputText);
   } catch (error) {
     const wrapped = new Error(`أعاد النموذج مخرجات غير صالحة كـ JSON: ${error.message}`, {
       cause: error,
@@ -643,5 +686,6 @@ module.exports = {
   assertDataPolicy,
   openAIStageModel,
   isStructuredOutputSchemaError,
+  parseStructuredOutputText,
   resetAIClient,
 };
