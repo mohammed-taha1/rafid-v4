@@ -682,7 +682,7 @@ async function handleApi(request, response, pathname) {
     const telemetryFlow = /^[0-9a-f-]{36}$/i.test(String(body.telemetry_flow_id || "")) ? String(body.telemetry_flow_id) : requestId();
     const telemetryStarted = Date.now();
     try {
-      const result = await analyzeResearch(body, { provider: createGroqResearchProvider(), maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 20), maxAnalysisInputChars: Number(process.env.MAX_ANALYSIS_INPUT_CHARS || 16000), timeoutMs: Number(process.env.ANALYSIS_TIMEOUT_SECONDS || 60) * 1000 });
+      const result = await analyzeResearch(body, { provider: createGroqResearchProvider(), maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 20), maxAnalysisInputChars: Number(process.env.MAX_ANALYSIS_INPUT_CHARS || 120000), timeoutMs: Number(process.env.ANALYSIS_TIMEOUT_SECONDS || 120) * 1000 });
       void recordProductEvent({ flow_id: telemetryFlow, event_name: "analysis_finished", service_key: "general_readiness", outcome: "succeeded", duration_ms: Date.now() - telemetryStarted, stage_timings: { total: Date.now() - telemetryStarted }, gap_keys: gapTaxonomy(result.result?.criticalGaps) });
       return sendJson(response, 200, { ok: true, ...result });
     } catch (error) {

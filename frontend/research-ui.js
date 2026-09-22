@@ -89,13 +89,26 @@
     resetView();
   }
 
+  function documentTextForAnalysis(documentData, fallbackName) {
+    const name = documentData.safeDisplayName || fallbackName || "مستند";
+    const sections = items(documentData.pagesOrSections);
+    if (!sections.length) return `### ${name}\n${documentData.fullText}`;
+    const marked = sections.map((section, index) => {
+      const locator = Number.isInteger(section.pageNumber)
+        ? `PAGE ${section.pageNumber}`
+        : `SECTION ${Number(section.sectionNumber) || index + 1}`;
+      return `[${locator}]\n${String(section.text || "").trim()}`;
+    }).filter((section) => !/\]\s*$/u.test(section));
+    return `### ${name}\n${marked.join("\n\n")}`;
+  }
+
   async function readSource(textInput, fileInput, label, { maxFiles = 1 } = {}) {
     const typed = textInput.value.trim();
     const files = Array.from(fileInput.files || []);
     if (typed && files.length) throw new Error(`اختر لصق نص ${label} أو رفع ملفاته، وليس الاثنين معًا.`);
     if (!typed && !files.length) throw new Error(`أدخل نص ${label} أو ارفع ملفًا.`);
     if (files.length > maxFiles) throw new Error(`يمكن رفع ${maxFiles} ${maxFiles === 1 ? "ملف فقط" : "ملفات كحد أقصى"} لـ${label}.`);
-    if (!files.length) return { text: typed, files: [], sourceName: "نص أدخله المستخدم" };
+    if (!files.length) return { text: typed, files: [], sourceName: "نص أدخله المستخدم", sourceMetadata: [{ name: "نص مباشر", sourceType: "text", sections: 1 }] };
     const documents = [];
     for (const file of files) {
       const documentData = await window.RafidIngest.read(file, {
@@ -104,9 +117,15 @@
       documents.push({ file, documentData });
     }
     return {
-      text: documents.map(({ file, documentData }) => `### ${documentData.safeDisplayName || file.name}\n${documentData.fullText}`).join("\n\n"),
+      text: documents.map(({ file, documentData }) => documentTextForAnalysis(documentData, file.name)).join("\n\n"),
       files: documents.map(({ file }) => file),
       sourceName: documents.map(({ file, documentData }) => documentData.safeDisplayName || file.name).join("، "),
+      sourceMetadata: documents.map(({ file, documentData }) => ({
+        name: documentData.safeDisplayName || file.name,
+        sourceType: documentData.sourceType || "unknown",
+        sections: items(documentData.pagesOrSections).length,
+        wordCount: Number(documentData.wordCount) || 0,
+      })),
     };
   }
 
@@ -606,7 +625,7 @@
         error.textContent = t("قراءة المحتوى… تحليل العناصر… تقييم الجاهزية… إعداد التوصيات…", "Reading content… Analyzing elements… Scoring readiness… Preparing recommendations…");
         controller = new AbortController();
         const flowId = window.RafidTelemetry?.start("general_readiness");
-        const data = await callApi("research/analyze", { text: source.text, output_language: window.RafidI18n?.language || "ar", telemetry_flow_id: flowId }, controller.signal);
+        const data = await callApi("research/analyze", { text: source.text, source_metadata: source.sourceMetadata, output_language: window.RafidI18n?.language || "ar", telemetry_flow_id: flowId }, controller.signal);
         generalResults(data.result, { ...data.meta, flow_id: flowId || data.requestId, service_key: "general_readiness" });
       } catch (errorValue) {
         error.textContent = errorValue.name === "AbortError" ? "أُلغي التحليل. يمكنك المحاولة مجددًا." : errorValue.message;
@@ -623,10 +642,13 @@
   function generalResults(result, meta = {}) {
     requestInFlight = false;
     const dimensions = items(result.technicalReadiness?.dimensions).map((dimension) => `<li><b>${esc(dimension.id)}</b><span>${esc(dimension.explanation)}</span></li>`).join("");
-    const truncationNotice = meta.truncated ? '<p class="rafid-notice">تم تحليل الجزء المقبول من المستند الطويل فقط؛ أعد التحليل على ملخص مركز للحصول على تغطية أوسع.</p>' : "";
+    const truncationNotice = meta.truncated ? `<p class="rafid-notice">${t("تجاوز المستند حد التحليل الكامل؛ لذلك لم يعرض رافد درجة دقيقة. راجع النطاق الاسترشادي أو قسّم المستند مع إبقاء أرقام الصفحات.", "The document exceeded the full-analysis limit, so Rafid withheld a precise score. Review the indicative range or split the document while preserving page numbers.")}</p>` : "";
     const confidence = t(result.confidence || "منخفض", ({ مرتفع: "High", متوسط: "Medium", منخفض: "Low" })[result.confidence] || result.confidence || "Low");
     const disclaimer = t(result.fundingDisclaimer || "هذا التحليل إرشادي ولا يضمن الحصول على تمويل.", "This assessment is advisory and does not guarantee funding or acceptance. Verify the official opportunity criteria before applying.");
-    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${esc(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores"><article><span>${t("الجاهزية التقنية", "Technical readiness")}</span><meter min="0" max="100" value="${clamp(result.technicalReadiness?.score)}"></meter><b>${clamp(result.technicalReadiness?.score)}<small>/100</small></b></article><article><span>${t("الجاهزية التمويلية", "Funding readiness")}</span><meter min="0" max="100" value="${clamp(result.fundingReadiness?.score)}"></meter><b>${clamp(result.fundingReadiness?.score)}<small>/100</small></b></article></div><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الدرجات", "Score explanations")}</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${safeList(result.criticalGaps)}</details><details><summary>${t("خطة العمل", "Action plan")}</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="download" class="rafid-secondary" type="button">${t("تنزيل تقرير", "Download report")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير", "Print report")}</button></div><fieldset class="result-feedback"><legend>${t("هل كانت النتيجة مفيدة؟", "Was this result useful?")}</legend><button type="button" data-rating="3">${t("مفيدة جدًا", "Very useful")}</button><button type="button" data-rating="2">${t("مفيدة جزئيًا", "Partly useful")}</button><button type="button" data-rating="1">${t("غير مفيدة", "Not useful")}</button><p role="status"></p></fieldset></section>`;
+    const readinessCard = (readiness, arabicLabel, englishLabel) => readiness?.scoreAvailable === false
+      ? `<article><span>${t(arabicLabel, englishLabel)}</span><div class="score-unavailable" role="img" aria-label="${t("لا توجد بيانات كافية لدرجة دقيقة", "Insufficient data for a precise score")}"><b>—</b></div><small>${t("النطاق الاسترشادي", "Indicative range")}: ${clamp(readiness.scoreRange?.minimum)}–${clamp(readiness.scoreRange?.maximum)}</small></article>`
+      : `<article><span>${t(arabicLabel, englishLabel)}</span><meter min="0" max="100" value="${clamp(readiness?.score)}"></meter><b>${clamp(readiness?.score)}<small>/100</small></b></article>`;
+    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${esc(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores">${readinessCard(result.technicalReadiness, "الجاهزية التقنية", "Technical readiness")}${readinessCard(result.fundingReadiness, "الجاهزية التمويلية", "Funding readiness")}</div><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الدرجات", "Score explanations")}</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${safeList(result.criticalGaps)}</details><details><summary>${t("خطة العمل", "Action plan")}</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="download" class="rafid-secondary" type="button">${t("تنزيل تقرير", "Download report")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير", "Print report")}</button></div><fieldset class="result-feedback"><legend>${t("هل كانت النتيجة مفيدة؟", "Was this result useful?")}</legend><button type="button" data-rating="3">${t("مفيدة جدًا", "Very useful")}</button><button type="button" data-rating="2">${t("مفيدة جزئيًا", "Partly useful")}</button><button type="button" data-rating="1">${t("غير مفيدة", "Not useful")}</button><p role="status"></p></fieldset></section>`;
     const flowId = meta.flow_id;
     if (flowId) window.RafidTelemetry?.record("report_viewed", "general_readiness", flowId);
     root().querySelector("#new").addEventListener("click", generalView);
