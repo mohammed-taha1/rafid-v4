@@ -21,6 +21,41 @@ let cachedClient = null;
 let cachedConfigKey = null;
 let OpenAIClient = null;
 
+const OPENAI_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra"]);
+const OPENAI_STAGE_DEFAULTS = Object.freeze({
+  extraction: "gpt-5.6-terra",
+  opportunity: "gpt-5.6-terra",
+  assessment: "gpt-5.6-sol",
+});
+
+function assertSupportedOpenAIModel(model, variableName = "OPENAI_MODEL") {
+  const selected = String(model || "").trim();
+  if (!OPENAI_MODELS.has(selected)) {
+    const error = new Error(
+      `${variableName} يجب أن يكون gpt-5.6-terra أو gpt-5.6-sol لضمان واجهة Responses والمخرجات المنظمة.`,
+    );
+    error.statusCode = 503;
+    error.code = "RAFID_UNSUPPORTED_OPENAI_MODEL";
+    throw error;
+  }
+  return selected;
+}
+
+function openAIStageModel(stage) {
+  if (activeProviderName() !== "openai") return null;
+  const variableByStage = {
+    extraction: "OPENAI_EXTRACTION_MODEL",
+    opportunity: "OPENAI_OPPORTUNITY_MODEL",
+    assessment: "OPENAI_ASSESSMENT_MODEL",
+  };
+  const variableName = variableByStage[stage];
+  const fallback = OPENAI_STAGE_DEFAULTS[stage] || process.env.OPENAI_MODEL || "gpt-5.6-sol";
+  return assertSupportedOpenAIModel(
+    (variableName && process.env[variableName]) || fallback,
+    variableName || "OPENAI_MODEL",
+  );
+}
+
 function dataPolicyFor(config) {
   if (config.provider === "ollama") {
     return {
@@ -174,10 +209,16 @@ function providerConfig() {
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
-  const baseURL = String(
-    process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
-  ).replace(/\/$/, "");
-  const model = process.env.OPENAI_MODEL || "gpt-5.6";
+  const officialBaseURL = "https://api.openai.com/v1";
+  const baseURL = String(process.env.OPENAI_BASE_URL || officialBaseURL).replace(/\/$/, "");
+  const testOverride = envFlag("RAFID_TEST_MODE") && /^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?\/v1$/i.test(baseURL);
+  if (baseURL !== officialBaseURL && !testOverride) {
+    const error = new Error("عنوان OpenAI ثابت على الواجهة الرسمية لحماية المفتاح من التحويل إلى خادم آخر.");
+    error.statusCode = 503;
+    error.code = "RAFID_INVALID_OPENAI_PROVIDER_URL";
+    throw error;
+  }
+  const model = assertSupportedOpenAIModel(process.env.OPENAI_MODEL || "gpt-5.6-sol");
   if (!apiKey) {
     const error = new Error("إعداد OpenAI غير مكتمل: فعّل مفتاح API من صفحة الاتصال والخصوصية.");
     error.statusCode = 503;
@@ -295,6 +336,7 @@ async function extractWithAI({ rawText, metadata, files, privacy, outputLanguage
     schema: RAFID_EXTRACTION_SCHEMA,
     maxOutputTokens: 14000,
     privacy,
+    model: openAIStageModel("extraction"),
   });
 
   return { ...result, project: result.data, inputTruncated: prepared.truncated };
@@ -321,6 +363,7 @@ async function extractOpportunityWithAI({ sourceText, metadata, privacy, outputL
     schema: RAFID_OPPORTUNITY_SCHEMA,
     maxOutputTokens: 16000,
     privacy,
+    model: openAIStageModel("opportunity"),
     responseMode: activeProviderName() === "groq" ? "json_object" : "json_schema",
   });
 
@@ -373,6 +416,7 @@ async function assessWithAI({ opportunity, project, context, privacy, outputLang
     schema: groq ? RAFID_COMPACT_ASSESSMENT_SCHEMA : RAFID_ASSESSMENT_SCHEMA,
     maxOutputTokens: 18000,
     privacy,
+    model: openAIStageModel("assessment"),
     reasoningEffort: groq ? process.env.GROQ_ASSESSMENT_REASONING_EFFORT || "medium" : undefined,
     responseMode: groq ? "json_object" : "json_schema",
   });
@@ -388,9 +432,13 @@ async function runStructured({
   privacy = {},
   reasoningEffort,
   responseMode = "json_schema",
+  model,
 }) {
   const { client, config } = getClient();
   const dataPolicy = assertDataPolicy(config, privacy);
+  const selectedModel = config.provider === "openai"
+    ? assertSupportedOpenAIModel(model || config.model)
+    : config.model;
   const configuredReasoningEffort = String(
     reasoningEffort ||
       (config.provider === "groq"
@@ -409,7 +457,7 @@ async function runStructured({
         )
       : maxOutputTokens;
   const chatRequest = {
-    model: config.model,
+    model: selectedModel,
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -476,7 +524,7 @@ async function runStructured({
     }
   } else {
     response = await client.responses.create({
-      model: config.model,
+      model: selectedModel,
       store: dataPolicy.store,
       input: [
         { role: "system", content: systemPrompt },
@@ -516,7 +564,7 @@ async function runStructured({
   return {
     data: parsed,
     provider: config.provider,
-    model: config.model,
+    model: selectedModel,
     responseId: response.id || null,
     usage: response.usage || null,
     dataPolicy,
@@ -567,6 +615,7 @@ module.exports = {
   smartTruncate,
   dataPolicyFor,
   assertDataPolicy,
+  openAIStageModel,
   isStructuredOutputSchemaError,
   resetAIClient,
 };

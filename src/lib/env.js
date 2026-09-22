@@ -1,6 +1,7 @@
 "use strict";
 
 const GROQ_MODELS = new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
+const OPENAI_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra"]);
 const PLACEHOLDER_PATTERN = /^(?:replace[_-]with|change[_-]me|your[_-]|example|placeholder|dummy)/i;
 
 function envFlag(name, fallback = false) {
@@ -267,6 +268,22 @@ function inspectEnvironment() {
           message: "Strict data processing requires confirmed OpenAI Zero Data Retention.",
         });
       }
+      const configuredModels = [
+        ["OPENAI_MODEL", firstEnvironmentValue(["OPENAI_MODEL"], "gpt-5.6-sol")],
+        ["OPENAI_EXTRACTION_MODEL", firstEnvironmentValue(["OPENAI_EXTRACTION_MODEL"], "gpt-5.6-terra")],
+        ["OPENAI_OPPORTUNITY_MODEL", firstEnvironmentValue(["OPENAI_OPPORTUNITY_MODEL"], "gpt-5.6-terra")],
+        ["OPENAI_ASSESSMENT_MODEL", firstEnvironmentValue(["OPENAI_ASSESSMENT_MODEL"], "gpt-5.6-sol")],
+      ];
+      for (const [variable, model] of configuredModels) {
+        if (!OPENAI_MODELS.has(model)) {
+          issues.push({
+            severity: "error",
+            code: "OPENAI_MODEL_UNSUPPORTED",
+            variables: [variable],
+            message: `${variable} is not in the supported server allowlist.`,
+          });
+        }
+      }
     } else if (
       provider === "azure_openai" &&
       ["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_DEPLOYMENT"].some(
@@ -305,6 +322,10 @@ function inspectEnvironment() {
     "GROQ_MODEL",
     "GROQ_ZERO_DATA_RETENTION_CONFIRMED",
     "OPENAI_API_KEY",
+    "OPENAI_MODEL",
+    "OPENAI_EXTRACTION_MODEL",
+    "OPENAI_OPPORTUNITY_MODEL",
+    "OPENAI_ASSESSMENT_MODEL",
     "OPENAI_ZERO_DATA_RETENTION_CONFIRMED",
     "AZURE_OPENAI_API_KEY",
     "AZURE_OPENAI_ENDPOINT",
