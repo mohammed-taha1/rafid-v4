@@ -210,7 +210,7 @@ function inspectEnvironment() {
   }
 
   if (providerMode === "server") {
-    if (!["groq", "openai", "azure_openai", "ollama"].includes(provider)) {
+    if (!["groq", "openai", "deepseek", "azure_openai", "ollama"].includes(provider)) {
       issues.push({
         severity: "error",
         code: "AI_PROVIDER_UNSUPPORTED",
@@ -218,7 +218,22 @@ function inspectEnvironment() {
         message: "AI_PROVIDER is not supported by this server.",
       });
     }
-    if (provider === "groq") {
+    if (provider === "deepseek") {
+      if (isPlaceholder(firstEnvironmentValue(["DEEPSEEK_API_KEY"]))) {
+        issues.push({ severity: "error", code: "DEEPSEEK_API_KEY_MISSING", variables: ["DEEPSEEK_API_KEY"], message: "DeepSeek requires a server-only API key." });
+      }
+      for (const variable of ["DEEPSEEK_MODEL", "DEEPSEEK_EXTRACTION_MODEL", "DEEPSEEK_OPPORTUNITY_MODEL", "DEEPSEEK_ASSESSMENT_MODEL"]) {
+        if (!["deepseek-flash", "deepseek-v4-pro"].includes(firstEnvironmentValue([variable], "deepseek-v4-pro"))) {
+          issues.push({ severity: "error", code: "DEEPSEEK_MODEL_UNSUPPORTED", variables: [variable], message: "Unsupported DeepSeek model." });
+        }
+      }
+      if (firstEnvironmentValue(["DEEPSEEK_BASE_URL"], "https://api.deepseek.com").replace(/\/$/, "") !== "https://api.deepseek.com") {
+        issues.push({ severity: "error", code: "DEEPSEEK_URL_INVALID", variables: ["DEEPSEEK_BASE_URL"], message: "Only the official DeepSeek endpoint is supported." });
+      }
+      if (dataPolicy === "strict_zdr" && !envFlag("DEEPSEEK_ZERO_DATA_RETENTION_CONFIRMED")) {
+        issues.push({ severity: "error", code: "DEEPSEEK_ZDR_NOT_CONFIRMED", variables: ["DEEPSEEK_ZERO_DATA_RETENTION_CONFIRMED"], message: "Strict mode requires verified DeepSeek retention terms." });
+      }
+    } else if (provider === "groq") {
       const key = firstEnvironmentValue(["GROQ_API_KEY"]);
       const model = firstEnvironmentValue(["GROQ_MODEL"], "openai/gpt-oss-120b");
       if (isPlaceholder(key)) {
@@ -315,6 +330,7 @@ function inspectEnvironment() {
   }
 
   const analysisErrors = new Set([
+    "DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL", "DEEPSEEK_MODEL", "DEEPSEEK_EXTRACTION_MODEL", "DEEPSEEK_OPPORTUNITY_MODEL", "DEEPSEEK_ASSESSMENT_MODEL", "DEEPSEEK_ZERO_DATA_RETENTION_CONFIRMED",
     "ANALYSIS_TIMEOUT_SECONDS",
     "AI_PROVIDER",
     "RAFID_DATA_POLICY",

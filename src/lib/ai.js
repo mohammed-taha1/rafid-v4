@@ -42,6 +42,9 @@ function assertSupportedOpenAIModel(model, variableName = "OPENAI_MODEL") {
 }
 
 function openAIStageModel(stage) {
+  if (activeProviderName() === "deepseek") {
+    return deepSeekModel(process.env[`DEEPSEEK_${stage.toUpperCase()}_MODEL`] || process.env.DEEPSEEK_MODEL || "deepseek-v4-pro");
+  }
   if (activeProviderName() !== "openai") return null;
   const variableByStage = {
     extraction: "OPENAI_EXTRACTION_MODEL",
@@ -56,6 +59,16 @@ function openAIStageModel(stage) {
   );
 }
 
+function deepSeekModel(model) {
+  if (!["deepseek-flash", "deepseek-v4-pro"].includes(model)) {
+    const error = new Error("إعداد نموذج DeepSeek غير صالح.");
+    error.statusCode = 503;
+    error.code = "RAFID_UNSUPPORTED_DEEPSEEK_MODEL";
+    throw error;
+  }
+  return model;
+}
+
 function dataPolicyFor(config) {
   if (config.provider === "ollama") {
     return {
@@ -68,7 +81,9 @@ function dataPolicyFor(config) {
   }
   const mode = String(process.env.RAFID_DATA_POLICY || "strict_zdr").toLowerCase();
   const zeroDataRetentionConfirmed =
-    config.provider === "openai"
+    config.provider === "deepseek"
+      ? envFlag("DEEPSEEK_ZERO_DATA_RETENTION_CONFIRMED")
+      : config.provider === "openai"
       ? envFlag("OPENAI_ZERO_DATA_RETENTION_CONFIRMED")
       : config.provider === "groq"
         ? envFlag("GROQ_ZERO_DATA_RETENTION_CONFIRMED")
@@ -79,7 +94,7 @@ function dataPolicyFor(config) {
   return {
     mode: ["strict_zdr", "standard"].includes(mode) ? mode : "strict_zdr",
     store: false,
-    training_by_default: false,
+    training_by_default: config.provider === "deepseek" ? null : false,
     zero_data_retention_confirmed: zeroDataRetentionConfirmed,
     provider_retention:
       zeroDataRetentionConfirmed
@@ -133,6 +148,16 @@ function assertDataPolicy(config, privacy = {}) {
 
 function providerConfig() {
   const provider = String(process.env.AI_PROVIDER || "openai").toLowerCase();
+  if (provider === "deepseek") {
+    const baseURL = "https://api.deepseek.com";
+    if ((process.env.DEEPSEEK_BASE_URL || baseURL).replace(/\/$/, "") !== baseURL || !process.env.DEEPSEEK_API_KEY) {
+      const error = new Error("إعداد DeepSeek غير مكتمل أو عنوان المزود غير معتمد.");
+      error.statusCode = 503;
+      error.code = "RAFID_PROVIDER_NOT_CONFIGURED";
+      throw error;
+    }
+    return { provider, apiKey: process.env.DEEPSEEK_API_KEY, baseURL, model: deepSeekModel(process.env.DEEPSEEK_MODEL || "deepseek-v4-pro") };
+  }
   if (provider === "ollama") {
     const baseURL = String(
       process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434/v1",
@@ -438,7 +463,7 @@ async function runStructured({
   const dataPolicy = assertDataPolicy(config, privacy);
   const selectedModel = config.provider === "openai"
     ? assertSupportedOpenAIModel(model || config.model)
-    : config.model;
+    : config.provider === "deepseek" ? deepSeekModel(model || config.model) : config.model;
   const configuredReasoningEffort = String(
     reasoningEffort ||
       (config.provider === "groq"
@@ -607,6 +632,7 @@ function resetAIClient() {
 }
 
 module.exports = {
+  deepSeekModel,
   extractWithAI,
   extractOpportunityWithAI,
   assessWithAI,

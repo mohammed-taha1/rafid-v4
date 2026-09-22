@@ -161,6 +161,21 @@ GROQ_REASONING_EFFORT=low
 
 لا تجعل قيمة `GROQ_ZERO_DATA_RETENTION_CONFIRMED=true` إلا بعد تفعيل ZDR فعليًا من Data Controls. الخطة المجانية لها حدود استخدام؛ القيم `GROQ_MAX_*` في `.env.example` تقلل الحقول الفارغة وتضبط حجم الطلب. قد يختصر رافد المصادر الطويلة ويصرح بذلك بدل إرسال طلب سيفشل.
 
+### DeepSeek — المزود التالي المعتمد
+
+```text
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=...
+DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_EXTRACTION_MODEL=deepseek-v4-pro
+DEEPSEEK_OPPORTUNITY_MODEL=deepseek-v4-pro
+DEEPSEEK_ASSESSMENT_MODEL=deepseek-v4-pro
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_ZERO_DATA_RETENTION_CONFIRMED=false
+```
+
+يبدأ رافد بـ`deepseek-v4-pro` في جميع المراحل لضبط خط جودة واضح. يمكن نقل الاستخراج وقراءة الفرصة إلى `deepseek-flash` بعد اجتياز مختبر الجودة. لا تغيّر تأكيد الاحتفاظ إلى `true` دون إثبات من المزود. راجع `docs/DEEPSEEK_SETUP.md` للتفعيل والرجوع.
+
 ### OpenAI مباشر
 
 ```text
