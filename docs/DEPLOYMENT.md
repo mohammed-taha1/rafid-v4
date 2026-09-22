@@ -24,7 +24,7 @@ Rollback: أعد النشر من آخر إصدار ناجح في Render أو ا�
 - الواجهة: `frontend` عبر Static Assets.
 - مسارات الخادم: `/api/rafid/*` و`/health` تمر عبر Worker إلى `RAFID_API_ORIGIN`.
 - لا تضع `GROQ_API_KEY` أو `DEEPSEEK_API_KEY` أو `SUPABASE_SERVICE_ROLE_KEY` في Cloudflare؛ تبقى أسرار التحليل على Render خلال هذه المرحلة.
-- لتفعيل DeepSeek، أضف مفتاحه إلى Render فقط، واضبط نماذج المراحل على `deepseek-v4-pro`، ثم غيّر `AI_PROVIDER=deepseek` بعد نجاح طلب حي غير حساس ومراجعة سياسة الاحتفاظ.
+- DeepSeek مفعّل في Render بإعداد `deepseek-flash` المجتاز للاختبار للمسار التفاعلي. لا تنقل `deepseek-v4-pro` إلى هذا المسار قبل تشغيله كمهمة خلفية وقياس المهلة والجودة.
 - لا تضع `OPENAI_API_KEY` في Cloudflare أو GitHub؛ يحفظ في Render Secret فقط، بينما أسماء النماذج غير سرية.
 - احتفظ بخدمة Render ورابطها القديم كي يظل QR الحالي صالحًا.
 - الخدمة الحية الحالية `rafid-v4` تعمل على خطة Render المجانية، مرتبطة بـ`main`، وCloudflare هو الواجهة العامة الأسرع.

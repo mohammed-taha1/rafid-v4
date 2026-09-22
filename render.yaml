@@ -33,17 +33,19 @@ services:
         sync: false
       - key: GROQ_ASSESSMENT_REASONING_EFFORT
         value: medium
-      # DeepSeek هو المزود التالي المعتمد ويبقى غير فعال حتى إضافة السر والاختبار الحي.
+      # الإعداد الحي المجتاز للاختبار: Flash للمسار التفاعلي مع تحقق رافد الحتمي.
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: DEEPSEEK_MODEL
-        value: deepseek-v4-pro
+        value: deepseek-flash
       - key: DEEPSEEK_EXTRACTION_MODEL
-        value: deepseek-v4-pro
+        value: deepseek-flash
       - key: DEEPSEEK_OPPORTUNITY_MODEL
-        value: deepseek-v4-pro
+        value: deepseek-flash
       - key: DEEPSEEK_ASSESSMENT_MODEL
-        value: deepseek-v4-pro
+        value: deepseek-flash
+      - key: RAFID_REASONING_EFFORT
+        value: none
       - key: DEEPSEEK_BASE_URL
         value: https://api.deepseek.com
       - key: DEEPSEEK_ZERO_DATA_RETENTION_CONFIRMED
