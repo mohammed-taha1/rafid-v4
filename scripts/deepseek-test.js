@@ -19,6 +19,9 @@ async function main() {
     assert.equal(result.provider, "deepseek");
   }
   assert.ok(captured.every(({ url, body }) => url === "https://api.deepseek.com/responses" && body.store === false && body.text.format.type === "json_schema"));
+  assert.deepEqual(ai.parseStructuredOutputText('```json\n{"ok":true}\n```'), { ok: true });
+  assert.deepEqual(ai.parseStructuredOutputText('Result:\n{"ok":true}\nDone.'), { ok: true });
+  assert.deepEqual(ai.parseStructuredOutputText('{"message":"brace } inside string","ok":true}'), { message: "brace } inside string", ok: true });
   process.env.DEEPSEEK_EXTRACTION_MODEL = "deepseek-flash";
   assert.equal(ai.openAIStageModel("extraction"), "deepseek-flash");
   assert.throws(() => ai.deepSeekModel("other"));
