@@ -422,6 +422,30 @@ tbody tr:hover { background: #fbfcfa; }
 @media(max-width:620px){.rafid-header{min-height:72px}.rafid-header nav a:nth-child(2),.rafid-header nav a:nth-child(3){display:none}.rafid .hero{padding:34px 21px}.hero-copy h1{font-size:2.55rem}.hero-preview{padding:15px}.trust-rail{margin-top:-18px}.audience-grid{grid-template-columns:1fr}.rafid-benefits ul{grid-template-columns:1fr}.report-nav{position:static}.report-command{grid-template-columns:1fr}.match-scores article{grid-template-columns:74px 1fr}.score-ring{width:68px;height:68px}.consent-heading{display:block}.secure-processing{margin:8px 0}.learn-strip{padding:22px}.rafid footer{display:block}.rafid footer nav{margin-top:12px}}
 @media(prefers-reduced-motion:reduce){.rafid *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 
+/* Complete general-readiness report: evidence, bilingual labels, and print-safe output. */
+.score-definition{margin:-12px 0 18px;color:#637b7a;font-size:.78rem}
+.dimension-list li{grid-template-columns:170px 1fr}
+.dimension-list b small{display:block;color:#6b807e;font-weight:700}
+.source-locator{display:inline-block;white-space:nowrap;color:var(--rafid-teal-deep);font-weight:800}
+.evidence-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:13px}
+.evidence-item{padding:13px;border:1px solid #e0ebe8;border-radius:12px;background:#fbfdfc}
+.evidence-item>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.evidence-item p{margin:7px 0;color:#536e6e}
+.evidence-item ul{margin:7px 0;padding-inline-start:22px}
+.evidence-item small{display:block;color:#708382}
+.evidence-status{padding:2px 7px;border-radius:999px;color:#5b7270;background:#e9f1ef;font-size:.68rem;font-weight:900}
+.evidence-status.present{color:#17633f;background:#dff5e8}
+.evidence-status.partial{color:#795716;background:#fff1ca}
+.evidence-status.missing{color:#8d342e;background:#fde5e2}
+@media(max-width:720px){.evidence-grid{grid-template-columns:1fr}.dimension-list li{grid-template-columns:1fr}}
+@media print{
+  .rafid-header,.report-actions,.copy-status,.result-feedback{display:none!important}
+  .rafid-report{max-width:none;margin:0;padding:0;border:0;box-shadow:none}
+  .rafid-report details,.evidence-item{break-inside:avoid;box-shadow:none}
+  .rafid-report details[open]>summary{margin-bottom:8px}
+  .rafid-report .evidence-grid{grid-template-columns:1fr 1fr}
+}
+
 /* Institutional workspace: direct services, short workflows, and multi-file intake. */
 body{background:linear-gradient(180deg,#f7faf8 0,#f3f5f1 62%,#eef3f0 100%)}
 .rafid{max-width:1240px}.rafid-header{padding-block:12px;border-bottom:1px solid #dce8e4}.rafid-header nav .pilot-badge{padding:5px 10px;border:1px solid #cde2dc;border-radius:999px;color:#176858;background:#eff9f5;font-size:.68rem;font-weight:900}
