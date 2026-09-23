@@ -477,6 +477,25 @@
     return items(value).length ? `<ul>${items(value).map((item) => `<li>${esc(item)}</li>`).join("")}</ul>` : `<p class="empty-value">${esc(empty)}</p>`;
   }
 
+  function reportText(value) {
+    return esc(value).replace(/\[PAGE\s+(\d+)\]/gi, '<span class="source-locator" dir="ltr">[PAGE $1]</span>');
+  }
+
+  function reportList(value, empty) {
+    return items(value).length
+      ? `<ul>${items(value).map((item) => `<li>${reportText(item)}</li>`).join("")}</ul>`
+      : `<p class="empty-value">${esc(empty || t("غير موضح", "Not stated"))}</p>`;
+  }
+
+  function printCompleteReport(container) {
+    const details = [...container.querySelectorAll("details")];
+    const states = details.map((entry) => entry.open);
+    details.forEach((entry) => { entry.open = true; });
+    const restore = () => details.forEach((entry, index) => { entry.open = states[index]; });
+    window.addEventListener("afterprint", restore, { once: true });
+    window.print();
+  }
+
   function statusClass(status) {
     return {
       "مستوفى": "met",
@@ -641,19 +660,35 @@
 
   function generalResults(result, meta = {}) {
     requestInFlight = false;
-    const dimensions = items(result.technicalReadiness?.dimensions).map((dimension) => `<li><b>${esc(dimension.id)}</b><span>${esc(dimension.explanation)}</span></li>`).join("");
+    const dimensionLabels = {
+      problem: ["وضوح المشكلة", "Problem clarity"], objectives: ["وضوح الأهداف", "Objective clarity"], methodology: ["قوة المنهجية", "Methodology"], feasibility: ["قابلية التنفيذ", "Feasibility"], resources: ["الموارد", "Resources"], risks: ["المخاطر", "Risks"], preliminaryEvidence: ["الأدلة الأولية", "Preliminary evidence"], measurement: ["القياس", "Measurement"], application: ["التطبيق", "Application"], workPlan: ["خطة العمل", "Work plan"],
+      value: ["وضوح القيمة", "Value proposition"], impact: ["حجم الأثر", "Impact"], beneficiaries: ["المستفيدون", "Beneficiaries"], budget: ["الميزانية", "Budget"], justification: ["المبررات", "Justification"], deliveryPlan: ["خطة التنفيذ", "Delivery plan"], fundingFit: ["الملاءمة التمويلية العامة", "General funding fit"], researchToProject: ["تحويل البحث إلى مشروع", "Research-to-project readiness"],
+    };
+    const elementLabels = {
+      problem: ["المشكلة", "Problem"], objectives: ["الأهداف", "Objectives"], questionsOrHypotheses: ["الأسئلة أو الفرضيات", "Questions or hypotheses"], methodology: ["المنهجية", "Methodology"], currentOrExpectedResults: ["النتائج الحالية أو المتوقعة", "Current or expected results"], innovation: ["الابتكار", "Innovation"], beneficiaries: ["المستفيدون", "Beneficiaries"], scientificImpact: ["الأثر العلمي", "Scientific impact"], economicImpact: ["الأثر الاقتصادي", "Economic impact"], socialImpact: ["الأثر الاجتماعي", "Social impact"], applicability: ["قابلية التطبيق", "Applicability"], risks: ["المخاطر", "Risks"], resources: ["الموارد", "Resources"], timeline: ["الجدول الزمني", "Timeline"], team: ["الفريق", "Team"], budget: ["الميزانية", "Budget"],
+    };
+    const renderDimensions = (readiness) => items(readiness?.dimensions).map((dimension) => {
+      const label = dimensionLabels[dimension.id] || [dimension.id, dimension.id];
+      return `<li><b>${esc(t(label[0], label[1]))}<small>${Number(dimension.score || 0)}/${Number(dimension.weight || 0)}</small></b><span>${reportText(dimension.explanation)}</span></li>`;
+    }).join("") || `<li class="empty-value">${t("لا توجد تفسيرات كافية.", "No sufficient explanations are available.")}</li>`;
+    const extractedElements = Object.entries(result.extractedElements || {}).map(([id, entry]) => {
+      const label = elementLabels[id] || [id, id];
+      const state = entry?.status === "موجود" ? "present" : entry?.status === "جزئي" ? "partial" : "missing";
+      const translatedStatus = t(entry?.status || "غير موضح", ({ موجود: "Present", جزئي: "Partial", "غير موضح": "Not stated" })[entry?.status] || entry?.status || "Not stated");
+      return `<article class="evidence-item"><div><b>${esc(t(label[0], label[1]))}</b><span class="evidence-status ${state}">${esc(translatedStatus)}</span></div><p>${reportText(entry?.summary || t("غير موضح", "Not stated"))}</p>${items(entry?.evidence).length ? `<ul>${items(entry.evidence).map((evidence) => `<li>${reportText(evidence)}</li>`).join("")}</ul>` : `<small>${t("لا يوجد دليل مباشر في النص.", "No direct evidence was found in the text.")}</small>`}<small>${reportText(entry?.assessmentNote || "")}</small></article>`;
+    }).join("");
     const truncationNotice = meta.truncated ? `<p class="rafid-notice">${t("تجاوز المستند حد التحليل الكامل؛ لذلك لم يعرض رافد درجة دقيقة. راجع النطاق الاسترشادي أو قسّم المستند مع إبقاء أرقام الصفحات.", "The document exceeded the full-analysis limit, so Rafid withheld a precise score. Review the indicative range or split the document while preserving page numbers.")}</p>` : "";
     const confidence = t(result.confidence || "منخفض", ({ مرتفع: "High", متوسط: "Medium", منخفض: "Low" })[result.confidence] || result.confidence || "Low");
     const disclaimer = t(result.fundingDisclaimer || "هذا التحليل إرشادي ولا يضمن الحصول على تمويل.", "This assessment is advisory and does not guarantee funding or acceptance. Verify the official opportunity criteria before applying.");
     const readinessCard = (readiness, arabicLabel, englishLabel) => readiness?.scoreAvailable === false
       ? `<article><span>${t(arabicLabel, englishLabel)}</span><div class="score-unavailable" role="img" aria-label="${t("لا توجد بيانات كافية لدرجة دقيقة", "Insufficient data for a precise score")}"><b>—</b></div><small>${t("النطاق الاسترشادي", "Indicative range")}: ${clamp(readiness.scoreRange?.minimum)}–${clamp(readiness.scoreRange?.maximum)}</small></article>`
       : `<article><span>${t(arabicLabel, englishLabel)}</span><meter min="0" max="100" value="${clamp(readiness?.score)}"></meter><b>${clamp(readiness?.score)}<small>/100</small></b></article>`;
-    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${esc(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores">${readinessCard(result.technicalReadiness, "الجاهزية التقنية", "Technical readiness")}${readinessCard(result.fundingReadiness, "الجاهزية التمويلية", "Funding readiness")}</div><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الدرجات", "Score explanations")}</summary><ul class="dimension-list">${dimensions}</ul></details><details><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${safeList(result.criticalGaps)}</details><details><summary>${t("خطة العمل", "Action plan")}</summary>${safeList(result.actionPlan)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="download" class="rafid-secondary" type="button">${t("تنزيل تقرير", "Download report")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير", "Print report")}</button></div><fieldset class="result-feedback"><legend>${t("هل كانت النتيجة مفيدة؟", "Was this result useful?")}</legend><button type="button" data-rating="3">${t("مفيدة جدًا", "Very useful")}</button><button type="button" data-rating="2">${t("مفيدة جزئيًا", "Partly useful")}</button><button type="button" data-rating="1">${t("غير مفيدة", "Not useful")}</button><p role="status"></p></fieldset></section>`;
+    root().innerHTML = `${header(`<button id="new" class="rafid-text-button" type="button">${t("تحليل جديد", "New analysis")}</button>`)}<section class="rafid-report"><span class="rafid-kicker">${t("نتيجة التقييم العام", "General assessment result")}</span><h1>${t("جاهزية البحث", "Research readiness")}</h1><p class="report-summary">${reportText(result.researchSummary || t("غير موضح", "Not stated"))}</p>${truncationNotice}<div class="scores">${readinessCard(result.technicalReadiness, "الجاهزية التقنية", "Technical readiness")}${readinessCard(result.fundingReadiness, "الجاهزية التمويلية", "Funding readiness")}</div><p class="score-definition">${t("في الأبحاث غير التقنية، تعكس الجاهزية التقنية جودة التصميم وقابلية التنفيذ، ولا تمثل مستوى TRL إلا إذا ذكره المصدر صراحة.", "For non-technical research, technical readiness reflects design quality and feasibility; it is not a TRL unless the source states one explicitly.")}</p><p class="confidence">${t("مستوى الثقة:", "Confidence level:")} <b>${esc(confidence)}</b></p><details open><summary>${t("تفسير الجاهزية التقنية", "Technical readiness explanations")}</summary><ul class="dimension-list">${renderDimensions(result.technicalReadiness)}</ul></details><details open><summary>${t("تفسير الجاهزية التمويلية", "Funding readiness explanations")}</summary><ul class="dimension-list">${renderDimensions(result.fundingReadiness)}</ul></details><details><summary>${t("العناصر والأدلة المستخرجة", "Extracted elements and evidence")}</summary><div class="evidence-grid">${extractedElements || `<p class="empty-value">${t("لم تتوفر عناصر مستخرجة.", "No extracted elements are available.")}</p>`}</div></details><details open><summary>${t("نقاط القوة", "Strengths")}</summary>${reportList(result.strengths)}</details><details open><summary>${t("النواقص الحرجة", "Critical gaps")}</summary>${reportList(result.criticalGaps)}</details><details><summary>${t("النواقص المهمة", "Important gaps")}</summary>${reportList(result.importantGaps)}</details><details><summary>${t("تحسينات إضافية", "Additional improvements")}</summary>${reportList(result.additionalImprovements)}</details><details open><summary>${t("خطة العمل", "Action plan")}</summary>${reportList(result.actionPlan)}</details><details><summary>${t("أسئلة للباحث", "Questions for the researcher")}</summary>${reportList(result.researcherQuestions)}</details><details><summary>${t("قائمة تحقق قبل التقديم", "Pre-submission checklist")}</summary>${reportList(result.fundingChecklist)}</details><details><summary>${t("القيود والتنبيهات", "Limitations and cautions")}</summary>${reportList(result.limitations)}</details><p class="rafid-notice">${esc(disclaimer)}</p><div class="form-actions report-actions"><button id="copy" class="rafid-secondary" type="button">${t("نسخ الملخص", "Copy summary")}</button><button id="download" class="rafid-secondary" type="button">${t("تنزيل تقرير مقروء", "Download readable report")}</button><button id="print" class="rafid-primary" type="button">${t("طباعة التقرير الكامل", "Print full report")}</button></div><fieldset class="result-feedback"><legend>${t("هل كانت النتيجة مفيدة؟", "Was this result useful?")}</legend><button type="button" data-rating="3">${t("مفيدة جدًا", "Very useful")}</button><button type="button" data-rating="2">${t("مفيدة جزئيًا", "Partly useful")}</button><button type="button" data-rating="1">${t("غير مفيدة", "Not useful")}</button><p role="status"></p></fieldset></section>`;
     const flowId = meta.flow_id;
     if (flowId) window.RafidTelemetry?.record("report_viewed", "general_readiness", flowId);
     root().querySelector("#new").addEventListener("click", generalView);
     root().querySelector("#copy").addEventListener("click", () => navigator.clipboard?.writeText(result.researchSummary || ""));
-    root().querySelector("#print").addEventListener("click", () => window.print());
+    root().querySelector("#print").addEventListener("click", () => printCompleteReport(root().querySelector(".rafid-report")));
     root().querySelector("#download").addEventListener("click", () => { const blob = new Blob([root().querySelector(".rafid-report")?.innerText || result.researchSummary || ""], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `rafid-readiness-${new Date().toISOString().slice(0, 10)}.txt`; link.click(); URL.revokeObjectURL(url); if (flowId) window.RafidTelemetry?.record("report_downloaded", "general_readiness", flowId); });
     root().querySelectorAll(".result-feedback [data-rating]").forEach((button) => button.addEventListener("click", () => { if (flowId) window.RafidTelemetry?.record("feedback_submitted", "general_readiness", flowId, { rating: Number(button.dataset.rating) }); root().querySelectorAll(".result-feedback button").forEach((item) => { item.disabled = true; }); root().querySelector(".result-feedback p").textContent = t("شكرًا، سُجل التقييم دون محتوى البحث.", "Thank you. The rating was recorded without research content."); }, { once: true }));
     resetView();
