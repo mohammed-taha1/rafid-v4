@@ -1,9 +1,13 @@
 "use strict";
 const assert=require("node:assert/strict");
 const {createAnalysis,emptyElements}=require("../src/lib/research-schema");
-const {createGroqAdapter,groupChunks,ProviderError,normalizeModelAnalysis}=require("../src/lib/research-provider");
+const {cleanMergedProject,createGroqAdapter,groupChunks,ProviderError,normalizeModelAnalysis}=require("../src/lib/research-provider");
 
 assert.deepEqual(groupChunks(["a".repeat(4), "b".repeat(4), "c".repeat(4)], 10), ["aaaa\n\nbbbb", "cccc"]);
+const cleaned=cleanMergedProject({project_identity:{team_members:[{name:"A.B."},{name:"Alice Smith"},{name:"alice smith"}]},project_stage:{trl_estimate:6,trl_reason:"مستنتج"},intellectual_property:{commercialization_restrictions:["CC BY-NC-ND article license","قيد تقني صريح"]}},"[PAGE 1] prototype",[{name:"paper.pdf"}],2);
+assert.deepEqual(cleaned.project_identity.team_members.map((item)=>item.name),["Alice Smith"]);
+assert.equal(cleaned.project_stage.trl_estimate,null);
+assert.deepEqual(cleaned.intellectual_property.commercialization_restrictions,["قيد تقني صريح"]);
 
 let requestOptions;
 const client={chat:{completions:{create:async(_request,options)=>{
