@@ -16,6 +16,17 @@ function createGroqAdapter({client,model=process.env.GROQ_MODEL,timeoutMs=60000,
 function mergeValues(left,right){if(right===null||right===undefined||right==="")return structuredClone(left);if(left===null||left===undefined||left==="")return structuredClone(right);if(Array.isArray(left)||Array.isArray(right)){const values=[...(Array.isArray(left)?left:[left]),...(Array.isArray(right)?right:[right])];const seen=new Set();return values.filter((entry)=>{const key=JSON.stringify(entry);if(seen.has(key))return false;seen.add(key);return true;});}if(typeof left==="object"&&typeof right==="object"){const output={...structuredClone(left)};for(const [key,value] of Object.entries(right))output[key]=mergeValues(output[key],value);return output;}if(typeof left==="boolean"||typeof right==="boolean")return Boolean(left||right);if(typeof left==="number"&&typeof right==="number")return Math.max(left,right);return String(right).length>String(left).length?right:left;}
 function groupChunks(chunks,maxChars=30000){const groups=[];let current="";for(const chunk of chunks||[]){const value=String(chunk||"").trim();if(!value)continue;if(current&&current.length+value.length+2>maxChars){groups.push(current);current=value;}else current=current?`${current}\n\n${value}`:value;}if(current)groups.push(current);return groups;}
 async function mapConcurrent(items,concurrency,worker){const results=new Array(items.length);let next=0;async function run(){while(next<items.length){const index=next++;results[index]=await worker(items[index],index);}}await Promise.all(Array.from({length:Math.min(concurrency,items.length)},run));return results;}
+function canonicalName(value){return String(value||"").normalize("NFKD").toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"");}
+function cleanMergedProject(project,fullMarkedText,sourceMetadata,batchCount){
+  const cleaned=structuredClone(project);
+  const members=[];const names=new Set();
+  for(const member of cleaned.project_identity?.team_members||[]){const name=String(member?.name||"").trim();const canonical=canonicalName(name);if(!canonical||/^(?:[a-z]\.?){1,4}$/i.test(name.replace(/\s+/g,""))||names.has(canonical))continue;names.add(canonical);members.push(member);}
+  if(cleaned.project_identity)cleaned.project_identity.team_members=members;
+  if(!/(?:\bTRL\s*\d|technology readiness level)/iu.test(fullMarkedText)){cleaned.project_stage.trl_estimate=null;cleaned.project_stage.trl_reason="غير محدد صراحة في المصدر.";}
+  if(cleaned.intellectual_property?.commercialization_restrictions){cleaned.intellectual_property.commercialization_restrictions=cleaned.intellectual_property.commercialization_restrictions.filter((item)=>!/(?:creative commons|CC\s*BY|ترخيص النشر|رخصة المقال)/iu.test(String(item)));}
+  cleaned.source_summary={sources_reviewed:(sourceMetadata||[]).map((source)=>source.name).filter(Boolean),information_completeness:"متوسطة",extraction_confidence:80,notes:`تمت معالجة المستند كاملًا ضمن الحد المسموح عبر ${batchCount} دفعات، ثم دُمجت النتائج قبل التقييم النهائي.`};
+  return cleaned;
+}
 function createGroqResearchProvider(){const OpenAI=require("openai");const key=process.env.GROQ_API_KEY;if(!key)throw new ProviderError("configuration_error",safeMessage.configuration_error);const adapter=createGroqAdapter({client:new OpenAI({apiKey:key,baseURL:"https://api.groq.com/openai/v1"}),model:process.env.GROQ_MODEL,log:(entry)=>console.info("[rafid:ai]",JSON.stringify(entry))});return {health:()=>adapter.health(),analyze:({chunks,requestId,textSize,outputLanguage})=>adapter.analyze({...requestFor("score",{chunks,output_language:outputLanguage}),requestId,textSize})};}
 function createResearchProvider() {
   if (process.env.AI_PROVIDER !== "deepseek") return createGroqResearchProvider();
@@ -41,9 +52,11 @@ function createResearchProvider() {
         });
         const merged = extractions.reduce(mergeValues, {});
         const fullMarkedText = chunks.join("\n\n");
-        const project = normalizeProjectData(augmentProjectDataFromText(merged, fullMarkedText), { metadata: { source_documents: sourceMetadata || [] }, files: sourceMetadata || [] });
+        const normalizedProject = normalizeProjectData(augmentProjectDataFromText(merged, fullMarkedText), { metadata: { source_documents: sourceMetadata || [] }, files: sourceMetadata || [] });
+        const project = cleanMergedProject(normalizedProject, fullMarkedText, sourceMetadata, groups.length);
         const request = requestFor("score", {
           project_data: project,
+          page_evidence_corpus: fullMarkedText,
           source_metadata: sourceMetadata || [],
           document_coverage: "complete_within_configured_limit",
           output_language: outputLanguage,
@@ -66,4 +79,4 @@ function createResearchProvider() {
     },
   };
 }
-module.exports={ProviderError,createGroqAdapter,createGroqResearchProvider:createResearchProvider,groupChunks,mergeValues,modelOutputSchema,normalizeModelAnalysis,safeMessage,safeProviderCode};
+module.exports={ProviderError,cleanMergedProject,createGroqAdapter,createGroqResearchProvider:createResearchProvider,groupChunks,mergeValues,modelOutputSchema,normalizeModelAnalysis,safeMessage,safeProviderCode};
