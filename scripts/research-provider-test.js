@@ -22,6 +22,11 @@ adapter.analyze({messages:[],requestId:"x",textSize:10}).then(async(result)=>{
   const normalized=normalizeModelAnalysis({researchSummary:"ملخص",extractedElements:{problem:{status:"موجود",summary:"مشكلة",evidence:["ص1"],assessmentNote:"واضحة"}}});
   assert.equal(normalized.extractedElements.problem.status,"موجود");
   assert.equal(normalized.technicalReadiness.score>0,true);
+  const longSummary=Array.from({length:200},(_,index)=>`كلمة${index}`).join(" ");
+  const safelyTruncated=normalizeModelAnalysis({sourceSummary:longSummary,researchSummary:"ملخص",extractedElements:{problem:{status:"موجود",summary:"مشكلة",evidence:["[PAGE 1]"],assessmentNote:"واضحة"}}}).sourceSummary;
+  assert.equal(safelyTruncated.endsWith("…"),true);
+  assert.equal(longSummary.startsWith(safelyTruncated.slice(0,-1)),true);
+  assert.equal(longSummary[safelyTruncated.length-1]," ","Truncation must stop at a word boundary.");
   const bad=createGroqAdapter({client:{chat:{completions:{create:async()=>({choices:[{message:{content:"{}"}}]})}}},model:"m"});
   await assert.rejects(()=>bad.analyze({messages:[]}),error=>error instanceof ProviderError&&error.kind==="invalid_response");
   console.log("Rafid resilient provider tests passed.");
